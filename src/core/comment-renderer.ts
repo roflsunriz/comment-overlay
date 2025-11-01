@@ -6,6 +6,7 @@ import {
   type CommentPrepareOptions,
   type TimeSource,
   createDefaultTimeSource,
+  STATIC_VISIBLE_DURATION_MS,
 } from "./comment";
 import { createLogger, type Logger } from "../shared/logger";
 
@@ -40,7 +41,6 @@ interface LaneReservation {
 const toMilliseconds = (seconds: number): number => seconds * 1000;
 const FINAL_PHASE_THRESHOLD_MS = 10_000;
 const ACTIVE_WINDOW_MS = 2_000;
-const SEEK_WINDOW_MS = 4_000;
 const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
 const MAX_VISIBLE_DURATION_MS = 4_000;
 const MIN_VISIBLE_DURATION_MS = 1_800;
@@ -53,6 +53,7 @@ const MIN_LANE_COUNT = 1;
 const DEFAULT_LANE_COUNT = 12;
 const MIN_FONT_SIZE_PX = 24;
 const EDGE_EPSILON = 1e-3;
+const SEEK_DIRECTION_EPSILON_MS = 50;
 
 export const createDefaultAnimationFrameProvider = (
   timeSource: TimeSource,
@@ -107,6 +108,8 @@ export class CommentRenderer {
   private _settings: RendererSettings;
   private readonly comments: Comment[] = [];
   private readonly reservedLanes = new Map<number, LaneReservation[]>();
+  private readonly topStaticLaneReservations = new Map<number, number>();
+  private readonly bottomStaticLaneReservations = new Map<number, number>();
   private readonly log: Logger;
   private readonly timeSource: TimeSource;
   private readonly animationFrameProvider: AnimationFrameProvider;
@@ -269,6 +272,8 @@ export class CommentRenderer {
   clearComments(): void {
     this.comments.length = 0;
     this.reservedLanes.clear();
+    this.topStaticLaneReservations.clear();
+    this.bottomStaticLaneReservations.clear();
     if (this.ctx && this.canvas) {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
@@ -302,15 +307,18 @@ export class CommentRenderer {
     this.settings = newSettings;
 
     this.comments.forEach((comment) => {
-      comment.color = this._settings.commentColor;
-      comment.opacity = this._settings.commentOpacity;
+      comment.syncWithSettings(this._settings);
     });
 
     if (!this._settings.isCommentVisible && this.ctx && this.canvas) {
       this.comments.forEach((comment) => {
         comment.isActive = false;
+        comment.clearActivation();
       });
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.reservedLanes.clear();
+      this.topStaticLaneReservations.clear();
+      this.bottomStaticLaneReservations.clear();
     }
 
     if (previousUseContainer !== this._settings.useContainerResizeObserver && this.videoElement) {
@@ -462,6 +470,8 @@ export class CommentRenderer {
     this.laneHeight = baseHeight * 1.2;
     const availableLanes = Math.floor(canvas.height / Math.max(this.laneHeight, 1));
     this.laneCount = Math.max(MIN_LANE_COUNT, availableLanes);
+    this.topStaticLaneReservations.clear();
+    this.bottomStaticLaneReservations.clear();
   }
 
   private updateComments(): void {
@@ -485,46 +495,76 @@ export class CommentRenderer {
       context.clearRect(0, 0, canvas.width, canvas.height);
       this.comments.forEach((comment) => {
         comment.isActive = false;
+        comment.clearActivation();
       });
       this.reservedLanes.clear();
+      this.topStaticLaneReservations.clear();
+      this.bottomStaticLaneReservations.clear();
     }
 
     if (!isNearEnd && this.finalPhaseActive) {
       this.finalPhaseActive = false;
     }
 
+    this.pruneStaticLaneReservations(this.currentTime);
+
     for (const comment of this.comments) {
       if (this.isNGComment(comment.text)) {
         continue;
       }
+      if (comment.isInvisible) {
+        comment.isActive = false;
+        comment.hasShown = true;
+        comment.clearActivation();
+        continue;
+      }
 
-      comment.color = this._settings.commentColor;
-      comment.opacity = this._settings.commentOpacity;
+      comment.syncWithSettings(this._settings);
 
-      if (!comment.isActive) {
-        const shouldShow = isNearEnd
-          ? comment.vpos > this.currentTime - FINAL_PHASE_THRESHOLD_MS && !comment.hasShown
-          : comment.vpos >= this.currentTime - ACTIVE_WINDOW_MS &&
-            comment.vpos <= this.currentTime + ACTIVE_WINDOW_MS;
-
-        if (shouldShow) {
-          comment.prepare(context, canvas.width, canvas.height, prepareOptions);
-          comment.lane = this.findAvailableLane(comment);
-          comment.y = comment.lane * this.laneHeight;
-          comment.x = comment.virtualStartX;
-          comment.isActive = true;
-          comment.hasShown = true;
-        }
+      if (this.shouldActivateCommentAtTime(comment, this.currentTime)) {
+        this.activateComment(
+          comment,
+          context,
+          canvas.width,
+          canvas.height,
+          prepareOptions,
+          this.currentTime,
+        );
       }
 
       if (comment.isActive) {
+        if (comment.layout !== "naka" && comment.hasStaticExpired(this.currentTime)) {
+          const staticPosition = comment.layout === "ue" ? "ue" : "shita";
+          this.releaseStaticLane(staticPosition, comment.lane);
+          comment.isActive = false;
+          comment.clearActivation();
+          continue;
+        }
+
+        if (
+          comment.layout === "naka" &&
+          comment.vpos > this.currentTime + SEEK_DIRECTION_EPSILON_MS
+        ) {
+          comment.x = comment.virtualStartX;
+          comment.lastUpdateTime = this.timeSource.now();
+          continue;
+        }
+
+        comment.hasShown = true;
         comment.update(this.playbackRate, !this.isPlaying);
+        if (!comment.isScrolling && comment.hasStaticExpired(this.currentTime)) {
+          const staticPosition = comment.layout === "ue" ? "ue" : "shita";
+          this.releaseStaticLane(staticPosition, comment.lane);
+          comment.isActive = false;
+          comment.clearActivation();
+        }
       }
     }
 
     for (const comment of this.comments) {
-      if (comment.isActive && comment.x < -comment.width) {
+      if (comment.isActive && comment.isScrolling && comment.x < -comment.width) {
         comment.isActive = false;
+        comment.clearActivation();
       }
     }
   }
@@ -545,6 +585,7 @@ export class CommentRenderer {
   private findAvailableLane(comment: Comment): number {
     const currentTime = this.currentTime;
     this.pruneLaneReservations(currentTime);
+    this.pruneStaticLaneReservations(currentTime);
     const laneCandidates = this.getLanePriorityOrder(currentTime);
     const newReservation = this.createLaneReservation(comment, currentTime);
 
@@ -573,9 +614,142 @@ export class CommentRenderer {
     }
   }
 
+  private pruneStaticLaneReservations(currentTime: number): void {
+    for (const [lane, releaseTime] of this.topStaticLaneReservations.entries()) {
+      if (releaseTime <= currentTime) {
+        this.topStaticLaneReservations.delete(lane);
+      }
+    }
+    for (const [lane, releaseTime] of this.bottomStaticLaneReservations.entries()) {
+      if (releaseTime <= currentTime) {
+        this.bottomStaticLaneReservations.delete(lane);
+      }
+    }
+  }
+
+  private getStaticLaneMap(position: "ue" | "shita"): Map<number, number> {
+    return position === "ue" ? this.topStaticLaneReservations : this.bottomStaticLaneReservations;
+  }
+
+  private getStaticReservedLaneSet(): Set<number> {
+    const reserved = new Set<number>();
+    for (const lane of this.topStaticLaneReservations.keys()) {
+      reserved.add(lane);
+    }
+    for (const lane of this.bottomStaticLaneReservations.keys()) {
+      reserved.add(lane);
+    }
+    return reserved;
+  }
+
+  private shouldActivateCommentAtTime(comment: Comment, timeMs: number): boolean {
+    if (comment.isInvisible || comment.isActive) {
+      return false;
+    }
+    if (comment.vpos > timeMs + SEEK_DIRECTION_EPSILON_MS) {
+      return false;
+    }
+    if (comment.vpos < timeMs - ACTIVE_WINDOW_MS) {
+      return false;
+    }
+    return true;
+  }
+
+  private activateComment(
+    comment: Comment,
+    context: CanvasRenderingContext2D,
+    canvasWidth: number,
+    canvasHeight: number,
+    options: CommentPrepareOptions,
+    referenceTime: number,
+  ): void {
+    comment.prepare(context, canvasWidth, canvasHeight, options);
+
+    if (comment.layout === "naka") {
+      const elapsedMs = Math.max(0, referenceTime - comment.vpos);
+      const displacement = comment.speedPixelsPerMs * elapsedMs;
+      const projectedX = comment.virtualStartX - displacement;
+
+      if (projectedX <= -comment.width) {
+        comment.isActive = false;
+        comment.hasShown = true;
+        comment.clearActivation();
+        comment.lane = -1;
+        return;
+      }
+
+      comment.lane = this.findAvailableLane(comment);
+      comment.y = comment.lane * this.laneHeight;
+      comment.x = projectedX;
+      comment.isActive = true;
+      comment.hasShown = true;
+      comment.isPaused = !this.isPlaying;
+      comment.markActivated(referenceTime);
+      comment.lastUpdateTime = this.timeSource.now();
+      return;
+    }
+
+    const displayEnd = comment.vpos + STATIC_VISIBLE_DURATION_MS;
+    if (referenceTime > displayEnd) {
+      comment.isActive = false;
+      comment.hasShown = true;
+      comment.clearActivation();
+      comment.lane = -1;
+      return;
+    }
+
+    const staticPosition = comment.layout === "ue" ? "ue" : "shita";
+    const laneIndex = this.assignStaticLane(staticPosition);
+    comment.lane = laneIndex;
+    comment.y = laneIndex * this.laneHeight;
+    comment.x = comment.virtualStartX;
+    comment.isActive = true;
+    comment.hasShown = true;
+    comment.isPaused = !this.isPlaying;
+    comment.markActivated(referenceTime);
+    comment.lastUpdateTime = this.timeSource.now();
+    comment.staticExpiryTimeMs = displayEnd;
+    this.reserveStaticLane(staticPosition, laneIndex, displayEnd);
+  }
+
+  private assignStaticLane(position: "ue" | "shita"): number {
+    const laneMap = this.getStaticLaneMap(position);
+    const laneIndices = Array.from({ length: this.laneCount }, (_, index) => index);
+    if (position === "shita") {
+      laneIndices.reverse();
+    }
+    for (const lane of laneIndices) {
+      if (!laneMap.has(lane)) {
+        return lane;
+      }
+    }
+    let fallbackLane = laneIndices[0] ?? 0;
+    let earliestRelease = Number.POSITIVE_INFINITY;
+    for (const [lane, releaseTime] of laneMap.entries()) {
+      if (releaseTime < earliestRelease) {
+        earliestRelease = releaseTime;
+        fallbackLane = lane;
+      }
+    }
+    return fallbackLane;
+  }
+
+  private reserveStaticLane(position: "ue" | "shita", lane: number, releaseTime: number): void {
+    const laneMap = this.getStaticLaneMap(position);
+    laneMap.set(lane, releaseTime);
+  }
+
+  private releaseStaticLane(position: "ue" | "shita", lane: number): void {
+    if (lane < 0) {
+      return;
+    }
+    const laneMap = this.getStaticLaneMap(position);
+    laneMap.delete(lane);
+  }
+
   private getLanePriorityOrder(currentTime: number): number[] {
     const indices = Array.from({ length: this.laneCount }, (_, index) => index);
-    return indices.sort((a, b) => {
+    const sorted = indices.sort((a, b) => {
       const nextA = this.getLaneNextAvailableTime(a, currentTime);
       const nextB = this.getLaneNextAvailableTime(b, currentTime);
       if (Math.abs(nextA - nextB) <= EDGE_EPSILON) {
@@ -583,6 +757,16 @@ export class CommentRenderer {
       }
       return nextA - nextB;
     });
+    const staticReserved = this.getStaticReservedLaneSet();
+    if (staticReserved.size === 0) {
+      return sorted;
+    }
+    const preferred = sorted.filter((lane) => !staticReserved.has(lane));
+    if (preferred.length === 0) {
+      return sorted;
+    }
+    const blocked = sorted.filter((lane) => staticReserved.has(lane));
+    return [...preferred, ...blocked];
   }
 
   private getLaneNextAvailableTime(lane: number, currentTime: number): number {
@@ -772,30 +956,51 @@ export class CommentRenderer {
       return;
     }
 
+    const nextTime = toMilliseconds(video.currentTime);
+
     this.finalPhaseActive = false;
-    this.currentTime = toMilliseconds(video.currentTime);
+    this.currentTime = nextTime;
 
     this.reservedLanes.clear();
+    this.topStaticLaneReservations.clear();
+    this.bottomStaticLaneReservations.clear();
     const prepareOptions = this.buildPrepareOptions(canvas.width);
 
     this.comments.forEach((comment) => {
-      if (
-        comment.vpos >= this.currentTime - SEEK_WINDOW_MS &&
-        comment.vpos <= this.currentTime + SEEK_WINDOW_MS
-      ) {
-        comment.prepare(context, canvas.width, canvas.height, prepareOptions);
-        comment.lane = this.findAvailableLane(comment);
-        comment.y = comment.lane * this.laneHeight;
-        const timeDiff = (this.currentTime - comment.vpos) / 1000;
-        const distance = comment.speed * timeDiff * 60;
-        comment.x = comment.virtualStartX - distance;
-        comment.isActive = comment.x > -comment.width;
-        if (comment.x < -comment.width) {
-          comment.isActive = false;
-          comment.hasShown = true;
-        }
-      } else {
+      if (this.isNGComment(comment.text)) {
         comment.isActive = false;
+        comment.clearActivation();
+        return;
+      }
+
+      if (comment.isInvisible) {
+        comment.isActive = false;
+        comment.hasShown = true;
+        comment.clearActivation();
+        return;
+      }
+
+      comment.syncWithSettings(this._settings);
+      comment.isActive = false;
+      comment.lane = -1;
+      comment.clearActivation();
+
+      if (this.shouldActivateCommentAtTime(comment, this.currentTime)) {
+        this.activateComment(
+          comment,
+          context,
+          canvas.width,
+          canvas.height,
+          prepareOptions,
+          this.currentTime,
+        );
+        return;
+      }
+
+      if (comment.vpos < this.currentTime - ACTIVE_WINDOW_MS) {
+        comment.hasShown = true;
+      } else {
+        comment.hasShown = false;
       }
     });
   }
@@ -905,6 +1110,8 @@ export class CommentRenderer {
       context.clearRect(0, 0, canvas.width, canvas.height);
     }
     this.reservedLanes.clear();
+    this.topStaticLaneReservations.clear();
+    this.bottomStaticLaneReservations.clear();
     this.comments.forEach((comment) => {
       comment.isActive = false;
       comment.isPaused = !this.isPlaying;
@@ -913,6 +1120,7 @@ export class CommentRenderer {
       comment.x = comment.virtualStartX;
       comment.speed = comment.baseSpeed;
       comment.lastUpdateTime = now;
+      comment.clearActivation();
     });
   }
 

@@ -1,37 +1,37 @@
 [
   {
-    "text": "Welcome to the overlay test!",
+    "text": "Shita, red, big, mincho(1s)",
     "vpos": 1000,
-    "commands": []
+    "commands": ["shita", "red", "big", "mincho"]
   },
   {
-    "text": "ナイスショット！",
+    "text": "Ue, green2, small, gothic(2.5s)",
     "vpos": 2500,
-    "commands": ["ue"]
+    "commands": ["ue", "green2", "small", "gothic"]
   },
   {
-    "text": "Try scrubbing the timeline to trigger seeking.",
+    "text": "Black2, _live(4.3s)",
     "vpos": 4300,
-    "commands": []
+    "commands": ["black2", "_live"]
   },
   {
-    "text": "Pause and resume to see smooth updates.",
+    "text": "Cyan2(6.1s)",
     "vpos": 6100,
-    "commands": []
+    "commands": ["cyan2"]
   },
   {
-    "text": "コメントの重なり具合をチェック中…",
+    "text": "Red(7.8s)",
     "vpos": 7800,
-    "commands": []
+    "commands": ["#FF0000"]
   },
   {
-    "text": "Speed up playback to test lane reservations.",
+    "text": "Green(9.4s)",
     "vpos": 9400,
-    "commands": []
+    "commands": ["#00FF00"]
   },
   {
-    "text": "Thanks for testing the comment engine!",
+    "text": "Blue(11.0s)",
     "vpos": 11000,
-    "commands": []
+    "commands": ["#0000FF"]
   }
 ]

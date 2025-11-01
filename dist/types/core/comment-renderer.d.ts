@@ -19,6 +19,8 @@ export declare class CommentRenderer {
     private _settings;
     private readonly comments;
     private readonly reservedLanes;
+    private readonly topStaticLaneReservations;
+    private readonly bottomStaticLaneReservations;
     private readonly log;
     private readonly timeSource;
     private readonly animationFrameProvider;
@@ -64,6 +66,14 @@ export declare class CommentRenderer {
     private buildPrepareOptions;
     private findAvailableLane;
     private pruneLaneReservations;
+    private pruneStaticLaneReservations;
+    private getStaticLaneMap;
+    private getStaticReservedLaneSet;
+    private shouldActivateCommentAtTime;
+    private activateComment;
+    private assignStaticLane;
+    private reserveStaticLane;
+    private releaseStaticLane;
     private getLanePriorityOrder;
     private getLaneNextAvailableTime;
     private createLaneReservation;
