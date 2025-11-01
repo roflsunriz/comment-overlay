@@ -108,6 +108,41 @@ const setup = async () => {
     void loadComments();
   });
 
+  const videoSources = ["./video.mp4", "./video2.mp4"];
+  const resolveInitialIndex = () => {
+    const currentSrc = videoEl.getAttribute("src") ?? "";
+    const normalizedSrc = currentSrc.startsWith("./") ? currentSrc : `./${currentSrc}`;
+    const index = videoSources.findIndex((source) => source === normalizedSrc);
+    return index >= 0 ? index : 0;
+  };
+  let currentSourceIndex = resolveInitialIndex();
+
+  const switchVideoSource = (nextIndex) => {
+    const nextSource = videoSources[nextIndex];
+    if (!nextSource) {
+      return;
+    }
+
+    currentSourceIndex = nextIndex;
+    videoEl.src = nextSource;
+    videoEl.load();
+    void videoEl.play().catch(() => {
+      reportStatus(`動画の自動再生に失敗しました。手動で再生してください: ${nextSource}`);
+    });
+    renderer.resetState();
+    void loadComments();
+    reportStatus(`動画ソースを${nextSource}に切り替えました。`);
+  };
+
+  videoEl.addEventListener("ended", () => {
+    const hasNext = currentSourceIndex + 1 < videoSources.length;
+    if (!hasNext) {
+      reportStatus("再生可能な動画が全て終了しました。");
+      return;
+    }
+    switchVideoSource(currentSourceIndex + 1);
+  });
+
   window.addEventListener("beforeunload", () => {
     renderer.destroy();
   });

@@ -1,5 +1,4 @@
 node_modules/
-dist/
 overlay-tests/dist/
 .DS_Store
 *.log
@@ -8,3 +7,4 @@ overlay-tests/dist/
 coverage/
 *.tsbuildinfo
 overlay-tests/video.mp4
+overlay-tests/video2.mp4

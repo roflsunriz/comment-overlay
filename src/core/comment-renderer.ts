@@ -211,6 +211,7 @@ export class CommentRenderer {
       this.videoElement = video;
       this.containerElement = container;
       this.duration = Number.isFinite(video.duration) ? toMilliseconds(video.duration) : 0;
+      this.currentTime = toMilliseconds(video.currentTime);
       this.playbackRate = video.playbackRate;
       this.isPlaying = !video.paused;
       this.lastDrawTime = this.timeSource.now();
@@ -240,6 +241,7 @@ export class CommentRenderer {
       this.calculateLaneMetrics();
       this.setupVideoEventListeners(video);
       this.setupResizeHandling(video);
+      this.setupVideoChangeDetection(video, container);
       this.startAnimation();
     } catch (error) {
       this.log.error("CommentRenderer.initialize", error as Error);
@@ -803,6 +805,7 @@ export class CommentRenderer {
       const onPlay = (): void => {
         this.isPlaying = true;
         const now = this.timeSource.now();
+        this.lastDrawTime = now;
         this.comments.forEach((comment) => {
           comment.lastUpdateTime = now;
           comment.isPaused = false;
@@ -810,27 +813,204 @@ export class CommentRenderer {
       };
       const onPause = (): void => {
         this.isPlaying = false;
+        const now = this.timeSource.now();
+        this.comments.forEach((comment) => {
+          comment.lastUpdateTime = now;
+          comment.isPaused = true;
+        });
       };
       const onSeeking = (): void => {
         this.onSeek();
       };
+      const onSeeked = (): void => {
+        this.onSeek();
+      };
       const onRateChange = (): void => {
         this.playbackRate = videoElement.playbackRate;
+        const now = this.timeSource.now();
+        this.comments.forEach((comment) => {
+          comment.lastUpdateTime = now;
+        });
+      };
+      const onLoadedMetadata = (): void => {
+        this.handleVideoMetadataLoaded(videoElement);
+      };
+      const onDurationChange = (): void => {
+        this.duration = Number.isFinite(videoElement.duration)
+          ? toMilliseconds(videoElement.duration)
+          : 0;
+      };
+      const onEmptied = (): void => {
+        this.handleVideoSourceChange();
       };
 
       videoElement.addEventListener("play", onPlay);
       videoElement.addEventListener("pause", onPause);
       videoElement.addEventListener("seeking", onSeeking);
+      videoElement.addEventListener("seeked", onSeeked);
       videoElement.addEventListener("ratechange", onRateChange);
+      videoElement.addEventListener("loadedmetadata", onLoadedMetadata);
+      videoElement.addEventListener("durationchange", onDurationChange);
+      videoElement.addEventListener("emptied", onEmptied);
 
       this.addCleanup(() => videoElement.removeEventListener("play", onPlay));
       this.addCleanup(() => videoElement.removeEventListener("pause", onPause));
       this.addCleanup(() => videoElement.removeEventListener("seeking", onSeeking));
+      this.addCleanup(() => videoElement.removeEventListener("seeked", onSeeked));
       this.addCleanup(() => videoElement.removeEventListener("ratechange", onRateChange));
+      this.addCleanup(() => videoElement.removeEventListener("loadedmetadata", onLoadedMetadata));
+      this.addCleanup(() => videoElement.removeEventListener("durationchange", onDurationChange));
+      this.addCleanup(() => videoElement.removeEventListener("emptied", onEmptied));
     } catch (error) {
       this.log.error("CommentRenderer.setupVideoEventListeners", error as Error);
       throw error;
     }
+  }
+
+  private handleVideoMetadataLoaded(videoElement: HTMLVideoElement): void {
+    this.handleVideoSourceChange(videoElement);
+    this.resize();
+    this.calculateLaneMetrics();
+    this.onSeek();
+  }
+
+  private handleVideoSourceChange(videoElement?: HTMLVideoElement | null): void {
+    const target = videoElement ?? this.videoElement;
+    if (!target) {
+      this.isPlaying = false;
+      this.finalPhaseActive = false;
+      this.resetCommentActivity();
+      return;
+    }
+    this.syncVideoState(target);
+    this.finalPhaseActive = false;
+    this.resetCommentActivity();
+  }
+
+  private syncVideoState(videoElement: HTMLVideoElement): void {
+    this.duration = Number.isFinite(videoElement.duration)
+      ? toMilliseconds(videoElement.duration)
+      : 0;
+    this.currentTime = toMilliseconds(videoElement.currentTime);
+    this.playbackRate = videoElement.playbackRate;
+    this.isPlaying = !videoElement.paused;
+    this.lastDrawTime = this.timeSource.now();
+  }
+
+  private resetCommentActivity(): void {
+    const now = this.timeSource.now();
+    const canvas = this.canvas;
+    const context = this.ctx;
+    if (canvas && context) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    this.reservedLanes.clear();
+    this.comments.forEach((comment) => {
+      comment.isActive = false;
+      comment.isPaused = !this.isPlaying;
+      comment.hasShown = false;
+      comment.lane = -1;
+      comment.x = comment.virtualStartX;
+      comment.speed = comment.baseSpeed;
+      comment.lastUpdateTime = now;
+    });
+  }
+
+  private setupVideoChangeDetection(videoElement: HTMLVideoElement, container: HTMLElement): void {
+    if (typeof MutationObserver === "undefined") {
+      this.log.debug(
+        "MutationObserver is not available in this environment. Video change detection is disabled.",
+      );
+      return;
+    }
+
+    const videoObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes" && mutation.attributeName === "src") {
+          const targetNode = mutation.target;
+          let previous: string | null = null;
+          let current: string | null = null;
+          if (targetNode instanceof HTMLVideoElement || targetNode instanceof HTMLSourceElement) {
+            previous = typeof mutation.oldValue === "string" ? mutation.oldValue : null;
+            current = targetNode.getAttribute("src");
+          }
+          if (previous === current) {
+            continue;
+          }
+          this.handleVideoSourceChange(videoElement);
+          return;
+        }
+        if (mutation.type === "childList") {
+          for (const node of mutation.addedNodes) {
+            if (node instanceof HTMLSourceElement) {
+              this.handleVideoSourceChange(videoElement);
+              return;
+            }
+          }
+          for (const node of mutation.removedNodes) {
+            if (node instanceof HTMLSourceElement) {
+              this.handleVideoSourceChange(videoElement);
+              return;
+            }
+          }
+        }
+      }
+    });
+
+    videoObserver.observe(videoElement, {
+      attributes: true,
+      attributeFilter: ["src"],
+      attributeOldValue: true,
+      childList: true,
+      subtree: true,
+    });
+    this.addCleanup(() => videoObserver.disconnect());
+
+    const containerObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type !== "childList") {
+          continue;
+        }
+        for (const node of mutation.addedNodes) {
+          const nextVideo = this.extractVideoElement(node);
+          if (nextVideo && nextVideo !== this.videoElement) {
+            this.initialize(nextVideo);
+            return;
+          }
+        }
+        for (const node of mutation.removedNodes) {
+          if (node === this.videoElement) {
+            this.videoElement = null;
+            this.handleVideoSourceChange(null);
+            return;
+          }
+          if (node instanceof Element) {
+            const removedVideo = node.querySelector("video");
+            if (removedVideo && removedVideo === this.videoElement) {
+              this.videoElement = null;
+              this.handleVideoSourceChange(null);
+              return;
+            }
+          }
+        }
+      }
+    });
+
+    containerObserver.observe(container, { childList: true, subtree: true });
+    this.addCleanup(() => containerObserver.disconnect());
+  }
+
+  private extractVideoElement(node: Node): HTMLVideoElement | null {
+    if (node instanceof HTMLVideoElement) {
+      return node;
+    }
+    if (node instanceof Element) {
+      const candidate = node.querySelector("video");
+      if (candidate instanceof HTMLVideoElement) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   private setupResizeHandling(videoElement: HTMLVideoElement): void {

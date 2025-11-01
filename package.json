@@ -19,6 +19,7 @@
     "clean": "rimraf dist",
     "dev": "vite",
     "build": "npm run clean && npm run typegen && vite build && node scripts/sync-overlay-tests.mjs",
+    "serve": "npx serve overlay-tests",
     "type-check": "tsc --project tsconfig.build.json --noEmit",
     "typegen": "tsc --project tsconfig.build.json",
     "lint": "eslint src --ext .ts",

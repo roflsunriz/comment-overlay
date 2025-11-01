@@ -1,0 +1,700 @@
+const E = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3
+}, V = (c, e, t) => {
+  const i = [`[${e}]`, ...t];
+  switch (c) {
+    case "debug":
+      console.debug(...i);
+      break;
+    case "info":
+      console.info(...i);
+      break;
+    case "warn":
+      console.warn(...i);
+      break;
+    case "error":
+      console.error(...i);
+      break;
+    default:
+      console.log(...i);
+  }
+}, L = (c, e = {}) => {
+  const { level: t = "info", emitter: s = V } = e, i = E[t], n = (r, a) => {
+    E[r] < i || s(r, c, a);
+  };
+  return {
+    debug: (...r) => n("debug", r),
+    info: (...r) => n("info", r),
+    warn: (...r) => n("warn", r),
+    error: (...r) => n("error", r)
+  };
+}, w = L("CommentEngine:Comment"), z = () => ({
+  now: () => typeof performance < "u" && typeof performance.now == "function" ? performance.now() : Date.now()
+}), x = () => z();
+class D {
+  text;
+  vpos;
+  commands;
+  x = 0;
+  y = 0;
+  width = 0;
+  height = 0;
+  baseSpeed = 0;
+  speed = 0;
+  lane = -1;
+  color;
+  fontSize = 0;
+  fontFamily = "Arial";
+  opacity;
+  isActive = !1;
+  hasShown = !1;
+  isPaused = !1;
+  lastUpdateTime = 0;
+  reservationWidth = 0;
+  bufferWidth = 0;
+  visibleDurationMs = 0;
+  totalDurationMs = 0;
+  preCollisionDurationMs = 0;
+  speedPixelsPerMs = 0;
+  virtualStartX = 0;
+  timeSource;
+  constructor(e, t, s, i, n = {}) {
+    if (typeof e != "string")
+      throw new Error("Comment text must be a string");
+    if (!Number.isFinite(t) || t < 0)
+      throw new Error("Comment vpos must be a non-negative number");
+    this.text = e, this.vpos = t, this.commands = Array.isArray(s) ? [...s] : [], this.color = i.commentColor, this.opacity = i.commentOpacity, this.timeSource = n.timeSource ?? x();
+  }
+  prepare(e, t, s, i) {
+    try {
+      if (!e)
+        throw new Error("Canvas context is required");
+      if (!Number.isFinite(t) || !Number.isFinite(s))
+        throw new Error("Canvas dimensions must be numbers");
+      if (!i)
+        throw new Error("Prepare options are required");
+      const n = Math.max(t, 1);
+      this.fontSize = Math.max(24, Math.floor(s * 0.05)), e.font = `${this.fontSize}px ${this.fontFamily}`, this.width = e.measureText(this.text).width, this.height = this.fontSize;
+      const r = e.measureText("??".repeat(150)).width, a = this.width * Math.max(i.bufferRatio, 0);
+      this.bufferWidth = Math.max(i.baseBufferPx, a);
+      const o = Math.max(i.entryBufferPx, this.bufferWidth);
+      this.virtualStartX = n + i.virtualExtension, this.x = this.virtualStartX;
+      const h = this.width / n;
+      let l = i.maxVisibleDurationMs;
+      if (h > 1) {
+        const N = Math.min(h, i.maxWidthRatio), F = i.maxVisibleDurationMs / Math.max(N, 1);
+        l = Math.max(i.minVisibleDurationMs, Math.floor(F));
+      }
+      const u = n + this.width + this.bufferWidth + o, p = Math.max(l, 1), v = u / p, f = v * 1e3 / 60;
+      this.baseSpeed = f, this.speed = this.baseSpeed, this.speedPixelsPerMs = v;
+      const R = this.virtualStartX + this.width + this.bufferWidth + o, A = n + o, P = this.virtualStartX + this.width + this.bufferWidth, y = Math.max(v, Number.EPSILON), O = Math.max(0, P - A);
+      this.visibleDurationMs = l, this.preCollisionDurationMs = Math.max(0, Math.ceil(O / y)), this.totalDurationMs = Math.max(
+        this.preCollisionDurationMs,
+        Math.ceil(R / y)
+      );
+      const _ = this.width + this.bufferWidth + o;
+      this.reservationWidth = Math.min(r, _), this.lastUpdateTime = this.timeSource.now(), this.isPaused = !1;
+    } catch (n) {
+      throw w.error("Comment.prepare", n, {
+        text: this.text,
+        visibleWidth: t,
+        canvasHeight: s,
+        hasContext: !!e
+      }), n;
+    }
+  }
+  update(e = 1, t = !1) {
+    try {
+      if (!this.isActive) {
+        this.isPaused = t;
+        return;
+      }
+      const s = this.timeSource.now();
+      if (t) {
+        this.isPaused = !0, this.lastUpdateTime = s;
+        return;
+      }
+      const i = (s - this.lastUpdateTime) / (1e3 / 60);
+      this.speed = this.baseSpeed * e, this.x -= this.speed * i, this.x < -this.width && (this.isActive = !1), this.lastUpdateTime = s, this.isPaused = !1;
+    } catch (s) {
+      w.error("Comment.update", s, {
+        text: this.text,
+        playbackRate: e,
+        isPaused: t,
+        isActive: this.isActive
+      });
+    }
+  }
+  draw(e, t = null) {
+    try {
+      if (!this.isActive || !e)
+        return;
+      e.save(), e.globalAlpha = this.opacity, e.font = `${this.fontSize}px ${this.fontFamily}`;
+      const s = t ?? this.x, i = this.y + this.fontSize;
+      e.strokeStyle = "#000000", e.lineWidth = Math.max(3, this.fontSize / 8), e.lineJoin = "round", e.strokeText(this.text, s, i);
+      const n = Math.max(1, this.fontSize * 0.04), r = this.fontSize * 0.18;
+      [
+        { offsetMultiplier: 1, blurMultiplier: 0.6, alpha: 0.45 },
+        { offsetMultiplier: 2, blurMultiplier: 1, alpha: 0.3 },
+        { offsetMultiplier: 3.2, blurMultiplier: 1.6, alpha: 0.18 }
+      ].forEach((o) => {
+        const h = n * o.offsetMultiplier;
+        e.shadowColor = `rgba(0, 0, 0, ${o.alpha})`, e.shadowBlur = r * o.blurMultiplier, e.shadowOffsetX = h, e.shadowOffsetY = h, e.fillStyle = this.color, e.fillText(this.text, s, i);
+      }), e.shadowColor = "transparent", e.shadowBlur = 0, e.shadowOffsetX = 0, e.shadowOffsetY = 0, e.fillStyle = this.color, e.fillText(this.text, s, i), e.restore();
+    } catch (s) {
+      w.error("Comment.draw", s, {
+        text: this.text,
+        isActive: this.isActive,
+        hasContext: !!e,
+        interpolatedX: t
+      });
+    }
+  }
+}
+const b = {
+  commentColor: "#FFFFFF",
+  commentOpacity: 0.75,
+  isCommentVisible: !0,
+  useContainerResizeObserver: !0,
+  ngWords: [],
+  ngRegexps: []
+}, K = b, I = () => ({
+  ...b,
+  ngWords: [...b.ngWords],
+  ngRegexps: [...b.ngRegexps]
+}), Z = "v1.0.0", m = (c) => c * 1e3, S = 1e4, C = 2e3, T = 4e3, k = 1e3, W = 4e3, H = 1800, B = 3, U = 0.25, X = 32, q = 48, g = 120, G = 1, $ = 12, M = 24, d = 1e-3, Y = (c) => typeof window < "u" && typeof window.requestAnimationFrame == "function" && typeof window.cancelAnimationFrame == "function" ? {
+  request: (e) => window.requestAnimationFrame(e),
+  cancel: (e) => window.cancelAnimationFrame(e)
+} : {
+  request: (e) => globalThis.setTimeout(() => {
+    e(c.now());
+  }, 16),
+  cancel: (e) => {
+    globalThis.clearTimeout(e);
+  }
+}, j = () => typeof document > "u" ? () => {
+  throw new Error(
+    "Document is not available. Provide a custom createCanvasElement implementation."
+  );
+} : () => document.createElement("canvas"), J = (c) => {
+  if (!c || typeof c != "object")
+    return !1;
+  const e = c;
+  return typeof e.commentColor == "string" && typeof e.commentOpacity == "number" && typeof e.isCommentVisible == "boolean";
+};
+class Q {
+  _settings;
+  comments = [];
+  reservedLanes = /* @__PURE__ */ new Map();
+  log;
+  timeSource;
+  animationFrameProvider;
+  createCanvasElement;
+  commentDependencies;
+  canvas = null;
+  ctx = null;
+  videoElement = null;
+  containerElement = null;
+  laneCount = $;
+  laneHeight = 0;
+  currentTime = 0;
+  duration = 0;
+  playbackRate = 1;
+  isPlaying = !0;
+  lastDrawTime = 0;
+  finalPhaseActive = !1;
+  frameId = null;
+  resizeObserver = null;
+  resizeObserverTarget = null;
+  isResizeObserverAvailable = typeof ResizeObserver < "u";
+  cleanupTasks = [];
+  constructor(e = null, t = void 0) {
+    let s, i;
+    if (J(e))
+      s = { ...e }, i = t ?? {};
+    else {
+      const n = e ?? t ?? {};
+      i = typeof n == "object" ? n : {}, s = I();
+    }
+    this.timeSource = i.timeSource ?? x(), this.animationFrameProvider = i.animationFrameProvider ?? Y(this.timeSource), this.createCanvasElement = i.createCanvasElement ?? j(), this.commentDependencies = { timeSource: this.timeSource }, this._settings = { ...s }, this.log = L(i.loggerNamespace ?? "CommentRenderer");
+  }
+  get settings() {
+    return this._settings;
+  }
+  set settings(e) {
+    this._settings = { ...e };
+  }
+  resolveContainer(e, t) {
+    if (e)
+      return e;
+    if (t.parentElement)
+      return t.parentElement;
+    if (typeof document < "u" && document.body)
+      return document.body;
+    throw new Error(
+      "Cannot resolve container element. Provide container explicitly when DOM is unavailable."
+    );
+  }
+  ensureContainerPositioning(e) {
+    if (typeof getComputedStyle == "function") {
+      getComputedStyle(e).position === "static" && (e.style.position = "relative");
+      return;
+    }
+    e.style.position || (e.style.position = "relative");
+  }
+  initialize(e) {
+    try {
+      this.destroyCanvasOnly();
+      const t = e instanceof HTMLVideoElement ? e : e.video, s = e instanceof HTMLVideoElement ? e.parentElement : e.container ?? e.video.parentElement, i = this.resolveContainer(s ?? null, t);
+      this.videoElement = t, this.containerElement = i, this.duration = Number.isFinite(t.duration) ? m(t.duration) : 0, this.currentTime = m(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.lastDrawTime = this.timeSource.now();
+      const n = this.createCanvasElement(), r = n.getContext("2d");
+      if (!r)
+        throw new Error("Failed to acquire 2D canvas context");
+      n.style.position = "absolute", n.style.top = "0", n.style.left = "0", n.style.pointerEvents = "none", n.style.zIndex = "1000";
+      const a = this.containerElement;
+      a instanceof HTMLElement && (this.ensureContainerPositioning(a), a.appendChild(n)), this.canvas = n, this.ctx = r, this.resize(), this.calculateLaneMetrics(), this.setupVideoEventListeners(t), this.setupResizeHandling(t), this.setupVideoChangeDetection(t, i), this.startAnimation();
+    } catch (t) {
+      throw this.log.error("CommentRenderer.initialize", t), t;
+    }
+  }
+  addComment(e, t, s = []) {
+    if (this.isNGComment(e) || this.comments.some(
+      (r) => r.text === e && r.vpos === t
+    ))
+      return null;
+    const n = new D(e, t, s, this._settings, this.commentDependencies);
+    return this.comments.push(n), this.comments.sort((r, a) => r.vpos - a.vpos), n;
+  }
+  clearComments() {
+    this.comments.length = 0, this.reservedLanes.clear(), this.ctx && this.canvas && this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+  resetState() {
+    this.clearComments(), this.currentTime = 0, this.finalPhaseActive = !1;
+  }
+  destroy() {
+    this.stopAnimation(), this.cleanupResizeHandling(), this.runCleanupTasks(), this.canvas && this.canvas.remove(), this.canvas = null, this.ctx = null, this.videoElement = null, this.containerElement = null, this.comments.length = 0, this.reservedLanes.clear(), this.finalPhaseActive = !1;
+  }
+  updateSettings(e) {
+    const t = this._settings.useContainerResizeObserver;
+    this.settings = e, this.comments.forEach((s) => {
+      s.color = this._settings.commentColor, s.opacity = this._settings.commentOpacity;
+    }), !this._settings.isCommentVisible && this.ctx && this.canvas && (this.comments.forEach((s) => {
+      s.isActive = !1;
+    }), this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)), t !== this._settings.useContainerResizeObserver && this.videoElement && this.setupResizeHandling(this.videoElement);
+  }
+  getVideoElement() {
+    return this.videoElement;
+  }
+  getCurrentVideoSource() {
+    const e = this.videoElement;
+    if (!e)
+      return null;
+    if (typeof e.currentSrc == "string" && e.currentSrc.length > 0)
+      return e.currentSrc;
+    const t = e.getAttribute("src");
+    if (t && t.length > 0)
+      return t;
+    const s = e.querySelector("source[src]");
+    return s && typeof s.src == "string" ? s.src : null;
+  }
+  getCommentsSnapshot() {
+    return [...this.comments];
+  }
+  isNGComment(e) {
+    try {
+      return typeof e != "string" || Array.isArray(this._settings.ngWords) && this._settings.ngWords.some(
+        (s) => typeof s == "string" && s.length > 0 && e.includes(s)
+      ) ? !0 : Array.isArray(this._settings.ngRegexps) ? this._settings.ngRegexps.some((t) => {
+        if (typeof t != "string" || t.length === 0)
+          return !1;
+        try {
+          return new RegExp(t).test(e);
+        } catch (s) {
+          return this.log.error("CommentRenderer.isNGComment.regex", s, {
+            pattern: t,
+            text: e
+          }), !1;
+        }
+      }) : !1;
+    } catch (t) {
+      return this.log.error("CommentRenderer.isNGComment", t, { text: e }), !0;
+    }
+  }
+  resize(e, t) {
+    const s = this.videoElement, i = this.canvas;
+    if (!s || !i)
+      return;
+    const n = s.getBoundingClientRect(), r = e ?? n.width ?? i.width, a = t ?? n.height ?? i.height;
+    if (!Number.isFinite(r) || !Number.isFinite(a) || r <= 0 || a <= 0)
+      return;
+    const o = Math.max(1, Math.floor(r)), h = Math.max(1, Math.floor(a));
+    if (!Number.isFinite(o) || !Number.isFinite(h))
+      return;
+    const l = i.width || o, u = i.height || h;
+    if (l === o && u === h)
+      return;
+    i.width = o, i.height = h, i.style.width = `${o}px`, i.style.height = `${h}px`;
+    const p = l > 0 ? o / l : 1, v = u > 0 ? h / u : 1;
+    (p !== 1 || v !== 1) && this.comments.forEach((f) => {
+      f.isActive && (f.x *= p, f.y *= v, f.baseSpeed *= p, f.speed *= p, f.fontSize = Math.max(M, Math.floor(h * 0.05)));
+    }), this.calculateLaneMetrics();
+  }
+  destroyCanvasOnly() {
+    this.stopAnimation(), this.cleanupResizeHandling(), this.runCleanupTasks(), this.canvas && this.canvas.remove(), this.canvas = null, this.ctx = null;
+  }
+  calculateLaneMetrics() {
+    const e = this.canvas;
+    if (!e)
+      return;
+    const t = Math.max(M, Math.floor(e.height * 0.05));
+    this.laneHeight = t * 1.2;
+    const s = Math.floor(e.height / Math.max(this.laneHeight, 1));
+    this.laneCount = Math.max(G, s);
+  }
+  updateComments() {
+    const e = this.videoElement, t = this.canvas, s = this.ctx;
+    if (!e || !t || !s)
+      return;
+    this.currentTime = m(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused;
+    const i = this.buildPrepareOptions(t.width), n = this.duration > 0 && this.duration - this.currentTime <= S;
+    n && !this.finalPhaseActive && (this.finalPhaseActive = !0, s.clearRect(0, 0, t.width, t.height), this.comments.forEach((r) => {
+      r.isActive = !1;
+    }), this.reservedLanes.clear()), !n && this.finalPhaseActive && (this.finalPhaseActive = !1);
+    for (const r of this.comments)
+      this.isNGComment(r.text) || (r.color = this._settings.commentColor, r.opacity = this._settings.commentOpacity, r.isActive || (n ? r.vpos > this.currentTime - S && !r.hasShown : r.vpos >= this.currentTime - C && r.vpos <= this.currentTime + C) && (r.prepare(s, t.width, t.height, i), r.lane = this.findAvailableLane(r), r.y = r.lane * this.laneHeight, r.x = r.virtualStartX, r.isActive = !0, r.hasShown = !0), r.isActive && r.update(this.playbackRate, !this.isPlaying));
+    for (const r of this.comments)
+      r.isActive && r.x < -r.width && (r.isActive = !1);
+  }
+  buildPrepareOptions(e) {
+    return {
+      visibleWidth: e,
+      virtualExtension: k,
+      maxVisibleDurationMs: W,
+      minVisibleDurationMs: H,
+      maxWidthRatio: B,
+      bufferRatio: U,
+      baseBufferPx: X,
+      entryBufferPx: q
+    };
+  }
+  findAvailableLane(e) {
+    const t = this.currentTime;
+    this.pruneLaneReservations(t);
+    const s = this.getLanePriorityOrder(t), i = this.createLaneReservation(e, t);
+    for (const r of s)
+      if (this.isLaneAvailable(r, i, t))
+        return this.storeLaneReservation(r, i), r;
+    const n = s[0] ?? 0;
+    return this.storeLaneReservation(n, i), n;
+  }
+  pruneLaneReservations(e) {
+    for (const [t, s] of this.reservedLanes.entries()) {
+      const i = s.filter(
+        (n) => n.totalEndTime + g > e
+      );
+      i.length > 0 ? this.reservedLanes.set(t, i) : this.reservedLanes.delete(t);
+    }
+  }
+  getLanePriorityOrder(e) {
+    return Array.from({ length: this.laneCount }, (s, i) => i).sort((s, i) => {
+      const n = this.getLaneNextAvailableTime(s, e), r = this.getLaneNextAvailableTime(i, e);
+      return Math.abs(n - r) <= d ? s - i : n - r;
+    });
+  }
+  getLaneNextAvailableTime(e, t) {
+    const s = this.reservedLanes.get(e);
+    if (!s || s.length === 0)
+      return t;
+    let i = t;
+    for (const n of s)
+      i = Math.max(i, n.endTime);
+    return i;
+  }
+  createLaneReservation(e, t) {
+    const s = Math.max(e.speedPixelsPerMs, d), i = t + e.preCollisionDurationMs + g, n = t + e.totalDurationMs + g;
+    return {
+      comment: e,
+      startTime: t,
+      endTime: Math.max(t, i),
+      totalEndTime: Math.max(t, n),
+      startLeft: e.virtualStartX,
+      width: e.width,
+      speed: s,
+      buffer: e.bufferWidth
+    };
+  }
+  isLaneAvailable(e, t, s) {
+    const i = this.reservedLanes.get(e);
+    if (!i || i.length === 0)
+      return !0;
+    for (const n of i)
+      if (!(n.totalEndTime + g <= s) && this.areReservationsConflicting(n, t))
+        return !1;
+    return !0;
+  }
+  storeLaneReservation(e, t) {
+    const i = [...this.reservedLanes.get(e) ?? [], t].sort((n, r) => n.endTime - r.endTime);
+    this.reservedLanes.set(e, i);
+  }
+  areReservationsConflicting(e, t) {
+    const s = Math.max(e.startTime, t.startTime), i = Math.min(e.endTime, t.endTime);
+    if (s >= i)
+      return !1;
+    const n = /* @__PURE__ */ new Set([
+      s,
+      i,
+      s + (i - s) / 2
+    ]), r = this.solveLeftRightEqualityTime(e, t);
+    r !== null && r >= s - d && r <= i + d && n.add(r);
+    const a = this.solveLeftRightEqualityTime(t, e);
+    a !== null && a >= s - d && a <= i + d && n.add(a);
+    for (const o of n) {
+      if (o < s - d || o > i + d)
+        continue;
+      const h = this.computeForwardGap(e, t, o), l = this.computeForwardGap(t, e, o);
+      if (h <= d && l <= d)
+        return !0;
+    }
+    return !1;
+  }
+  computeForwardGap(e, t, s) {
+    const i = this.getBufferedEdges(e, s), n = this.getBufferedEdges(t, s);
+    return i.left - n.right;
+  }
+  getBufferedEdges(e, t) {
+    const s = Math.max(0, t - e.startTime), i = e.speed * s, n = e.startLeft - i, r = n - e.buffer, a = n + e.width + e.buffer;
+    return { left: r, right: a };
+  }
+  solveLeftRightEqualityTime(e, t) {
+    const s = t.speed - e.speed;
+    if (Math.abs(s) < d)
+      return null;
+    const n = (t.startLeft + t.speed * t.startTime + t.width + t.buffer - e.startLeft - e.speed * e.startTime + e.buffer) / s;
+    return Number.isFinite(n) ? n : null;
+  }
+  draw() {
+    const e = this.canvas, t = this.ctx;
+    if (!e || !t)
+      return;
+    t.clearRect(0, 0, e.width, e.height);
+    const s = this.comments.filter((n) => n.isActive), i = this.timeSource.now();
+    if (this._settings.isCommentVisible) {
+      const n = (i - this.lastDrawTime) / 16.666666666666668;
+      s.forEach((r) => {
+        const a = r.x - r.speed * n;
+        r.draw(t, a);
+      });
+    }
+    this.lastDrawTime = i;
+  }
+  updateFrame = () => {
+    if (this.videoElement) {
+      if (!this._settings.isCommentVisible) {
+        this.frameId = this.animationFrameProvider.request(this.updateFrame);
+        return;
+      }
+      this.updateComments(), this.draw(), this.frameId = this.animationFrameProvider.request(this.updateFrame);
+    }
+  };
+  startAnimation() {
+    this.stopAnimation(), this.frameId = this.animationFrameProvider.request(this.updateFrame);
+  }
+  stopAnimation() {
+    this.frameId !== null && (this.animationFrameProvider.cancel(this.frameId), this.frameId = null);
+  }
+  onSeek() {
+    const e = this.canvas, t = this.ctx, s = this.videoElement;
+    if (!e || !t || !s)
+      return;
+    this.finalPhaseActive = !1, this.currentTime = m(s.currentTime), this.reservedLanes.clear();
+    const i = this.buildPrepareOptions(e.width);
+    this.comments.forEach((n) => {
+      if (n.vpos >= this.currentTime - T && n.vpos <= this.currentTime + T) {
+        n.prepare(t, e.width, e.height, i), n.lane = this.findAvailableLane(n), n.y = n.lane * this.laneHeight;
+        const r = (this.currentTime - n.vpos) / 1e3, a = n.speed * r * 60;
+        n.x = n.virtualStartX - a, n.isActive = n.x > -n.width, n.x < -n.width && (n.isActive = !1, n.hasShown = !0);
+      } else
+        n.isActive = !1;
+    });
+  }
+  setupVideoEventListeners(e) {
+    try {
+      const t = () => {
+        this.isPlaying = !0;
+        const l = this.timeSource.now();
+        this.lastDrawTime = l, this.comments.forEach((u) => {
+          u.lastUpdateTime = l, u.isPaused = !1;
+        });
+      }, s = () => {
+        this.isPlaying = !1;
+        const l = this.timeSource.now();
+        this.comments.forEach((u) => {
+          u.lastUpdateTime = l, u.isPaused = !0;
+        });
+      }, i = () => {
+        this.onSeek();
+      }, n = () => {
+        this.onSeek();
+      }, r = () => {
+        this.playbackRate = e.playbackRate;
+        const l = this.timeSource.now();
+        this.comments.forEach((u) => {
+          u.lastUpdateTime = l;
+        });
+      }, a = () => {
+        this.handleVideoMetadataLoaded(e);
+      }, o = () => {
+        this.duration = Number.isFinite(e.duration) ? m(e.duration) : 0;
+      }, h = () => {
+        this.handleVideoSourceChange();
+      };
+      e.addEventListener("play", t), e.addEventListener("pause", s), e.addEventListener("seeking", i), e.addEventListener("seeked", n), e.addEventListener("ratechange", r), e.addEventListener("loadedmetadata", a), e.addEventListener("durationchange", o), e.addEventListener("emptied", h), this.addCleanup(() => e.removeEventListener("play", t)), this.addCleanup(() => e.removeEventListener("pause", s)), this.addCleanup(() => e.removeEventListener("seeking", i)), this.addCleanup(() => e.removeEventListener("seeked", n)), this.addCleanup(() => e.removeEventListener("ratechange", r)), this.addCleanup(() => e.removeEventListener("loadedmetadata", a)), this.addCleanup(() => e.removeEventListener("durationchange", o)), this.addCleanup(() => e.removeEventListener("emptied", h));
+    } catch (t) {
+      throw this.log.error("CommentRenderer.setupVideoEventListeners", t), t;
+    }
+  }
+  handleVideoMetadataLoaded(e) {
+    this.handleVideoSourceChange(e), this.resize(), this.calculateLaneMetrics(), this.onSeek();
+  }
+  handleVideoSourceChange(e) {
+    const t = e ?? this.videoElement;
+    if (!t) {
+      this.isPlaying = !1, this.finalPhaseActive = !1, this.resetCommentActivity();
+      return;
+    }
+    this.syncVideoState(t), this.finalPhaseActive = !1, this.resetCommentActivity();
+  }
+  syncVideoState(e) {
+    this.duration = Number.isFinite(e.duration) ? m(e.duration) : 0, this.currentTime = m(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.lastDrawTime = this.timeSource.now();
+  }
+  resetCommentActivity() {
+    const e = this.timeSource.now(), t = this.canvas, s = this.ctx;
+    t && s && s.clearRect(0, 0, t.width, t.height), this.reservedLanes.clear(), this.comments.forEach((i) => {
+      i.isActive = !1, i.isPaused = !this.isPlaying, i.hasShown = !1, i.lane = -1, i.x = i.virtualStartX, i.speed = i.baseSpeed, i.lastUpdateTime = e;
+    });
+  }
+  setupVideoChangeDetection(e, t) {
+    if (typeof MutationObserver > "u") {
+      this.log.debug(
+        "MutationObserver is not available in this environment. Video change detection is disabled."
+      );
+      return;
+    }
+    const s = new MutationObserver((n) => {
+      for (const r of n) {
+        if (r.type === "attributes" && r.attributeName === "src") {
+          const a = r.target;
+          let o = null, h = null;
+          if ((a instanceof HTMLVideoElement || a instanceof HTMLSourceElement) && (o = typeof r.oldValue == "string" ? r.oldValue : null, h = a.getAttribute("src")), o === h)
+            continue;
+          this.handleVideoSourceChange(e);
+          return;
+        }
+        if (r.type === "childList") {
+          for (const a of r.addedNodes)
+            if (a instanceof HTMLSourceElement) {
+              this.handleVideoSourceChange(e);
+              return;
+            }
+          for (const a of r.removedNodes)
+            if (a instanceof HTMLSourceElement) {
+              this.handleVideoSourceChange(e);
+              return;
+            }
+        }
+      }
+    });
+    s.observe(e, {
+      attributes: !0,
+      attributeFilter: ["src"],
+      attributeOldValue: !0,
+      childList: !0,
+      subtree: !0
+    }), this.addCleanup(() => s.disconnect());
+    const i = new MutationObserver((n) => {
+      for (const r of n)
+        if (r.type === "childList") {
+          for (const a of r.addedNodes) {
+            const o = this.extractVideoElement(a);
+            if (o && o !== this.videoElement) {
+              this.initialize(o);
+              return;
+            }
+          }
+          for (const a of r.removedNodes) {
+            if (a === this.videoElement) {
+              this.videoElement = null, this.handleVideoSourceChange(null);
+              return;
+            }
+            if (a instanceof Element) {
+              const o = a.querySelector("video");
+              if (o && o === this.videoElement) {
+                this.videoElement = null, this.handleVideoSourceChange(null);
+                return;
+              }
+            }
+          }
+        }
+    });
+    i.observe(t, { childList: !0, subtree: !0 }), this.addCleanup(() => i.disconnect());
+  }
+  extractVideoElement(e) {
+    if (e instanceof HTMLVideoElement)
+      return e;
+    if (e instanceof Element) {
+      const t = e.querySelector("video");
+      if (t instanceof HTMLVideoElement)
+        return t;
+    }
+    return null;
+  }
+  setupResizeHandling(e) {
+    if (this.cleanupResizeHandling(), this._settings.useContainerResizeObserver && this.isResizeObserverAvailable) {
+      const t = e.parentElement ?? e, s = new ResizeObserver((i) => {
+        for (const n of i) {
+          const { width: r, height: a } = n.contentRect;
+          r > 0 && a > 0 ? this.resize(r, a) : this.resize();
+        }
+      });
+      s.observe(t), this.resizeObserver = s, this.resizeObserverTarget = t;
+    } else if (typeof window < "u" && typeof window.addEventListener == "function") {
+      const t = () => {
+        this.resize();
+      };
+      window.addEventListener("resize", t), this.addCleanup(() => window.removeEventListener("resize", t));
+    } else
+      this.log.debug(
+        "Resize handling is disabled because neither ResizeObserver nor window APIs are available."
+      );
+  }
+  cleanupResizeHandling() {
+    this.resizeObserver && this.resizeObserverTarget && this.resizeObserver.unobserve(this.resizeObserverTarget), this.resizeObserver?.disconnect(), this.resizeObserver = null, this.resizeObserverTarget = null;
+  }
+  addCleanup(e) {
+    this.cleanupTasks.push(e);
+  }
+  runCleanupTasks() {
+    for (; this.cleanupTasks.length > 0; ) {
+      const e = this.cleanupTasks.pop();
+      try {
+        e?.();
+      } catch (t) {
+        this.log.error("CommentRenderer.cleanupTask", t);
+      }
+    }
+  }
+}
+export {
+  D as Comment,
+  Q as CommentRenderer,
+  K as DEFAULT_RENDERER_SETTINGS,
+  Z as RENDERER_VERSION,
+  I as cloneDefaultSettings,
+  Y as createDefaultAnimationFrameProvider,
+  x as createDefaultTimeSource,
+  L as createLogger
+};
+//# sourceMappingURL=comment-overlay.es.map

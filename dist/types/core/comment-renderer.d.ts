@@ -1,0 +1,93 @@
+import type { RendererSettings } from "../shared/types";
+import { Comment, type TimeSource } from "./comment";
+export interface CommentRendererConfig {
+    loggerNamespace?: string;
+    timeSource?: TimeSource;
+    animationFrameProvider?: AnimationFrameProvider;
+    createCanvasElement?: () => HTMLCanvasElement;
+}
+export interface CommentRendererInitializeOptions {
+    video: HTMLVideoElement;
+    container?: HTMLElement | null;
+}
+export interface AnimationFrameProvider {
+    request(callback: FrameRequestCallback): ReturnType<typeof setTimeout>;
+    cancel(handle: ReturnType<typeof setTimeout>): void;
+}
+export declare const createDefaultAnimationFrameProvider: (timeSource: TimeSource) => AnimationFrameProvider;
+export declare class CommentRenderer {
+    private _settings;
+    private readonly comments;
+    private readonly reservedLanes;
+    private readonly log;
+    private readonly timeSource;
+    private readonly animationFrameProvider;
+    private readonly createCanvasElement;
+    private readonly commentDependencies;
+    private canvas;
+    private ctx;
+    private videoElement;
+    private containerElement;
+    private laneCount;
+    private laneHeight;
+    private currentTime;
+    private duration;
+    private playbackRate;
+    private isPlaying;
+    private lastDrawTime;
+    private finalPhaseActive;
+    private frameId;
+    private resizeObserver;
+    private resizeObserverTarget;
+    private readonly isResizeObserverAvailable;
+    private readonly cleanupTasks;
+    constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
+    constructor(config?: CommentRendererConfig);
+    get settings(): RendererSettings;
+    set settings(value: RendererSettings);
+    private resolveContainer;
+    private ensureContainerPositioning;
+    initialize(options: HTMLVideoElement | CommentRendererInitializeOptions): void;
+    addComment(text: string, vpos: number, commands?: string[]): Comment | null;
+    clearComments(): void;
+    resetState(): void;
+    destroy(): void;
+    updateSettings(newSettings: RendererSettings): void;
+    getVideoElement(): HTMLVideoElement | null;
+    getCurrentVideoSource(): string | null;
+    getCommentsSnapshot(): Comment[];
+    isNGComment(text: string): boolean;
+    resize(width?: number, height?: number): void;
+    private destroyCanvasOnly;
+    private calculateLaneMetrics;
+    private updateComments;
+    private buildPrepareOptions;
+    private findAvailableLane;
+    private pruneLaneReservations;
+    private getLanePriorityOrder;
+    private getLaneNextAvailableTime;
+    private createLaneReservation;
+    private isLaneAvailable;
+    private storeLaneReservation;
+    private areReservationsConflicting;
+    private computeForwardGap;
+    private getBufferedEdges;
+    private solveLeftRightEqualityTime;
+    private draw;
+    private readonly updateFrame;
+    private startAnimation;
+    private stopAnimation;
+    private onSeek;
+    private setupVideoEventListeners;
+    private handleVideoMetadataLoaded;
+    private handleVideoSourceChange;
+    private syncVideoState;
+    private resetCommentActivity;
+    private setupVideoChangeDetection;
+    private extractVideoElement;
+    private setupResizeHandling;
+    private cleanupResizeHandling;
+    private addCleanup;
+    private runCleanupTasks;
+}
+//# sourceMappingURL=comment-renderer.d.ts.map
