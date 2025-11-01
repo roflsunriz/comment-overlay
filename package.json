@@ -2,6 +2,9 @@
   "name": "comment-overlay",
   "version": "1.0.0",
   "description": "Reusable comment overlay renderer engine.",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/comment-overlay.cjs.js",
   "module": "dist/comment-overlay.es.js",
   "types": "dist/types/index.d.ts",
