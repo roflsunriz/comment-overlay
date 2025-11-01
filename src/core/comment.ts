@@ -268,23 +268,43 @@ export class Comment {
 
       const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
       const baseShadowBlur = this.fontSize * 0.18;
-      const shadowLayers: ReadonlyArray<{
-        readonly offsetMultiplier: number;
-        readonly blurMultiplier: number;
-        readonly alpha: number;
-      }> = [
-        { offsetMultiplier: 1, blurMultiplier: 0.6, alpha: 0.45 },
-        { offsetMultiplier: 2, blurMultiplier: 1, alpha: 0.3 },
-        { offsetMultiplier: 3.2, blurMultiplier: 1.6, alpha: 0.18 },
+      type ShadowLayer = Readonly<{
+        offsetXMultiplier: number;
+        offsetYMultiplier: number;
+        blurMultiplier: number;
+        alpha: number;
+        rgb: string;
+      }>;
+      const shadowLayers: ReadonlyArray<ShadowLayer> = [
+        {
+          offsetXMultiplier: 0.9,
+          offsetYMultiplier: 1.1,
+          blurMultiplier: 0.55,
+          alpha: 0.52,
+          rgb: "20, 28, 40",
+        },
+        {
+          offsetXMultiplier: 2.4,
+          offsetYMultiplier: 2.7,
+          blurMultiplier: 1.45,
+          alpha: 0.32,
+          rgb: "0, 0, 0",
+        },
+        {
+          offsetXMultiplier: -0.7,
+          offsetYMultiplier: -0.6,
+          blurMultiplier: 0.4,
+          alpha: 0.42,
+          rgb: "255, 255, 255",
+        },
       ];
 
       shadowLayers.forEach((layer) => {
-        const offset = baseShadowOffset * layer.offsetMultiplier;
         const effectiveShadowAlpha = Math.max(0, Math.min(1, layer.alpha * this.opacity));
-        ctx.shadowColor = `rgba(0, 0, 0, ${effectiveShadowAlpha})`;
+        ctx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
         ctx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
-        ctx.shadowOffsetX = offset;
-        ctx.shadowOffsetY = offset;
+        ctx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
+        ctx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
         ctx.fillStyle = this.color;
         ctx.fillText(this.text, drawX, drawY);
       });

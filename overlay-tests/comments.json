@@ -33,5 +33,10 @@
     "text": "Blue(11.0s)",
     "vpos": 11000,
     "commands": ["#0000FF"]
+  },
+  {
+    "text": "ランダムな白いコメント",
+    "vpos": 30000,
+    "commands": []
   }
 ]

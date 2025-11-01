@@ -60,23 +60,23 @@ const L = {
   blue2: "#39F",
   purple2: "#63C",
   black2: "#666"
-}, C = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, H = /^[,.:;]+/, X = /[,.:;]+$/, B = (h) => {
+}, C = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, X = /^[,.:;]+/, H = /[,.:;]+$/, B = (h) => {
   const e = h.trim();
-  return e ? C.test(e) ? e : e.replace(H, "").replace(X, "") : "";
+  return e ? C.test(e) ? e : e.replace(X, "").replace(H, "") : "";
 }, G = (h) => C.test(h) ? h.toUpperCase() : null, q = (h) => h === "naka" || h === "ue" || h === "shita", Y = (h) => h === "small" || h === "medium" || h === "big", $ = (h) => h === "defont" || h === "gothic" || h === "mincho", j = (h) => h in F, J = (h, e) => {
   let t = "naka", s = "medium", n = "defont", a = null, i = 1, r = null, o = !1;
   for (const f of h) {
-    const v = B(typeof f == "string" ? f : "");
-    if (!v)
+    const p = B(typeof f == "string" ? f : "");
+    if (!p)
       continue;
-    if (C.test(v)) {
-      const g = G(v);
+    if (C.test(p)) {
+      const g = G(p);
       if (g) {
         a = g;
         continue;
       }
     }
-    const u = v.toLowerCase();
+    const u = p.toLowerCase();
     if (q(u)) {
       t = u;
       continue;
@@ -112,7 +112,7 @@ const L = {
     opacityOverride: d,
     isInvisible: o
   };
-}, M = x("CommentEngine:Comment"), S = 4e3, K = () => ({
+}, w = x("CommentEngine:Comment"), S = 4e3, K = () => ({
   now: () => typeof performance < "u" && typeof performance.now == "function" ? performance.now() : Date.now()
 }), P = () => K();
 class Z {
@@ -188,7 +188,7 @@ class Z {
         const b = Math.min(d, n.maxWidthRatio), D = n.maxVisibleDurationMs / Math.max(b, 1);
         f = Math.max(n.minVisibleDurationMs, Math.floor(D));
       }
-      const v = a + this.width + this.bufferWidth + c, u = Math.max(f, 1), g = v / u, O = g * 1e3 / 60;
+      const p = a + this.width + this.bufferWidth + c, u = Math.max(f, 1), g = p / u, O = g * 1e3 / 60;
       this.baseSpeed = O, this.speed = this.baseSpeed, this.speedPixelsPerMs = g;
       const _ = this.virtualStartX + this.width + this.bufferWidth + c, N = a + c, I = this.virtualStartX + this.width + this.bufferWidth, E = Math.max(g, Number.EPSILON), z = Math.max(0, I - N);
       this.visibleDurationMs = f, this.preCollisionDurationMs = Math.max(0, Math.ceil(z / E)), this.totalDurationMs = Math.max(
@@ -198,7 +198,7 @@ class Z {
       const k = this.width + this.bufferWidth + c;
       this.reservationWidth = Math.min(o, k), this.lastUpdateTime = this.timeSource.now(), this.isPaused = !1;
     } catch (a) {
-      throw M.error("Comment.prepare", a, {
+      throw w.error("Comment.prepare", a, {
         text: this.text,
         visibleWidth: t,
         canvasHeight: s,
@@ -224,7 +224,7 @@ class Z {
       const n = (s - this.lastUpdateTime) / (1e3 / 60);
       this.speed = this.baseSpeed * e, this.x -= this.speed * n, this.x < -this.width && (this.isActive = !1), this.lastUpdateTime = s, this.isPaused = !1;
     } catch (s) {
-      M.error("Comment.update", s, {
+      w.error("Comment.update", s, {
         text: this.text,
         playbackRate: e,
         isPaused: t,
@@ -241,15 +241,33 @@ class Z {
       e.strokeStyle = "#000000", e.lineWidth = Math.max(3, this.fontSize / 8), e.lineJoin = "round", e.strokeText(this.text, s, n);
       const a = Math.max(1, this.fontSize * 0.04), i = this.fontSize * 0.18;
       [
-        { offsetMultiplier: 1, blurMultiplier: 0.6, alpha: 0.45 },
-        { offsetMultiplier: 2, blurMultiplier: 1, alpha: 0.3 },
-        { offsetMultiplier: 3.2, blurMultiplier: 1.6, alpha: 0.18 }
+        {
+          offsetXMultiplier: 0.9,
+          offsetYMultiplier: 1.1,
+          blurMultiplier: 0.55,
+          alpha: 0.52,
+          rgb: "20, 28, 40"
+        },
+        {
+          offsetXMultiplier: 2.4,
+          offsetYMultiplier: 2.7,
+          blurMultiplier: 1.45,
+          alpha: 0.32,
+          rgb: "0, 0, 0"
+        },
+        {
+          offsetXMultiplier: -0.7,
+          offsetYMultiplier: -0.6,
+          blurMultiplier: 0.4,
+          alpha: 0.42,
+          rgb: "255, 255, 255"
+        }
       ].forEach((o) => {
-        const l = a * o.offsetMultiplier, c = Math.max(0, Math.min(1, o.alpha * this.opacity));
-        e.shadowColor = `rgba(0, 0, 0, ${c})`, e.shadowBlur = i * o.blurMultiplier, e.shadowOffsetX = l, e.shadowOffsetY = l, e.fillStyle = this.color, e.fillText(this.text, s, n);
+        const l = Math.max(0, Math.min(1, o.alpha * this.opacity));
+        e.shadowColor = `rgba(${o.rgb}, ${l})`, e.shadowBlur = i * o.blurMultiplier, e.shadowOffsetX = a * o.offsetXMultiplier, e.shadowOffsetY = a * o.offsetYMultiplier, e.fillStyle = this.color, e.fillText(this.text, s, n);
       }), e.shadowColor = "transparent", e.shadowBlur = 0, e.shadowOffsetX = 0, e.shadowOffsetY = 0, e.fillStyle = this.color, e.fillText(this.text, s, n), e.restore();
     } catch (s) {
-      M.error("Comment.draw", s, {
+      w.error("Comment.draw", s, {
         text: this.text,
         isActive: this.isActive,
         hasContext: !!e,
@@ -280,18 +298,18 @@ class Z {
     return this.isScrolling || this.staticExpiryTimeMs === null ? !1 : e >= this.staticExpiryTimeMs;
   }
 }
-const w = {
+const M = {
   commentColor: "#FFFFFF",
   commentOpacity: 0.75,
   isCommentVisible: !0,
   useContainerResizeObserver: !0,
   ngWords: [],
   ngRegexps: []
-}, fe = w, Q = () => ({
-  ...w,
-  ngWords: [...w.ngWords],
-  ngRegexps: [...w.ngRegexps]
-}), me = "v1.0.0", p = (h) => h * 1e3, ee = 1e4, T = 2e3, te = 1e3, ie = 4e3, se = 1800, ne = 3, ae = 0.25, re = 32, oe = 48, y = 120, he = 1, le = 12, R = 24, m = 1e-3, A = 50, ce = (h) => typeof window < "u" && typeof window.requestAnimationFrame == "function" && typeof window.cancelAnimationFrame == "function" ? {
+}, fe = M, Q = () => ({
+  ...M,
+  ngWords: [...M.ngWords],
+  ngRegexps: [...M.ngRegexps]
+}), me = "v1.0.0", v = (h) => h * 1e3, ee = 1e4, T = 2e3, te = 1e3, ie = 4e3, se = 1800, ne = 3, ae = 0.25, re = 32, oe = 48, y = 120, he = 1, le = 12, R = 24, m = 1e-3, A = 50, ce = (h) => typeof window < "u" && typeof window.requestAnimationFrame == "function" && typeof window.cancelAnimationFrame == "function" ? {
   request: (e) => window.requestAnimationFrame(e),
   cancel: (e) => window.cancelAnimationFrame(e)
 } : {
@@ -311,7 +329,7 @@ const w = {
   const e = h;
   return typeof e.commentColor == "string" && typeof e.commentOpacity == "number" && typeof e.isCommentVisible == "boolean";
 };
-class ve {
+class pe {
   _settings;
   comments = [];
   reservedLanes = /* @__PURE__ */ new Map();
@@ -377,7 +395,7 @@ class ve {
     try {
       this.destroyCanvasOnly();
       const t = e instanceof HTMLVideoElement ? e : e.video, s = e instanceof HTMLVideoElement ? e.parentElement : e.container ?? e.video.parentElement, n = this.resolveContainer(s ?? null, t);
-      this.videoElement = t, this.containerElement = n, this.duration = Number.isFinite(t.duration) ? p(t.duration) : 0, this.currentTime = p(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.lastDrawTime = this.timeSource.now();
+      this.videoElement = t, this.containerElement = n, this.duration = Number.isFinite(t.duration) ? v(t.duration) : 0, this.currentTime = v(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.lastDrawTime = this.timeSource.now();
       const a = this.createCanvasElement(), i = a.getContext("2d");
       if (!i)
         throw new Error("Failed to acquire 2D canvas context");
@@ -465,9 +483,9 @@ class ve {
     if (c === o && d === l)
       return;
     n.width = o, n.height = l, n.style.width = `${o}px`, n.style.height = `${l}px`;
-    const f = c > 0 ? o / c : 1, v = d > 0 ? l / d : 1;
-    (f !== 1 || v !== 1) && this.comments.forEach((u) => {
-      u.isActive && (u.x *= f, u.y *= v, u.baseSpeed *= f, u.speed *= f, u.fontSize = Math.max(R, Math.floor(l * 0.05)));
+    const f = c > 0 ? o / c : 1, p = d > 0 ? l / d : 1;
+    (f !== 1 || p !== 1) && this.comments.forEach((u) => {
+      u.isActive && (u.x *= f, u.y *= p, u.baseSpeed *= f, u.speed *= f, u.fontSize = Math.max(R, Math.floor(l * 0.05)));
     }), this.calculateLaneMetrics();
   }
   destroyCanvasOnly() {
@@ -486,7 +504,7 @@ class ve {
     const e = this.videoElement, t = this.canvas, s = this.ctx;
     if (!e || !t || !s)
       return;
-    this.currentTime = p(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused;
+    this.currentTime = v(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused;
     const n = this.buildPrepareOptions(t.width), a = this.duration > 0 && this.duration - this.currentTime <= ee;
     a && !this.finalPhaseActive && (this.finalPhaseActive = !0, s.clearRect(0, 0, t.width, t.height), this.comments.forEach((i) => {
       i.isActive = !1, i.clearActivation();
@@ -728,7 +746,7 @@ class ve {
     const e = this.canvas, t = this.ctx, s = this.videoElement;
     if (!e || !t || !s)
       return;
-    const n = p(s.currentTime);
+    const n = v(s.currentTime);
     this.finalPhaseActive = !1, this.currentTime = n, this.reservedLanes.clear(), this.topStaticLaneReservations.clear(), this.bottomStaticLaneReservations.clear();
     const a = this.buildPrepareOptions(e.width);
     this.comments.forEach((i) => {
@@ -781,7 +799,7 @@ class ve {
       }, r = () => {
         this.handleVideoMetadataLoaded(e);
       }, o = () => {
-        this.duration = Number.isFinite(e.duration) ? p(e.duration) : 0;
+        this.duration = Number.isFinite(e.duration) ? v(e.duration) : 0;
       }, l = () => {
         this.handleVideoSourceChange();
       };
@@ -802,7 +820,7 @@ class ve {
     this.syncVideoState(t), this.finalPhaseActive = !1, this.resetCommentActivity();
   }
   syncVideoState(e) {
-    this.duration = Number.isFinite(e.duration) ? p(e.duration) : 0, this.currentTime = p(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.lastDrawTime = this.timeSource.now();
+    this.duration = Number.isFinite(e.duration) ? v(e.duration) : 0, this.currentTime = v(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.lastDrawTime = this.timeSource.now();
   }
   resetCommentActivity() {
     const e = this.timeSource.now(), t = this.canvas, s = this.ctx;
@@ -923,7 +941,7 @@ class ve {
 }
 export {
   Z as Comment,
-  ve as CommentRenderer,
+  pe as CommentRenderer,
   fe as DEFAULT_RENDERER_SETTINGS,
   me as RENDERER_VERSION,
   Q as cloneDefaultSettings,
