@@ -1,0 +1,37 @@
+[
+  {
+    "text": "Welcome to the overlay test!",
+    "vpos": 1000,
+    "commands": []
+  },
+  {
+    "text": "ナイスショット！",
+    "vpos": 2500,
+    "commands": ["ue"]
+  },
+  {
+    "text": "Try scrubbing the timeline to trigger seeking.",
+    "vpos": 4300,
+    "commands": []
+  },
+  {
+    "text": "Pause and resume to see smooth updates.",
+    "vpos": 6100,
+    "commands": []
+  },
+  {
+    "text": "コメントの重なり具合をチェック中…",
+    "vpos": 7800,
+    "commands": []
+  },
+  {
+    "text": "Speed up playback to test lane reservations.",
+    "vpos": 9400,
+    "commands": []
+  },
+  {
+    "text": "Thanks for testing the comment engine!",
+    "vpos": 11000,
+    "commands": []
+  }
+]
