@@ -1,4 +1,4 @@
-import type { RendererSettings } from "../shared/types";
+import type { RendererSettings, ScrollDirection } from "../shared/types";
 import { createLogger } from "../shared/logger";
 import { parseCommentCommands } from "./comment-commands";
 import type { CommentLayoutCommand } from "../types/comment";
@@ -77,6 +77,11 @@ export interface CommentDependencies {
   timeSource?: TimeSource;
 }
 
+const resolveScrollDirection = (input: ScrollDirection | string): ScrollDirection =>
+  input === "ltr" ? "ltr" : "rtl";
+
+const getDirectionSign = (direction: ScrollDirection): -1 | 1 => (direction === "ltr" ? 1 : -1);
+
 export interface CommentPrepareOptions {
   visibleWidth: number;
   virtualExtension: number;
@@ -124,6 +129,9 @@ export class Comment {
   preCollisionDurationMs = 0;
   speedPixelsPerMs = 0;
   virtualStartX = 0;
+  exitThreshold = 0;
+  scrollDirection: ScrollDirection = "rtl";
+  private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
 
   constructor(
@@ -160,6 +168,7 @@ export class Comment {
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
 
     this.timeSource = dependencies.timeSource ?? createDefaultTimeSource();
+    this.applyScrollDirection(settings.scrollDirection);
     this.syncWithSettings(settings);
   }
 
@@ -213,8 +222,25 @@ export class Comment {
       this.bufferWidth = Math.max(options.baseBufferPx, bufferFromWidth);
       const entryBuffer = Math.max(options.entryBufferPx, this.bufferWidth);
 
-      this.virtualStartX = safeVisibleWidth + options.virtualExtension;
-      this.x = this.virtualStartX;
+      const direction = this.scrollDirection;
+
+      const startLeft =
+        direction === "rtl"
+          ? safeVisibleWidth + options.virtualExtension
+          : -this.width - this.bufferWidth - options.virtualExtension;
+      const exitLeft =
+        direction === "rtl"
+          ? -this.width - this.bufferWidth - entryBuffer
+          : safeVisibleWidth + entryBuffer;
+      const trailingBoundary = direction === "rtl" ? safeVisibleWidth + entryBuffer : -entryBuffer;
+      const trailingEdgeAtStart =
+        direction === "rtl"
+          ? startLeft + this.width + this.bufferWidth
+          : startLeft - this.bufferWidth;
+
+      this.virtualStartX = startLeft;
+      this.x = startLeft;
+      this.exitThreshold = exitLeft;
 
       const widthRatio = this.width / safeVisibleWidth;
       let visibleDurationMs = options.maxVisibleDurationMs;
@@ -232,11 +258,12 @@ export class Comment {
       this.speed = this.baseSpeed;
       this.speedPixelsPerMs = pixelsPerMs;
 
-      const travelDistance = this.virtualStartX + this.width + this.bufferWidth + entryBuffer;
-      const preCollisionBoundary = safeVisibleWidth + entryBuffer;
-      const startRight = this.virtualStartX + this.width + this.bufferWidth;
+      const travelDistance = Math.abs(exitLeft - startLeft);
+      const preCollisionDistance =
+        direction === "rtl"
+          ? Math.max(0, trailingEdgeAtStart - trailingBoundary)
+          : Math.max(0, trailingBoundary - trailingEdgeAtStart);
       const safePixelsPerMs = Math.max(pixelsPerMs, Number.EPSILON);
-      const preCollisionDistance = Math.max(0, startRight - preCollisionBoundary);
 
       this.visibleDurationMs = visibleDurationMs;
       this.preCollisionDurationMs = Math.max(0, Math.ceil(preCollisionDistance / safePixelsPerMs));
@@ -283,8 +310,11 @@ export class Comment {
 
       const deltaTime = (currentTime - this.lastUpdateTime) / (1000 / 60);
       this.speed = this.baseSpeed * playbackRate;
-      this.x -= this.speed * deltaTime;
-      if (this.x < -this.width) {
+      this.x += this.speed * deltaTime * this.directionSign;
+      const hasExited =
+        (this.scrollDirection === "rtl" && this.x <= this.exitThreshold) ||
+        (this.scrollDirection === "ltr" && this.x >= this.exitThreshold);
+      if (hasExited) {
         this.isActive = false;
       }
       this.lastUpdateTime = currentTime;
@@ -386,6 +416,7 @@ export class Comment {
   syncWithSettings(settings: RendererSettings): void {
     this.color = this.getEffectiveColor(settings.commentColor);
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
+    this.applyScrollDirection(settings.scrollDirection);
   }
 
   getEffectiveColor(defaultColor: string): string {
@@ -426,5 +457,15 @@ export class Comment {
       return false;
     }
     return currentTimeMs >= this.staticExpiryTimeMs;
+  }
+
+  getDirectionSign(): -1 | 1 {
+    return this.directionSign;
+  }
+
+  private applyScrollDirection(direction: ScrollDirection | string): void {
+    const resolved = resolveScrollDirection(direction);
+    this.scrollDirection = resolved;
+    this.directionSign = getDirectionSign(resolved);
   }
 }

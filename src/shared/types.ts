@@ -1,3 +1,5 @@
+export type ScrollDirection = "rtl" | "ltr";
+
 export interface RendererSettings {
   commentColor: string;
   commentOpacity: number;
@@ -5,6 +7,7 @@ export interface RendererSettings {
   useContainerResizeObserver: boolean;
   ngWords: string[];
   ngRegexps: string[];
+  scrollDirection: ScrollDirection;
 }
 
 export interface VideoMetadata {

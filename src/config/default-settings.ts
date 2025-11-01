@@ -18,6 +18,7 @@ const BASE_SETTINGS: RendererSettings = {
   useContainerResizeObserver: true,
   ngWords: [],
   ngRegexps: [],
+  scrollDirection: "rtl",
 };
 
 export const DEFAULT_RENDERER_SETTINGS: ReadonlySettings = BASE_SETTINGS;
@@ -28,4 +29,4 @@ export const cloneDefaultSettings = (): RendererSettings => ({
   ngRegexps: [...BASE_SETTINGS.ngRegexps],
 });
 
-export const COMMENT_OVERLAY_VERSION = "v1.0.1";
+export const COMMENT_OVERLAY_VERSION = "v1.1.0";

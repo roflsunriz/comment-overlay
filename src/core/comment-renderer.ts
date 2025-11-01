@@ -36,6 +36,7 @@ interface LaneReservation {
   width: number;
   speed: number;
   buffer: number;
+  directionSign: -1 | 1;
 }
 
 const toMilliseconds = (seconds: number): number => seconds * 1000;
@@ -54,6 +55,11 @@ const DEFAULT_LANE_COUNT = 12;
 const MIN_FONT_SIZE_PX = 24;
 const EDGE_EPSILON = 1e-3;
 const SEEK_DIRECTION_EPSILON_MS = 50;
+
+const normalizeSettings = (settings: RendererSettings): RendererSettings => ({
+  ...settings,
+  scrollDirection: settings.scrollDirection === "ltr" ? "ltr" : "rtl",
+});
 
 export const createDefaultAnimationFrameProvider = (
   timeSource: TimeSource,
@@ -143,13 +149,13 @@ export class CommentRenderer {
     let config: CommentRendererConfig;
 
     if (isRendererSettings(settingsOrConfig)) {
-      baseSettings = { ...settingsOrConfig };
+      baseSettings = normalizeSettings({ ...(settingsOrConfig as RendererSettings) });
       config = maybeConfig ?? {};
     } else {
       const configCandidate = settingsOrConfig ?? maybeConfig ?? {};
       config =
         typeof configCandidate === "object" ? (configCandidate as CommentRendererConfig) : {};
-      baseSettings = cloneDefaultSettings();
+      baseSettings = normalizeSettings(cloneDefaultSettings());
     }
 
     this.timeSource = config.timeSource ?? createDefaultTimeSource();
@@ -157,7 +163,7 @@ export class CommentRenderer {
       config.animationFrameProvider ?? createDefaultAnimationFrameProvider(this.timeSource);
     this.createCanvasElement = config.createCanvasElement ?? createBrowserCanvasFactory();
     this.commentDependencies = { timeSource: this.timeSource };
-    this._settings = { ...baseSettings };
+    this._settings = normalizeSettings(baseSettings);
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
   }
 
@@ -166,7 +172,7 @@ export class CommentRenderer {
   }
 
   set settings(value: RendererSettings) {
-    this._settings = { ...value };
+    this._settings = normalizeSettings(value);
   }
 
   private resolveContainer(
@@ -304,11 +310,17 @@ export class CommentRenderer {
 
   updateSettings(newSettings: RendererSettings): void {
     const previousUseContainer = this._settings.useContainerResizeObserver;
+    const previousDirection = this._settings.scrollDirection;
     this.settings = newSettings;
+    const directionChanged = previousDirection !== this._settings.scrollDirection;
 
     this.comments.forEach((comment) => {
       comment.syncWithSettings(this._settings);
     });
+
+    if (directionChanged) {
+      this.resetCommentActivity();
+    }
 
     if (!this._settings.isCommentVisible && this.ctx && this.canvas) {
       this.comments.forEach((comment) => {
@@ -359,10 +371,18 @@ export class CommentRenderer {
         return true;
       }
 
-      if (Array.isArray(this._settings.ngWords)) {
-        const containsNgWord = this._settings.ngWords.some(
-          (word) => typeof word === "string" && word.length > 0 && text.includes(word),
-        );
+      if (Array.isArray(this._settings.ngWords) && this._settings.ngWords.length > 0) {
+        const normalizedText = text.toLowerCase();
+        const containsNgWord = this._settings.ngWords.some((word) => {
+          if (typeof word !== "string") {
+            return false;
+          }
+          const normalizedWord = word.trim().toLowerCase();
+          if (normalizedWord.length === 0) {
+            return false;
+          }
+          return normalizedText.includes(normalizedWord);
+        });
         if (containsNgWord) {
           return true;
         }
@@ -562,7 +582,12 @@ export class CommentRenderer {
     }
 
     for (const comment of this.comments) {
-      if (comment.isActive && comment.isScrolling && comment.x < -comment.width) {
+      if (
+        comment.isActive &&
+        comment.isScrolling &&
+        ((comment.scrollDirection === "rtl" && comment.x <= comment.exitThreshold) ||
+          (comment.scrollDirection === "ltr" && comment.x >= comment.exitThreshold))
+      ) {
         comment.isActive = false;
         comment.clearActivation();
       }
@@ -668,9 +693,15 @@ export class CommentRenderer {
     if (comment.layout === "naka") {
       const elapsedMs = Math.max(0, referenceTime - comment.vpos);
       const displacement = comment.speedPixelsPerMs * elapsedMs;
-      const projectedX = comment.virtualStartX - displacement;
+      const directionSign = comment.getDirectionSign();
+      const projectedX = comment.virtualStartX + directionSign * displacement;
+      const exitThreshold = comment.exitThreshold;
+      const direction = comment.scrollDirection;
+      const alreadyExited =
+        (direction === "rtl" && projectedX <= exitThreshold) ||
+        (direction === "ltr" && projectedX >= exitThreshold);
 
-      if (projectedX <= -comment.width) {
+      if (alreadyExited) {
         comment.isActive = false;
         comment.hasShown = true;
         comment.clearActivation();
@@ -794,6 +825,7 @@ export class CommentRenderer {
       width: comment.width,
       speed,
       buffer: comment.bufferWidth,
+      directionSign: comment.getDirectionSign(),
     };
   }
 
@@ -875,24 +907,26 @@ export class CommentRenderer {
   ): { left: number; right: number } {
     const elapsed = Math.max(0, time - reservation.startTime);
     const displacement = reservation.speed * elapsed;
-    const rawLeft = reservation.startLeft - displacement;
+    const rawLeft = reservation.startLeft + reservation.directionSign * displacement;
     const left = rawLeft - reservation.buffer;
     const right = rawLeft + reservation.width + reservation.buffer;
     return { left, right };
   }
 
   private solveLeftRightEqualityTime(left: LaneReservation, right: LaneReservation): number | null {
-    const denominator = right.speed - left.speed;
+    const leftSign = left.directionSign;
+    const rightSign = right.directionSign;
+    const denominator = rightSign * right.speed - leftSign * left.speed;
     if (Math.abs(denominator) < EDGE_EPSILON) {
       return null;
     }
     const numerator =
       right.startLeft +
-      right.speed * right.startTime +
+      rightSign * right.speed * right.startTime +
       right.width +
       right.buffer -
       left.startLeft -
-      left.speed * left.startTime +
+      leftSign * left.speed * left.startTime +
       left.buffer;
     const time = numerator / denominator;
     if (!Number.isFinite(time)) {
@@ -915,7 +949,7 @@ export class CommentRenderer {
     if (this._settings.isCommentVisible) {
       const deltaTime = (now - this.lastDrawTime) / (1000 / 60);
       activeComments.forEach((comment) => {
-        const interpolatedX = comment.x - comment.speed * deltaTime;
+        const interpolatedX = comment.x + comment.getDirectionSign() * comment.speed * deltaTime;
         comment.draw(context, interpolatedX);
       });
     }

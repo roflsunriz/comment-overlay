@@ -1,4 +1,4 @@
-import type { RendererSettings } from "../shared/types";
+import type { RendererSettings, ScrollDirection } from "../shared/types";
 import type { CommentLayoutCommand } from "../types/comment";
 export declare const STATIC_VISIBLE_DURATION_MS = 4000;
 export interface TimeSource {
@@ -53,6 +53,9 @@ export declare class Comment {
     preCollisionDurationMs: number;
     speedPixelsPerMs: number;
     virtualStartX: number;
+    exitThreshold: number;
+    scrollDirection: ScrollDirection;
+    private directionSign;
     private readonly timeSource;
     constructor(text: string, vpos: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
     prepare(ctx: CanvasRenderingContext2D, visibleWidth: number, canvasHeight: number, options: CommentPrepareOptions): void;
@@ -64,5 +67,7 @@ export declare class Comment {
     markActivated(atTimeMs: number): void;
     clearActivation(): void;
     hasStaticExpired(currentTimeMs: number): boolean;
+    getDirectionSign(): -1 | 1;
+    private applyScrollDirection;
 }
 //# sourceMappingURL=comment.d.ts.map

@@ -53,8 +53,11 @@ renderer.addComment("Hello Overlay!", 150, ["naka", "yellow"]);
 | `commentOpacity` | `number` | コメントの不透明度 (0-1) |
 | `isCommentVisible` | `boolean` | コメント描画全体の ON/OFF |
 | `useContainerResizeObserver` | `boolean` | コンテナサイズの自動追跡を行うかどうか |
-| `ngWords` | `string[]` | 完全一致 NG ワード |
-| `ngRegexps` | `string[]` | 正規表現 NG ワード |
+| `ngWords` | `string[]` | 部分一致 (大文字小文字を区別しない) で判定する NG ワード |
+| `ngRegexps` | `string[]` | 正規表現 NG パターン |
+| `scrollDirection` | `'rtl' \| 'ltr'` | 横流れコメントのスクロール方向 |
+
+`ngWords` は入力をトリムしたうえで部分一致・大文字小文字を区別せずに評価されます。`scrollDirection` を `'ltr'` にするとコメントが左側から右方向へ流れ、デフォルトの `'rtl'` では従来通り右側から左方向へ流れます。
 
 配列を共有しないためにも `cloneDefaultSettings()` の戻り値を編集するか、自前でディープコピーしてください。
 
@@ -89,7 +92,7 @@ logger.info("Renderer started");
 
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v1.0.1`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v1.1.0`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";
