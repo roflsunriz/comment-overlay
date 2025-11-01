@@ -1,6 +1,6 @@
 {
   "name": "comment-overlay",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Reusable comment overlay renderer engine.",
   "main": "dist/comment-overlay.cjs.js",
   "module": "dist/comment-overlay.es.js",
