@@ -7,6 +7,57 @@ const logger = createLogger("CommentEngine:Comment");
 
 export const STATIC_VISIBLE_DURATION_MS = 4_000;
 
+const HEX_COLOR_PATTERN = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i;
+
+const clampOpacity = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (value <= 0) {
+    return 0;
+  }
+  if (value >= 1) {
+    return 1;
+  }
+  return value;
+};
+
+const expandHex = (fragment: string): string =>
+  fragment.length === 1 ? fragment.repeat(2) : fragment;
+
+const parseHexComponent = (component: string): number => Number.parseInt(component, 16);
+
+const resolveFillStyleWithOpacity = (color: string, opacity: number): string => {
+  const match = HEX_COLOR_PATTERN.exec(color);
+  if (!match) {
+    return color;
+  }
+  const body = match[1];
+  let red: number;
+  let green: number;
+  let blue: number;
+  let alpha = 1;
+
+  if (body.length === 3 || body.length === 4) {
+    red = parseHexComponent(expandHex(body[0]));
+    green = parseHexComponent(expandHex(body[1]));
+    blue = parseHexComponent(expandHex(body[2]));
+    if (body.length === 4) {
+      alpha = parseHexComponent(expandHex(body[3])) / 255;
+    }
+  } else {
+    red = parseHexComponent(body.slice(0, 2));
+    green = parseHexComponent(body.slice(2, 4));
+    blue = parseHexComponent(body.slice(4, 6));
+    if (body.length === 8) {
+      alpha = parseHexComponent(body.slice(6, 8)) / 255;
+    }
+  }
+
+  const combinedAlpha = clampOpacity(alpha * clampOpacity(opacity));
+  return `rgba(${red}, ${green}, ${blue}, ${combinedAlpha})`;
+};
+
 export interface TimeSource {
   now(): number;
 }
@@ -255,8 +306,9 @@ export class Comment {
       }
 
       ctx.save();
-      ctx.globalAlpha = this.opacity;
       ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+      const effectiveOpacity = clampOpacity(this.opacity);
+      ctx.globalAlpha = effectiveOpacity;
 
       const drawX = interpolatedX ?? this.x;
       const drawY = this.y + this.fontSize;
@@ -265,6 +317,7 @@ export class Comment {
       ctx.lineWidth = Math.max(3, this.fontSize / 8);
       ctx.lineJoin = "round";
       ctx.strokeText(this.text, drawX, drawY);
+      ctx.globalAlpha = 1;
 
       const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
       const baseShadowBlur = this.fontSize * 0.18;
@@ -299,13 +352,14 @@ export class Comment {
         },
       ];
 
+      // 透明な塗りでシャドウのみ描画し、文字色の重ね塗りによる不透明度の累積を防ぐ
       shadowLayers.forEach((layer) => {
-        const effectiveShadowAlpha = Math.max(0, Math.min(1, layer.alpha * this.opacity));
+        const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
         ctx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
         ctx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
         ctx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
         ctx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = "rgba(0, 0, 0, 0)";
         ctx.fillText(this.text, drawX, drawY);
       });
 
@@ -314,7 +368,8 @@ export class Comment {
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
-      ctx.fillStyle = this.color;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
       ctx.fillText(this.text, drawX, drawY);
 
       ctx.restore();
@@ -343,13 +398,13 @@ export class Comment {
 
   getEffectiveOpacity(defaultOpacity: number): number {
     if (typeof this.opacityOverride === "number") {
-      return Math.max(0, Math.min(1, this.opacityOverride));
+      return clampOpacity(this.opacityOverride);
     }
     const scaled = defaultOpacity * this.opacityMultiplier;
     if (!Number.isFinite(scaled)) {
       return 0;
     }
-    return Math.max(0, Math.min(1, scaled));
+    return clampOpacity(scaled);
   }
 
   markActivated(atTimeMs: number): void {
