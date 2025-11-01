@@ -7,12 +7,10 @@ import {
   type TimeSource,
   createDefaultTimeSource,
 } from "./comment";
-import { KeyboardShortcutHandler } from "./keyboard-shortcut-handler";
 import { createLogger, type Logger } from "../shared/logger";
 
 export interface CommentRendererConfig {
   loggerNamespace?: string;
-  enableKeyboardShortcuts?: boolean;
   timeSource?: TimeSource;
   animationFrameProvider?: AnimationFrameProvider;
   createCanvasElement?: () => HTMLCanvasElement;
@@ -113,9 +111,7 @@ export class CommentRenderer {
   private readonly timeSource: TimeSource;
   private readonly animationFrameProvider: AnimationFrameProvider;
   private readonly createCanvasElement: () => HTMLCanvasElement;
-  private readonly enableKeyboardShortcuts: boolean;
   private readonly commentDependencies: CommentDependencies;
-  private readonly isBrowserEnvironment: boolean;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private videoElement: HTMLVideoElement | null = null;
@@ -129,7 +125,6 @@ export class CommentRenderer {
   private lastDrawTime = 0;
   private finalPhaseActive = false;
   private frameId: ReturnType<typeof setTimeout> | null = null;
-  private keyboardHandler: KeyboardShortcutHandler | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeObserverTarget: Element | null = null;
   private readonly isResizeObserverAvailable = typeof ResizeObserver !== "undefined";
@@ -141,8 +136,6 @@ export class CommentRenderer {
     settingsOrConfig: RendererSettings | CommentRendererConfig | null = null,
     maybeConfig: CommentRendererConfig | undefined = undefined,
   ) {
-    const hasDom = typeof window !== "undefined" && typeof document !== "undefined";
-
     let baseSettings: RendererSettings;
     let config: CommentRendererConfig;
 
@@ -156,14 +149,12 @@ export class CommentRenderer {
       baseSettings = cloneDefaultSettings();
     }
 
-    this.isBrowserEnvironment = hasDom;
     this.timeSource = config.timeSource ?? createDefaultTimeSource();
     this.animationFrameProvider =
       config.animationFrameProvider ?? createDefaultAnimationFrameProvider(this.timeSource);
     this.createCanvasElement = config.createCanvasElement ?? createBrowserCanvasFactory();
     this.commentDependencies = { timeSource: this.timeSource };
     this._settings = { ...baseSettings };
-    this.enableKeyboardShortcuts = config.enableKeyboardShortcuts ?? hasDom;
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
   }
 
@@ -248,7 +239,6 @@ export class CommentRenderer {
       this.resize();
       this.calculateLaneMetrics();
       this.setupVideoEventListeners(video);
-      this.setupKeyboardShortcuts();
       this.setupResizeHandling(video);
       this.startAnimation();
     } catch (error) {
@@ -290,8 +280,6 @@ export class CommentRenderer {
 
   destroy(): void {
     this.stopAnimation();
-    this.keyboardHandler?.stopListening();
-    this.keyboardHandler = null;
     this.cleanupResizeHandling();
     this.runCleanupTasks();
 
@@ -842,47 +830,6 @@ export class CommentRenderer {
     } catch (error) {
       this.log.error("CommentRenderer.setupVideoEventListeners", error as Error);
       throw error;
-    }
-  }
-
-  private setupKeyboardShortcuts(): void {
-    try {
-      if (!this.enableKeyboardShortcuts || !this.isBrowserEnvironment) {
-        this.keyboardHandler?.stopListening();
-        this.keyboardHandler = null;
-        return;
-      }
-
-      this.keyboardHandler?.stopListening();
-      this.keyboardHandler = new KeyboardShortcutHandler();
-      this.keyboardHandler.addShortcut("C", "Shift", () => {
-        try {
-          this._settings.isCommentVisible = !this._settings.isCommentVisible;
-          if (!this._settings.isCommentVisible) {
-            this.comments.forEach((comment) => {
-              comment.isActive = false;
-            });
-            if (this.ctx && this.canvas) {
-              this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            }
-          }
-          const globalSettingsManager = (
-            window as typeof window & {
-              dAniRenderer?: {
-                settingsManager?: {
-                  updateSettings: (settings: RendererSettings) => void;
-                };
-              };
-            }
-          ).dAniRenderer?.settingsManager;
-          globalSettingsManager?.updateSettings(this._settings);
-        } catch (error) {
-          this.log.error(error as Error, "CommentRenderer.keyboardShortcut");
-        }
-      });
-      this.keyboardHandler.startListening();
-    } catch (error) {
-      this.log.error(error as Error, "CommentRenderer.setupKeyboardShortcuts");
     }
   }
 

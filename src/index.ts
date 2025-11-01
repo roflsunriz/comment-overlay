@@ -19,4 +19,3 @@ export {
 } from "./config/default-settings";
 export type { RendererSettings, VideoMetadata } from "./shared/types";
 export { createLogger, type LogLevel, type Logger } from "./shared/logger";
-export { KeyboardShortcutHandler, type ShortcutCallback } from "./core/keyboard-shortcut-handler";

@@ -40,10 +40,7 @@ const fallbackEmitter = (level: LogLevel, namespace: string, args: unknown[]): v
   }
 };
 
-export const createLogger = (
-  namespace: string,
-  options: LoggerOptions = {},
-): Logger => {
+export const createLogger = (namespace: string, options: LoggerOptions = {}): Logger => {
   const { level = "info", emitter = fallbackEmitter } = options;
   const threshold = LEVEL_PRIORITY[level];
 

@@ -7,9 +7,9 @@
   "types": "dist/types/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/comment-overlay.es.js",
-      "require": "./dist/comment-overlay.cjs.js",
-      "types": "./dist/types/index.d.ts"
+      "require": "./dist/comment-overlay.cjs.js"
     }
   },
   "files": [
@@ -21,7 +21,7 @@
     "build": "npm run clean && npm run typegen && vite build",
     "type-check": "tsc --project tsconfig.build.json --noEmit",
     "typegen": "tsc --project tsconfig.build.json",
-    "lint": "eslint src/core src/index.ts --ext .ts",
+    "lint": "eslint src --ext .ts",
     "preview": "vite preview"
   },
   "keywords": [

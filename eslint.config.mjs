@@ -19,7 +19,7 @@ const typedTsConfigs = tsAdditionalConfigs.map((config) => ({
 
 export default [
   {
-    ignores: ["dist", "node_modules", "runtime", "services", "config"],
+    ignores: ["dist", "node_modules"],
   },
   {
     ...tsBaseConfig,
