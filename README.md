@@ -1,6 +1,10 @@
 # comment-overlay
 
-再利用可能なコメントオーバーレイ描画エンジンです。ニコニコ動画のような横流れコメントを、HTML5 動画など任意の再生コンテンツ上に重ねて表示できます。
+[![npm version](https://img.shields.io/npm/v/comment-overlay)](https://www.npmjs.com/package/comment-overlay)
+[![npm downloads](https://img.shields.io/npm/dm/comment-overlay)](https://www.npmjs.com/package/comment-overlay)
+[![license](https://img.shields.io/github/license/rofls/comment-overlay)](./LICENSE)
+
+再利用可能なコメントオーバーレイ描画エンジンです。ニコニコ動画のような横流れコメントを、HTML5 動画など任意の再生コンテンツ上に重ねて表示できます。npm モジュールとして公開されており、`npm install comment-overlay` で導入できます。
 
 ![cover](./images/cover.png)
 
@@ -73,6 +77,8 @@ video.addEventListener("ended", () => {
 3. ブラウザーで表示される URL を開き、`overlay-tests` 内のテスト UI でコメント描画を確認できます。
 
 サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータは `overlay-tests/comments.json` を編集して調整できます。動画データは `overlay-tests/video.mp4` と `overlay-tests/video2.mp4` に配置してください。
+
+より詳細なセットアップや API の使い方は [DOCUMENTATION.md](./DOCUMENTATION.md) を参照してください。
 
 ## コントリビューション
 

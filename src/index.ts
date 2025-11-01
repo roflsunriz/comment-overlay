@@ -15,7 +15,7 @@ export {
 export {
   cloneDefaultSettings,
   DEFAULT_RENDERER_SETTINGS,
-  RENDERER_VERSION,
+  COMMENT_OVERLAY_VERSION,
 } from "./config/default-settings";
 export type { RendererSettings, VideoMetadata } from "./shared/types";
 export { createLogger, type LogLevel, type Logger } from "./shared/logger";

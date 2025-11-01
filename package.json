@@ -1,6 +1,6 @@
 {
   "name": "comment-overlay",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Reusable comment overlay renderer engine.",
   "publishConfig": {
     "access": "public"
@@ -16,7 +16,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "DOCUMENTATION.md"
   ],
   "scripts": {
     "clean": "rimraf dist",

@@ -60,13 +60,13 @@ const R = {
   blue2: "#39F",
   purple2: "#63C",
   black2: "#666"
-}, T = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, G = /^[,.:;]+/, q = /[,.:;]+$/, Y = (o) => {
+}, T = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, G = /^[,.:;]+/, Y = /[,.:;]+$/, q = (o) => {
   const e = o.trim();
-  return e ? T.test(e) ? e : e.replace(G, "").replace(q, "") : "";
+  return e ? T.test(e) ? e : e.replace(G, "").replace(Y, "") : "";
 }, $ = (o) => T.test(o) ? o.toUpperCase() : null, j = (o) => o === "naka" || o === "ue" || o === "shita", J = (o) => o === "small" || o === "medium" || o === "big", K = (o) => o === "defont" || o === "gothic" || o === "mincho", Z = (o) => o in _, Q = (o, e) => {
   let t = "naka", s = "medium", n = "defont", r = null, i = 1, a = null, l = !1;
   for (const f of o) {
-    const m = Y(typeof f == "string" ? f : "");
+    const m = q(typeof f == "string" ? f : "");
     if (!m)
       continue;
     if (T.test(m)) {
@@ -320,7 +320,7 @@ const E = {
   ...E,
   ngWords: [...E.ngWords],
   ngRegexps: [...E.ngRegexps]
-}), be = "v1.0.0", g = (o) => o * 1e3, re = 1e4, x = 2e3, ae = 1e3, oe = 4e3, le = 1800, he = 3, ce = 0.25, ue = 32, de = 48, C = 120, fe = 1, pe = 12, F = 24, p = 1e-3, O = 50, me = (o) => typeof window < "u" && typeof window.requestAnimationFrame == "function" && typeof window.cancelAnimationFrame == "function" ? {
+}), be = "v1.0.1", g = (o) => o * 1e3, re = 1e4, x = 2e3, ae = 1e3, oe = 4e3, le = 1800, he = 3, ce = 0.25, ue = 32, de = 48, C = 120, fe = 1, pe = 12, F = 24, p = 1e-3, O = 50, me = (o) => typeof window < "u" && typeof window.requestAnimationFrame == "function" && typeof window.cancelAnimationFrame == "function" ? {
   request: (e) => window.requestAnimationFrame(e),
   cancel: (e) => window.cancelAnimationFrame(e)
 } : {
@@ -951,10 +951,10 @@ class ye {
   }
 }
 export {
+  be as COMMENT_OVERLAY_VERSION,
   se as Comment,
   ye as CommentRenderer,
   Se as DEFAULT_RENDERER_SETTINGS,
-  be as RENDERER_VERSION,
   ne as cloneDefaultSettings,
   me as createDefaultAnimationFrameProvider,
   N as createDefaultTimeSource,
