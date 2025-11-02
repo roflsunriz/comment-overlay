@@ -58,7 +58,7 @@ const convertVposToMilliseconds = (vposHundredth: number): number => {
   const clamped = Math.max(0, vposHundredth);
   return Math.round(clamped * VPOS_UNIT_IN_MILLISECONDS);
 };
-const FINAL_PHASE_THRESHOLD_MS = 10_000;
+const FINAL_PHASE_THRESHOLD_MS = 4_000;
 const ACTIVE_WINDOW_MS = 2_000;
 const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
 const MAX_VISIBLE_DURATION_MS = 4_000;

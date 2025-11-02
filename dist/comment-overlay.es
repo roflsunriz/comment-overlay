@@ -347,7 +347,7 @@ const ue = 4e3, F = {
     return 0;
   const e = Math.max(0, l);
   return Math.round(e * pe);
-}, ve = 1e4, V = 2e3, ge = 1e3, Se = 4e3, ye = 1800, be = 3, Me = 0.25, Ce = 32, we = 48, R = 120, z = 1, k = 12, H = 24, g = 1e-3, W = 50, xe = (l) => Number.isFinite(l) ? l <= 0 ? 0 : l >= 1 ? 1 : l : 1, D = (l) => {
+}, ve = 4e3, V = 2e3, ge = 1e3, Se = 4e3, ye = 1800, be = 3, Me = 0.25, Ce = 32, we = 48, R = 120, z = 1, k = 12, H = 24, g = 1e-3, W = 50, xe = (l) => Number.isFinite(l) ? l <= 0 ? 0 : l >= 1 ? 1 : l : 1, D = (l) => {
   const e = l.scrollVisibleDurationMs, t = e == null ? null : Number.isFinite(e) ? Math.max(1, Math.floor(e)) : null;
   return {
     ...l,
