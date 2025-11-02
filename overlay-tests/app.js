@@ -152,7 +152,6 @@ const setup = async () => {
     const patterns = parseMultilineInput(value);
     for (const pattern of patterns) {
       try {
-        // eslint-disable-next-line no-new
         new RegExp(pattern);
       } catch (error) {
         ngRegexInput.classList.add("invalid");
