@@ -27,6 +27,16 @@ export interface AnimationFrameProvider {
   cancel(handle: ReturnType<typeof setTimeout>): void;
 }
 
+type VideoFrameCallbackMetadataLike = {
+  readonly mediaTime?: number;
+};
+
+type RequestVideoFrameCallback = (
+  callback: (now: DOMHighResTimeStamp, metadata: VideoFrameCallbackMetadataLike) => void,
+) => number;
+
+type CancelVideoFrameCallback = (handle: number) => void;
+
 interface LaneReservation {
   comment: Comment;
   startTime: number;
@@ -40,6 +50,14 @@ interface LaneReservation {
 }
 
 const toMilliseconds = (seconds: number): number => seconds * 1000;
+const VPOS_UNIT_IN_MILLISECONDS = 10;
+const convertVposToMilliseconds = (vposHundredth: number): number => {
+  if (!Number.isFinite(vposHundredth)) {
+    return 0;
+  }
+  const clamped = Math.max(0, vposHundredth);
+  return Math.round(clamped * VPOS_UNIT_IN_MILLISECONDS);
+};
 const FINAL_PHASE_THRESHOLD_MS = 10_000;
 const ACTIVE_WINDOW_MS = 2_000;
 const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
@@ -56,10 +74,39 @@ const MIN_FONT_SIZE_PX = 24;
 const EDGE_EPSILON = 1e-3;
 const SEEK_DIRECTION_EPSILON_MS = 50;
 
-const normalizeSettings = (settings: RendererSettings): RendererSettings => ({
-  ...settings,
-  scrollDirection: settings.scrollDirection === "ltr" ? "ltr" : "rtl",
-});
+const clampOpacity = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+  if (value <= 0) {
+    return 0;
+  }
+  if (value >= 1) {
+    return 1;
+  }
+  return value;
+};
+
+const normalizeSettings = (settings: RendererSettings): RendererSettings => {
+  const rawDuration = settings.scrollVisibleDurationMs;
+  const normalizedDuration =
+    rawDuration === null || rawDuration === undefined
+      ? null
+      : Number.isFinite(rawDuration)
+        ? Math.max(1, Math.floor(rawDuration))
+        : null;
+
+  const base: RendererSettings = {
+    ...settings,
+    scrollDirection: settings.scrollDirection === "ltr" ? "ltr" : "rtl",
+    commentOpacity: clampOpacity(settings.commentOpacity),
+    renderStyle: settings.renderStyle === "classic" ? "classic" : "outline-only",
+    scrollVisibleDurationMs: normalizedDuration,
+    syncMode: settings.syncMode === "video-frame" ? "video-frame" : "raf",
+    useDprScaling: Boolean(settings.useDprScaling),
+  };
+  return base;
+};
 
 export const createDefaultAnimationFrameProvider = (
   timeSource: TimeSource,
@@ -127,6 +174,9 @@ export class CommentRenderer {
   private containerElement: HTMLElement | null = null;
   private laneCount = DEFAULT_LANE_COUNT;
   private laneHeight = 0;
+  private displayWidth = 0;
+  private displayHeight = 0;
+  private canvasDpr = 1;
   private currentTime = 0;
   private duration = 0;
   private playbackRate = 1;
@@ -134,10 +184,12 @@ export class CommentRenderer {
   private lastDrawTime = 0;
   private finalPhaseActive = false;
   private frameId: ReturnType<typeof setTimeout> | null = null;
+  private videoFrameHandle: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeObserverTarget: Element | null = null;
   private readonly isResizeObserverAvailable = typeof ResizeObserver !== "undefined";
   private readonly cleanupTasks: Array<() => void> = [];
+  private commentSequence = 0;
 
   constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
   constructor(config?: CommentRendererConfig);
@@ -262,16 +314,24 @@ export class CommentRenderer {
     if (this.isNGComment(text)) {
       return null;
     }
+    const vposMs = convertVposToMilliseconds(vpos);
     const duplicate = this.comments.some(
-      (comment) => comment.text === text && comment.vpos === vpos,
+      (comment) => comment.text === text && comment.vpos === vposMs,
     );
     if (duplicate) {
       return null;
     }
 
-    const comment = new Comment(text, vpos, commands, this._settings, this.commentDependencies);
+    const comment = new Comment(text, vposMs, commands, this._settings, this.commentDependencies);
+    comment.creationIndex = this.commentSequence++;
     this.comments.push(comment);
-    this.comments.sort((a, b) => a.vpos - b.vpos);
+    this.comments.sort((a, b) => {
+      const vposDiff = a.vpos - b.vpos;
+      if (Math.abs(vposDiff) > EDGE_EPSILON) {
+        return vposDiff;
+      }
+      return a.creationIndex - b.creationIndex;
+    });
     return comment;
   }
 
@@ -280,8 +340,13 @@ export class CommentRenderer {
     this.reservedLanes.clear();
     this.topStaticLaneReservations.clear();
     this.bottomStaticLaneReservations.clear();
+    this.commentSequence = 0;
     if (this.ctx && this.canvas) {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+      const width = this.displayWidth > 0 ? this.displayWidth : this.canvas.width / effectiveDpr;
+      const height =
+        this.displayHeight > 0 ? this.displayHeight : this.canvas.height / effectiveDpr;
+      this.ctx.clearRect(0, 0, width, height);
     }
   }
 
@@ -306,13 +371,21 @@ export class CommentRenderer {
     this.comments.length = 0;
     this.reservedLanes.clear();
     this.finalPhaseActive = false;
+    this.displayWidth = 0;
+    this.displayHeight = 0;
+    this.canvasDpr = 1;
+    this.commentSequence = 0;
   }
 
   updateSettings(newSettings: RendererSettings): void {
     const previousUseContainer = this._settings.useContainerResizeObserver;
     const previousDirection = this._settings.scrollDirection;
+    const previousUseDprScaling = this._settings.useDprScaling;
+    const previousSyncMode = this._settings.syncMode;
     this.settings = newSettings;
     const directionChanged = previousDirection !== this._settings.scrollDirection;
+    const useDprScalingChanged = previousUseDprScaling !== this._settings.useDprScaling;
+    const syncModeChanged = previousSyncMode !== this._settings.syncMode;
 
     this.comments.forEach((comment) => {
       comment.syncWithSettings(this._settings);
@@ -327,7 +400,11 @@ export class CommentRenderer {
         comment.isActive = false;
         comment.clearActivation();
       });
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+      const width = this.displayWidth > 0 ? this.displayWidth : this.canvas.width / effectiveDpr;
+      const height =
+        this.displayHeight > 0 ? this.displayHeight : this.canvas.height / effectiveDpr;
+      this.ctx.clearRect(0, 0, width, height);
       this.reservedLanes.clear();
       this.topStaticLaneReservations.clear();
       this.bottomStaticLaneReservations.clear();
@@ -335,6 +412,14 @@ export class CommentRenderer {
 
     if (previousUseContainer !== this._settings.useContainerResizeObserver && this.videoElement) {
       this.setupResizeHandling(this.videoElement);
+    }
+
+    if (useDprScalingChanged) {
+      this.resize();
+    }
+
+    if (syncModeChanged && this.videoElement) {
+      this.startAnimation();
     }
   }
 
@@ -415,13 +500,18 @@ export class CommentRenderer {
   resize(width?: number, height?: number): void {
     const video = this.videoElement;
     const canvas = this.canvas;
+    const context = this.ctx;
     if (!video || !canvas) {
       return;
     }
 
     const rect = video.getBoundingClientRect();
-    const measuredWidth = width ?? rect.width ?? canvas.width;
-    const measuredHeight = height ?? rect.height ?? canvas.height;
+    const currentDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const fallbackWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / currentDpr;
+    const fallbackHeight = this.displayHeight > 0 ? this.displayHeight : canvas.height / currentDpr;
+
+    const measuredWidth = width ?? rect.width ?? fallbackWidth;
+    const measuredHeight = height ?? rect.height ?? fallbackHeight;
 
     if (
       !Number.isFinite(measuredWidth) ||
@@ -432,41 +522,78 @@ export class CommentRenderer {
       return;
     }
 
-    const nextWidth = Math.max(1, Math.floor(measuredWidth));
-    const nextHeight = Math.max(1, Math.floor(measuredHeight));
+    const cssWidth = Math.max(1, Math.floor(measuredWidth));
+    const cssHeight = Math.max(1, Math.floor(measuredHeight));
+    const previousDisplayWidth = this.displayWidth > 0 ? this.displayWidth : cssWidth;
+    const previousDisplayHeight = this.displayHeight > 0 ? this.displayHeight : cssHeight;
+    const nextDpr = this._settings.useDprScaling ? this.resolveDevicePixelRatio() : 1;
+    const pixelWidth = Math.max(1, Math.round(cssWidth * nextDpr));
+    const pixelHeight = Math.max(1, Math.round(cssHeight * nextDpr));
 
-    if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight)) {
+    const needsResize =
+      this.displayWidth !== cssWidth ||
+      this.displayHeight !== cssHeight ||
+      Math.abs(this.canvasDpr - nextDpr) > Number.EPSILON ||
+      canvas.width !== pixelWidth ||
+      canvas.height !== pixelHeight;
+
+    if (!needsResize) {
       return;
     }
 
-    const previousWidth = canvas.width || nextWidth;
-    const previousHeight = canvas.height || nextHeight;
+    this.displayWidth = cssWidth;
+    this.displayHeight = cssHeight;
+    this.canvasDpr = nextDpr;
 
-    if (previousWidth === nextWidth && previousHeight === nextHeight) {
-      return;
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+
+    if (context) {
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      if (this._settings.useDprScaling) {
+        context.scale(nextDpr, nextDpr);
+      }
     }
 
-    canvas.width = nextWidth;
-    canvas.height = nextHeight;
-    canvas.style.width = `${nextWidth}px`;
-    canvas.style.height = `${nextHeight}px`;
-
-    const scaleX = previousWidth > 0 ? nextWidth / previousWidth : 1;
-    const scaleY = previousHeight > 0 ? nextHeight / previousHeight : 1;
+    const scaleX = previousDisplayWidth > 0 ? cssWidth / previousDisplayWidth : 1;
+    const scaleY = previousDisplayHeight > 0 ? cssHeight / previousDisplayHeight : 1;
 
     if (scaleX !== 1 || scaleY !== 1) {
       this.comments.forEach((comment) => {
         if (comment.isActive) {
           comment.x *= scaleX;
           comment.y *= scaleY;
+          comment.width *= scaleX;
+          comment.fontSize = Math.max(
+            MIN_FONT_SIZE_PX,
+            Math.floor(Math.max(1, comment.fontSize) * scaleY),
+          );
+          comment.height = comment.fontSize;
+          comment.virtualStartX *= scaleX;
+          comment.exitThreshold *= scaleX;
           comment.baseSpeed *= scaleX;
           comment.speed *= scaleX;
-          comment.fontSize = Math.max(MIN_FONT_SIZE_PX, Math.floor(nextHeight * 0.05));
+          comment.speedPixelsPerMs *= scaleX;
+          comment.bufferWidth *= scaleX;
+          comment.reservationWidth *= scaleX;
         }
       });
     }
 
     this.calculateLaneMetrics();
+  }
+
+  private resolveDevicePixelRatio(): number {
+    if (typeof window === "undefined") {
+      return 1;
+    }
+    const ratio = Number(window.devicePixelRatio);
+    if (!Number.isFinite(ratio) || ratio <= 0) {
+      return 1;
+    }
+    return ratio;
   }
 
   private destroyCanvasOnly(): void {
@@ -478,6 +605,9 @@ export class CommentRenderer {
     }
     this.canvas = null;
     this.ctx = null;
+    this.displayWidth = 0;
+    this.displayHeight = 0;
+    this.canvasDpr = 1;
   }
 
   private calculateLaneMetrics(): void {
@@ -486,15 +616,26 @@ export class CommentRenderer {
       return;
     }
 
-    const baseHeight = Math.max(MIN_FONT_SIZE_PX, Math.floor(canvas.height * 0.05));
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / Math.max(this.canvasDpr, 1);
+    const baseHeight = Math.max(MIN_FONT_SIZE_PX, Math.floor(effectiveHeight * 0.05));
     this.laneHeight = baseHeight * 1.2;
-    const availableLanes = Math.floor(canvas.height / Math.max(this.laneHeight, 1));
-    this.laneCount = Math.max(MIN_LANE_COUNT, availableLanes);
+    const availableLanes = Math.floor(effectiveHeight / Math.max(this.laneHeight, 1));
+    if (this._settings.useFixedLaneCount) {
+      // 利用可能レーン数の範囲にクランプして固定値を適用
+      const desired = Number.isFinite(this._settings.fixedLaneCount)
+        ? Math.floor(this._settings.fixedLaneCount)
+        : DEFAULT_LANE_COUNT;
+      const clamped = Math.max(MIN_LANE_COUNT, Math.min(availableLanes, desired));
+      this.laneCount = clamped;
+    } else {
+      this.laneCount = Math.max(MIN_LANE_COUNT, availableLanes);
+    }
     this.topStaticLaneReservations.clear();
     this.bottomStaticLaneReservations.clear();
   }
 
-  private updateComments(): void {
+  private updateComments(frameTimeMs?: number): void {
     const video = this.videoElement;
     const canvas = this.canvas;
     const context = this.ctx;
@@ -502,17 +643,23 @@ export class CommentRenderer {
       return;
     }
 
-    this.currentTime = toMilliseconds(video.currentTime);
+    const referenceTime =
+      typeof frameTimeMs === "number" ? frameTimeMs : toMilliseconds(video.currentTime);
+    this.currentTime = referenceTime;
     this.playbackRate = video.playbackRate;
     this.isPlaying = !video.paused;
-    const prepareOptions = this.buildPrepareOptions(canvas.width);
+    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+    const prepareOptions = this.buildPrepareOptions(effectiveWidth);
 
     const isNearEnd =
       this.duration > 0 && this.duration - this.currentTime <= FINAL_PHASE_THRESHOLD_MS;
 
     if (isNearEnd && !this.finalPhaseActive) {
       this.finalPhaseActive = true;
-      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.clearRect(0, 0, effectiveWidth, effectiveHeight);
       this.comments.forEach((comment) => {
         comment.isActive = false;
         comment.clearActivation();
@@ -545,8 +692,8 @@ export class CommentRenderer {
         this.activateComment(
           comment,
           context,
-          canvas.width,
-          canvas.height,
+          effectiveWidth,
+          effectiveHeight,
           prepareOptions,
           this.currentTime,
         );
@@ -595,11 +742,16 @@ export class CommentRenderer {
   }
 
   private buildPrepareOptions(visibleWidth: number): CommentPrepareOptions {
+    const overrideDuration = this._settings.scrollVisibleDurationMs;
+    const maxVisibleDurationMs =
+      overrideDuration !== null ? overrideDuration : MAX_VISIBLE_DURATION_MS;
+    const minVisibleDurationMs =
+      overrideDuration !== null ? overrideDuration : MIN_VISIBLE_DURATION_MS;
     return {
       visibleWidth,
       virtualExtension: VIRTUAL_CANVAS_EXTENSION_PX,
-      maxVisibleDurationMs: MAX_VISIBLE_DURATION_MS,
-      minVisibleDurationMs: MIN_VISIBLE_DURATION_MS,
+      maxVisibleDurationMs,
+      minVisibleDurationMs,
       maxWidthRatio: MAX_COMMENT_WIDTH_RATIO,
       bufferRatio: COLLISION_BUFFER_RATIO,
       baseBufferPx: BASE_COLLISION_BUFFER_PX,
@@ -683,12 +835,12 @@ export class CommentRenderer {
   private activateComment(
     comment: Comment,
     context: CanvasRenderingContext2D,
-    canvasWidth: number,
-    canvasHeight: number,
+    displayWidth: number,
+    displayHeight: number,
     options: CommentPrepareOptions,
     referenceTime: number,
   ): void {
-    comment.prepare(context, canvasWidth, canvasHeight, options);
+    comment.prepare(context, displayWidth, displayHeight, options);
 
     if (comment.layout === "naka") {
       const elapsedMs = Math.max(0, referenceTime - comment.vpos);
@@ -942,12 +1094,27 @@ export class CommentRenderer {
       return;
     }
 
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+
+    context.clearRect(0, 0, effectiveWidth, effectiveHeight);
     const activeComments = this.comments.filter((comment) => comment.isActive);
     const now = this.timeSource.now();
 
     if (this._settings.isCommentVisible) {
       const deltaTime = (now - this.lastDrawTime) / (1000 / 60);
+      activeComments.sort((a, b) => {
+        const vposDiff = a.vpos - b.vpos;
+        if (Math.abs(vposDiff) > EDGE_EPSILON) {
+          return vposDiff;
+        }
+        if (a.isScrolling !== b.isScrolling) {
+          return a.isScrolling ? 1 : -1;
+        }
+        return a.creationIndex - b.creationIndex;
+      });
       activeComments.forEach((comment) => {
         const interpolatedX = comment.x + comment.getDirectionSign() * comment.speed * deltaTime;
         comment.draw(context, interpolatedX);
@@ -957,29 +1124,103 @@ export class CommentRenderer {
     this.lastDrawTime = now;
   }
 
-  private readonly updateFrame = (): void => {
+  private processFrame(frameTimeMs?: number): void {
     if (!this.videoElement) {
       return;
     }
     if (!this._settings.isCommentVisible) {
-      this.frameId = this.animationFrameProvider.request(this.updateFrame);
       return;
     }
-    this.updateComments();
+    this.updateComments(frameTimeMs);
     this.draw();
-    this.frameId = this.animationFrameProvider.request(this.updateFrame);
-  };
-
-  private startAnimation(): void {
-    this.stopAnimation();
-    this.frameId = this.animationFrameProvider.request(this.updateFrame);
   }
 
-  private stopAnimation(): void {
+  private readonly handleAnimationFrame = (): void => {
+    const pendingId = this.frameId;
+    this.frameId = null;
+    if (pendingId !== null) {
+      this.animationFrameProvider.cancel(pendingId);
+    }
+    this.processFrame();
+    this.scheduleNextFrame();
+  };
+
+  private readonly handleVideoFrame = (
+    _now: DOMHighResTimeStamp,
+    metadata: VideoFrameCallbackMetadataLike,
+  ): void => {
+    this.videoFrameHandle = null;
+    const mediaTime =
+      typeof metadata?.mediaTime === "number" ? metadata.mediaTime * 1000 : undefined;
+    this.processFrame(typeof mediaTime === "number" ? mediaTime : undefined);
+    this.scheduleNextFrame();
+  };
+
+  private shouldUseVideoFrameCallback(): boolean {
+    if (this._settings.syncMode !== "video-frame") {
+      return false;
+    }
+    const video = this.videoElement as HTMLVideoElement & {
+      requestVideoFrameCallback?: RequestVideoFrameCallback;
+      cancelVideoFrameCallback?: CancelVideoFrameCallback;
+    };
+    return (
+      Boolean(video) &&
+      typeof video.requestVideoFrameCallback === "function" &&
+      typeof video.cancelVideoFrameCallback === "function"
+    );
+  }
+
+  private scheduleNextFrame(): void {
+    const video = this.videoElement;
+    if (!video) {
+      return;
+    }
+    if (this.shouldUseVideoFrameCallback()) {
+      this.cancelAnimationFrameRequest();
+      this.cancelVideoFrameCallback();
+      const request = (
+        video as HTMLVideoElement & {
+          requestVideoFrameCallback?: RequestVideoFrameCallback;
+        }
+      ).requestVideoFrameCallback;
+      if (typeof request === "function") {
+        this.videoFrameHandle = request.call(video, this.handleVideoFrame);
+      }
+      return;
+    }
+    this.cancelVideoFrameCallback();
+    this.frameId = this.animationFrameProvider.request(this.handleAnimationFrame);
+  }
+
+  private cancelAnimationFrameRequest(): void {
     if (this.frameId !== null) {
       this.animationFrameProvider.cancel(this.frameId);
       this.frameId = null;
     }
+  }
+
+  private cancelVideoFrameCallback(): void {
+    if (this.videoFrameHandle === null) {
+      return;
+    }
+    const video = this.videoElement as HTMLVideoElement & {
+      cancelVideoFrameCallback?: CancelVideoFrameCallback;
+    };
+    if (video && typeof video.cancelVideoFrameCallback === "function") {
+      video.cancelVideoFrameCallback(this.videoFrameHandle);
+    }
+    this.videoFrameHandle = null;
+  }
+
+  private startAnimation(): void {
+    this.stopAnimation();
+    this.scheduleNextFrame();
+  }
+
+  private stopAnimation(): void {
+    this.cancelAnimationFrameRequest();
+    this.cancelVideoFrameCallback();
   }
 
   private onSeek(): void {
@@ -998,7 +1239,11 @@ export class CommentRenderer {
     this.reservedLanes.clear();
     this.topStaticLaneReservations.clear();
     this.bottomStaticLaneReservations.clear();
-    const prepareOptions = this.buildPrepareOptions(canvas.width);
+    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+    const prepareOptions = this.buildPrepareOptions(effectiveWidth);
 
     this.comments.forEach((comment) => {
       if (this.isNGComment(comment.text)) {
@@ -1023,8 +1268,8 @@ export class CommentRenderer {
         this.activateComment(
           comment,
           context,
-          canvas.width,
-          canvas.height,
+          effectiveWidth,
+          effectiveHeight,
           prepareOptions,
           this.currentTime,
         );
@@ -1141,7 +1386,10 @@ export class CommentRenderer {
     const canvas = this.canvas;
     const context = this.ctx;
     if (canvas && context) {
-      context.clearRect(0, 0, canvas.width, canvas.height);
+      const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+      const width = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+      const height = this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+      context.clearRect(0, 0, width, height);
     }
     this.reservedLanes.clear();
     this.topStaticLaneReservations.clear();

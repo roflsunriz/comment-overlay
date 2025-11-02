@@ -1,7 +1,11 @@
-import type { RendererSettings, ScrollDirection } from "../shared/types";
+import type {
+  CommentLayoutCommand,
+  RenderStyle,
+  RendererSettings,
+  ScrollDirection,
+} from "../shared/types";
 import { createLogger } from "../shared/logger";
 import { parseCommentCommands } from "./comment-commands";
-import type { CommentLayoutCommand } from "../types/comment";
 
 const logger = createLogger("CommentEngine:Comment");
 
@@ -131,6 +135,8 @@ export class Comment {
   virtualStartX = 0;
   exitThreshold = 0;
   scrollDirection: ScrollDirection = "rtl";
+  renderStyle: RenderStyle = "outline-only";
+  creationIndex = 0;
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
 
@@ -166,6 +172,7 @@ export class Comment {
     this.fontFamily = parsedCommands.fontFamily;
     this.color = parsedCommands.resolvedColor;
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
+    this.renderStyle = settings.renderStyle;
 
     this.timeSource = dependencies.timeSource ?? createDefaultTimeSource();
     this.applyScrollDirection(settings.scrollDirection);
@@ -349,54 +356,61 @@ export class Comment {
       ctx.strokeText(this.text, drawX, drawY);
       ctx.globalAlpha = 1;
 
-      const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
-      const baseShadowBlur = this.fontSize * 0.18;
-      type ShadowLayer = Readonly<{
-        offsetXMultiplier: number;
-        offsetYMultiplier: number;
-        blurMultiplier: number;
-        alpha: number;
-        rgb: string;
-      }>;
-      const shadowLayers: ReadonlyArray<ShadowLayer> = [
-        {
-          offsetXMultiplier: 0.9,
-          offsetYMultiplier: 1.1,
-          blurMultiplier: 0.55,
-          alpha: 0.52,
-          rgb: "20, 28, 40",
-        },
-        {
-          offsetXMultiplier: 2.4,
-          offsetYMultiplier: 2.7,
-          blurMultiplier: 1.45,
-          alpha: 0.32,
-          rgb: "0, 0, 0",
-        },
-        {
-          offsetXMultiplier: -0.7,
-          offsetYMultiplier: -0.6,
-          blurMultiplier: 0.4,
-          alpha: 0.42,
-          rgb: "255, 255, 255",
-        },
-      ];
+      if (this.renderStyle === "classic") {
+        const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
+        const baseShadowBlur = this.fontSize * 0.18;
+        type ShadowLayer = Readonly<{
+          offsetXMultiplier: number;
+          offsetYMultiplier: number;
+          blurMultiplier: number;
+          alpha: number;
+          rgb: string;
+        }>;
+        const shadowLayers: ReadonlyArray<ShadowLayer> = [
+          {
+            offsetXMultiplier: 0.9,
+            offsetYMultiplier: 1.1,
+            blurMultiplier: 0.55,
+            alpha: 0.52,
+            rgb: "20, 28, 40",
+          },
+          {
+            offsetXMultiplier: 2.4,
+            offsetYMultiplier: 2.7,
+            blurMultiplier: 1.45,
+            alpha: 0.32,
+            rgb: "0, 0, 0",
+          },
+          {
+            offsetXMultiplier: -0.7,
+            offsetYMultiplier: -0.6,
+            blurMultiplier: 0.4,
+            alpha: 0.42,
+            rgb: "255, 255, 255",
+          },
+        ];
 
-      // 透明な塗りでシャドウのみ描画し、文字色の重ね塗りによる不透明度の累積を防ぐ
-      shadowLayers.forEach((layer) => {
-        const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
-        ctx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
-        ctx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
-        ctx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
-        ctx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
-        ctx.fillStyle = "rgba(0, 0, 0, 0)";
-        ctx.fillText(this.text, drawX, drawY);
-      });
+        // 透明な塗りでシャドウのみ描画し、文字色の重ね塗りによる不透明度の累積を防ぐ
+        shadowLayers.forEach((layer) => {
+          const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
+          ctx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
+          ctx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
+          ctx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
+          ctx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
+          ctx.fillStyle = "rgba(0, 0, 0, 0)";
+          ctx.fillText(this.text, drawX, drawY);
+        });
 
-      ctx.shadowColor = "transparent";
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      } else {
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
 
       ctx.globalAlpha = 1;
       ctx.fillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
@@ -417,6 +431,7 @@ export class Comment {
     this.color = this.getEffectiveColor(settings.commentColor);
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.applyScrollDirection(settings.scrollDirection);
+    this.renderStyle = settings.renderStyle;
   }
 
   getEffectiveColor(defaultColor: string): string {

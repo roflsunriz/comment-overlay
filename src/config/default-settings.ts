@@ -11,14 +11,22 @@ type ReadonlySettings = {
     : ReadonlyArray<string>;
 };
 
+export const NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS = 4_000;
+
 const BASE_SETTINGS: RendererSettings = {
   commentColor: "#FFFFFF",
-  commentOpacity: 0.75,
+  commentOpacity: 1,
   isCommentVisible: true,
   useContainerResizeObserver: true,
   ngWords: [],
   ngRegexps: [],
   scrollDirection: "rtl",
+  renderStyle: "outline-only",
+  syncMode: "raf",
+  scrollVisibleDurationMs: NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS,
+  useFixedLaneCount: false,
+  fixedLaneCount: 12,
+  useDprScaling: true,
 };
 
 export const DEFAULT_RENDERER_SETTINGS: ReadonlySettings = BASE_SETTINGS;

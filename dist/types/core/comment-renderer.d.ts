@@ -32,6 +32,9 @@ export declare class CommentRenderer {
     private containerElement;
     private laneCount;
     private laneHeight;
+    private displayWidth;
+    private displayHeight;
+    private canvasDpr;
     private currentTime;
     private duration;
     private playbackRate;
@@ -39,10 +42,12 @@ export declare class CommentRenderer {
     private lastDrawTime;
     private finalPhaseActive;
     private frameId;
+    private videoFrameHandle;
     private resizeObserver;
     private resizeObserverTarget;
     private readonly isResizeObserverAvailable;
     private readonly cleanupTasks;
+    private commentSequence;
     constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
     constructor(config?: CommentRendererConfig);
     get settings(): RendererSettings;
@@ -60,6 +65,7 @@ export declare class CommentRenderer {
     getCommentsSnapshot(): Comment[];
     isNGComment(text: string): boolean;
     resize(width?: number, height?: number): void;
+    private resolveDevicePixelRatio;
     private destroyCanvasOnly;
     private calculateLaneMetrics;
     private updateComments;
@@ -84,7 +90,13 @@ export declare class CommentRenderer {
     private getBufferedEdges;
     private solveLeftRightEqualityTime;
     private draw;
-    private readonly updateFrame;
+    private processFrame;
+    private readonly handleAnimationFrame;
+    private readonly handleVideoFrame;
+    private shouldUseVideoFrameCallback;
+    private scheduleNextFrame;
+    private cancelAnimationFrameRequest;
+    private cancelVideoFrameCallback;
     private startAnimation;
     private stopAnimation;
     private onSeek;

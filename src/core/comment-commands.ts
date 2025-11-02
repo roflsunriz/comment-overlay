@@ -6,7 +6,7 @@ import {
   type CommentHexColorCommand,
   type CommentLayoutCommand,
   type CommentSizeCommand,
-} from "../types/comment";
+} from "../shared/types";
 
 const COMMENT_SIZE_SCALE: Record<CommentSizeCommand, number> = {
   small: 0.8,

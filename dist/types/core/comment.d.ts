@@ -1,5 +1,4 @@
-import type { RendererSettings, ScrollDirection } from "../shared/types";
-import type { CommentLayoutCommand } from "../types/comment";
+import type { CommentLayoutCommand, RenderStyle, RendererSettings, ScrollDirection } from "../shared/types";
 export declare const STATIC_VISIBLE_DURATION_MS = 4000;
 export interface TimeSource {
     now(): number;
@@ -55,6 +54,8 @@ export declare class Comment {
     virtualStartX: number;
     exitThreshold: number;
     scrollDirection: ScrollDirection;
+    renderStyle: RenderStyle;
+    creationIndex: number;
     private directionSign;
     private readonly timeSource;
     constructor(text: string, vpos: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
