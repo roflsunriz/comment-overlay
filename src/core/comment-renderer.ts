@@ -58,9 +58,6 @@ const convertVposToMilliseconds = (vposHundredth: number): number => {
   const clamped = Math.max(0, vposHundredth);
   return Math.round(clamped * VPOS_UNIT_IN_MILLISECONDS);
 };
-const FINAL_PHASE_THRESHOLD_MS = 4_000;
-const ACTIVE_WINDOW_MS = 2_000;
-const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
 const MAX_VISIBLE_DURATION_MS = 4_000;
 const MIN_VISIBLE_DURATION_MS = 1_800;
 const MAX_COMMENT_WIDTH_RATIO = 3;
@@ -68,6 +65,10 @@ const COLLISION_BUFFER_RATIO = 0.25;
 const BASE_COLLISION_BUFFER_PX = 32;
 const ENTRY_BUFFER_PX = 48;
 const RESERVATION_TIME_MARGIN_MS = 120;
+const FINAL_PHASE_THRESHOLD_MS = 4_000;
+// シーク後も画面上に残る可能性があるコメントを拾えるよう、可視時間と静止時間の合計を参照する
+const ACTIVE_WINDOW_MS = STATIC_VISIBLE_DURATION_MS + MAX_VISIBLE_DURATION_MS;
+const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
 const MIN_LANE_COUNT = 1;
 const DEFAULT_LANE_COUNT = 12;
 const MIN_FONT_SIZE_PX = 24;
@@ -967,8 +968,10 @@ export class CommentRenderer {
     return nextTime;
   }
 
-  private createLaneReservation(comment: Comment, startTime: number): LaneReservation {
+  private createLaneReservation(comment: Comment, referenceTime: number): LaneReservation {
     const speed = Math.max(comment.speedPixelsPerMs, EDGE_EPSILON);
+    const baseStartTime = Number.isFinite(comment.vpos) ? comment.vpos : referenceTime;
+    const startTime = Math.max(0, baseStartTime);
     const endTime = startTime + comment.preCollisionDurationMs + RESERVATION_TIME_MARGIN_MS;
     const totalEndTime = startTime + comment.totalDurationMs + RESERVATION_TIME_MARGIN_MS;
     return {
