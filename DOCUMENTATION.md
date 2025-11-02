@@ -56,6 +56,12 @@ renderer.addComment("Hello Overlay!", 150, ["naka", "yellow"]);
 | `ngWords` | `string[]` | 部分一致 (大文字小文字を区別しない) で判定する NG ワード |
 | `ngRegexps` | `string[]` | 正規表現 NG パターン |
 | `scrollDirection` | `'rtl' \| 'ltr'` | 横流れコメントのスクロール方向 |
+| `renderStyle` | `'outline-only' \| 'classic'` | コメントの描画スタイル。`'classic'` は影付き |
+| `syncMode` | `'raf' \| 'video-frame'` | 描画の同期モード。`video-frame` は `requestVideoFrameCallback` を利用 |
+| `scrollVisibleDurationMs` | `number \| null` | スクロールコメントの表示時間 (ms)。`null` で自動調整 |
+| `useFixedLaneCount` | `boolean` | レーン数を固定するかどうか |
+| `fixedLaneCount` | `number` | 固定する場合のレーン数 |
+| `useDprScaling` | `boolean` | `devicePixelRatio` に応じた高解像度描画を行うか |
 
 `ngWords` は入力をトリムしたうえで部分一致・大文字小文字を区別せずに評価されます。`scrollDirection` を `'ltr'` にするとコメントが左側から右方向へ流れ、デフォルトの `'rtl'` では従来通り右側から左方向へ流れます。
 
@@ -71,6 +77,8 @@ renderer.addComment("Hello Overlay!", 150, ["naka", "yellow"]);
 - 色 (名前指定): `white`, `red`, `pink`, ほか 16 色
 - 色 (カラーコード): `#RRGGBB` / `#RRGGBBAA`
 - 演出: `_live` (半透明), `invisible` (非表示)
+- 字間: `ls:10` / `letterspacing:10` (px単位)
+- 行高: `lh:1.5` / `lineheight:150%` (倍率またはパーセント)
 
 ## ライフサイクル
 

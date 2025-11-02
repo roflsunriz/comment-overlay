@@ -68,6 +68,8 @@ video.addEventListener("ended", () => {
 - 色指定: `white`, `red`, `pink`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `black`, `white2`, `red2`, `pink2`, `orange2`, `yellow2`, `green2`, `cyan2`, `blue2`, `purple2`, `black2`
 - 透明度指定: `_live`(半透明), `invisible`(非表示)
 - 色指定: `#FF0000`, `#00FF00`, `#0000FF`などの16進数カラーコード
+- 字間指定: `ls:10` や `letterspacing:10` (px単位)
+- 行高指定: `lh:1.5` や `lineheight:150%` (倍率またはパーセント)
 - コメントコマンドが未指定のときは`naka` `medium` `defont` `white` 相当の表示になります。
 
 ### RendererSettings のポイント
