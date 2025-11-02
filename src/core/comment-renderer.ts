@@ -50,13 +50,11 @@ interface LaneReservation {
 }
 
 const toMilliseconds = (seconds: number): number => seconds * 1000;
-const VPOS_UNIT_IN_MILLISECONDS = 10;
-const convertVposToMilliseconds = (vposHundredth: number): number => {
-  if (!Number.isFinite(vposHundredth)) {
+const sanitizeVposMs = (value: number): number => {
+  if (!Number.isFinite(value)) {
     return 0;
   }
-  const clamped = Math.max(0, vposHundredth);
-  return Math.round(clamped * VPOS_UNIT_IN_MILLISECONDS);
+  return Math.max(0, Math.round(value));
 };
 const MAX_VISIBLE_DURATION_MS = 4_000;
 const MIN_VISIBLE_DURATION_MS = 1_800;
@@ -311,25 +309,31 @@ export class CommentRenderer {
     }
   }
 
-  addComment(text: string, vpos: number, commands: string[] = []): Comment | null {
+  addComment(text: string, vposMs: number, commands: string[] = []): Comment | null {
     if (this.isNGComment(text)) {
       return null;
     }
-    const vposMs = convertVposToMilliseconds(vpos);
+    const normalizedVposMs = sanitizeVposMs(vposMs);
     const duplicate = this.comments.some(
-      (comment) => comment.text === text && comment.vpos === vposMs,
+      (comment) => comment.text === text && comment.vposMs === normalizedVposMs,
     );
     if (duplicate) {
       return null;
     }
 
-    const comment = new Comment(text, vposMs, commands, this._settings, this.commentDependencies);
+    const comment = new Comment(
+      text,
+      normalizedVposMs,
+      commands,
+      this._settings,
+      this.commentDependencies,
+    );
     comment.creationIndex = this.commentSequence++;
     this.comments.push(comment);
     this.comments.sort((a, b) => {
-      const vposDiff = a.vpos - b.vpos;
-      if (Math.abs(vposDiff) > EDGE_EPSILON) {
-        return vposDiff;
+      const vposMsDiff = a.vposMs - b.vposMs;
+      if (Math.abs(vposMsDiff) > EDGE_EPSILON) {
+        return vposMsDiff;
       }
       return a.creationIndex - b.creationIndex;
     });
@@ -711,7 +715,7 @@ export class CommentRenderer {
 
         if (
           comment.layout === "naka" &&
-          comment.vpos > this.currentTime + SEEK_DIRECTION_EPSILON_MS
+          comment.vposMs > this.currentTime + SEEK_DIRECTION_EPSILON_MS
         ) {
           comment.x = comment.virtualStartX;
           comment.lastUpdateTime = this.timeSource.now();
@@ -824,10 +828,10 @@ export class CommentRenderer {
     if (comment.isInvisible || comment.isActive) {
       return false;
     }
-    if (comment.vpos > timeMs + SEEK_DIRECTION_EPSILON_MS) {
+    if (comment.vposMs > timeMs + SEEK_DIRECTION_EPSILON_MS) {
       return false;
     }
-    if (comment.vpos < timeMs - ACTIVE_WINDOW_MS) {
+    if (comment.vposMs < timeMs - ACTIVE_WINDOW_MS) {
       return false;
     }
     return true;
@@ -844,7 +848,7 @@ export class CommentRenderer {
     comment.prepare(context, displayWidth, displayHeight, options);
 
     if (comment.layout === "naka") {
-      const elapsedMs = Math.max(0, referenceTime - comment.vpos);
+      const elapsedMs = Math.max(0, referenceTime - comment.vposMs);
       const displacement = comment.speedPixelsPerMs * elapsedMs;
       const directionSign = comment.getDirectionSign();
       const projectedX = comment.virtualStartX + directionSign * displacement;
@@ -873,7 +877,7 @@ export class CommentRenderer {
       return;
     }
 
-    const displayEnd = comment.vpos + STATIC_VISIBLE_DURATION_MS;
+    const displayEnd = comment.vposMs + STATIC_VISIBLE_DURATION_MS;
     if (referenceTime > displayEnd) {
       comment.isActive = false;
       comment.hasShown = true;
@@ -970,7 +974,7 @@ export class CommentRenderer {
 
   private createLaneReservation(comment: Comment, referenceTime: number): LaneReservation {
     const speed = Math.max(comment.speedPixelsPerMs, EDGE_EPSILON);
-    const baseStartTime = Number.isFinite(comment.vpos) ? comment.vpos : referenceTime;
+    const baseStartTime = Number.isFinite(comment.vposMs) ? comment.vposMs : referenceTime;
     const startTime = Math.max(0, baseStartTime);
     const endTime = startTime + comment.preCollisionDurationMs + RESERVATION_TIME_MARGIN_MS;
     const totalEndTime = startTime + comment.totalDurationMs + RESERVATION_TIME_MARGIN_MS;
@@ -1112,9 +1116,9 @@ export class CommentRenderer {
     if (this._settings.isCommentVisible) {
       const deltaTime = (now - this.lastDrawTime) / (1000 / 60);
       activeComments.sort((a, b) => {
-        const vposDiff = a.vpos - b.vpos;
-        if (Math.abs(vposDiff) > EDGE_EPSILON) {
-          return vposDiff;
+        const vposMsDiff = a.vposMs - b.vposMs;
+        if (Math.abs(vposMsDiff) > EDGE_EPSILON) {
+          return vposMsDiff;
         }
         if (a.isScrolling !== b.isScrolling) {
           return a.isScrolling ? 1 : -1;
@@ -1285,7 +1289,7 @@ export class CommentRenderer {
         return;
       }
 
-      if (comment.vpos < this.currentTime - ACTIVE_WINDOW_MS) {
+      if (comment.vposMs < this.currentTime - ACTIVE_WINDOW_MS) {
         comment.hasShown = true;
       } else {
         comment.hasShown = false;

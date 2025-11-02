@@ -55,7 +55,7 @@ export declare class CommentRenderer {
     private resolveContainer;
     private ensureContainerPositioning;
     initialize(options: HTMLVideoElement | CommentRendererInitializeOptions): void;
-    addComment(text: string, vpos: number, commands?: string[]): Comment | null;
+    addComment(text: string, vposMs: number, commands?: string[]): Comment | null;
     clearComments(): void;
     resetState(): void;
     destroy(): void;

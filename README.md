@@ -53,13 +53,19 @@ const renderer = new CommentRenderer(settings, {
 });
 
 renderer.initialize({ video, container });
-renderer.addComment("このコメントは明朝体で赤色で下部に大きく表示されます", 500, ["shita", "red", "big", "mincho"]);
+renderer.addComment(
+  "このコメントは明朝体で赤色で下部に大きく表示されます",
+  5000,
+  ["shita", "red", "big", "mincho"],
+);
 
 // 動画のライフサイクルに合わせてリソースを解放します。
 video.addEventListener("ended", () => {
   renderer.destroy();
 });
 ```
+
+第2引数 `vposMs` はコメントを表示するミリ秒単位の再生位置です。
 
 対応コメントコマンドは以下の通りです。
 - 位置指定: `shita`, `ue`, `naka`

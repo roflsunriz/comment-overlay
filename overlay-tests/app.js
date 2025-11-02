@@ -48,14 +48,14 @@ const sanitizeCommentEntry = (entry) => {
     return null;
   }
   const text = typeof entry.text === "string" ? entry.text.trim() : "";
-  const vpos = Number(entry.vpos);
-  if (!text || !Number.isFinite(vpos) || vpos < 0) {
+  const vposMs = Number(entry.vposMs);
+  if (!text || !Number.isFinite(vposMs) || vposMs < 0) {
     return null;
   }
   const commands = Array.isArray(entry.commands)
     ? entry.commands.filter((value) => typeof value === "string" && value.length > 0)
     : [];
-  return { text, vpos, commands };
+  return { text, vposMs, commands };
 };
 
 const setup = async () => {
@@ -198,8 +198,8 @@ const setup = async () => {
         : [];
 
       renderer.clearComments();
-      cleaned.forEach(({ text, vpos, commands }) => {
-        renderer.addComment(text, vpos, commands);
+      cleaned.forEach(({ text, vposMs, commands }) => {
+        renderer.addComment(text, vposMs, commands);
       });
 
       reportStatus(`Loaded ${cleaned.length} comments.`);

@@ -38,10 +38,10 @@ const options: CommentRendererInitializeOptions = {
 };
 
 renderer.initialize(options);
-renderer.addComment("Hello Overlay!", 150, ["naka", "yellow"]);
+renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 ```
 
-コメントは `renderer.addComment(text, vpos, commands)` で追加します。`vpos` は 1/100 秒単位のタイムスタンプです。動画再生時に自動で同期され、コメントが表示されます。
+コメントは `renderer.addComment(text, vposMs, commands)` で追加します。`vposMs` はミリ秒単位のタイムスタンプです。動画再生時に自動で同期され、コメントが表示されます。
 
 ## 設定
 

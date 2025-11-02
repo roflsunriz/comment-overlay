@@ -19,7 +19,7 @@ export interface CommentPrepareOptions {
 }
 export declare class Comment {
     readonly text: string;
-    readonly vpos: number;
+    readonly vposMs: number;
     readonly commands: string[];
     readonly layout: CommentLayoutCommand;
     readonly isScrolling: boolean;
@@ -62,7 +62,7 @@ export declare class Comment {
     lines: string[];
     private directionSign;
     private readonly timeSource;
-    constructor(text: string, vpos: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
+    constructor(text: string, vposMs: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
     prepare(ctx: CanvasRenderingContext2D, visibleWidth: number, canvasHeight: number, options: CommentPrepareOptions): void;
     update(playbackRate?: number, isPaused?: boolean): void;
     draw(ctx: CanvasRenderingContext2D, interpolatedX?: number | null): void;

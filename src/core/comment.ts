@@ -99,7 +99,7 @@ export interface CommentPrepareOptions {
 
 export class Comment {
   readonly text: string;
-  readonly vpos: number;
+  readonly vposMs: number;
   readonly commands: string[];
   readonly layout: CommentLayoutCommand;
   readonly isScrolling: boolean;
@@ -146,7 +146,7 @@ export class Comment {
 
   constructor(
     text: string,
-    vpos: number,
+    vposMs: number,
     commands: string[] | undefined,
     settings: RendererSettings,
     dependencies: CommentDependencies = {},
@@ -154,12 +154,12 @@ export class Comment {
     if (typeof text !== "string") {
       throw new Error("Comment text must be a string");
     }
-    if (!Number.isFinite(vpos) || vpos < 0) {
-      throw new Error("Comment vpos must be a non-negative number");
+    if (!Number.isFinite(vposMs) || vposMs < 0) {
+      throw new Error("Comment vposMs must be a non-negative number");
     }
 
     this.text = text;
-    this.vpos = vpos;
+    this.vposMs = vposMs;
     this.commands = Array.isArray(commands) ? [...commands] : [];
 
     const parsedCommands = parseCommentCommands(this.commands, {
@@ -241,7 +241,7 @@ export class Comment {
         this.preCollisionDurationMs = STATIC_VISIBLE_DURATION_MS;
         this.totalDurationMs = STATIC_VISIBLE_DURATION_MS;
         this.reservationWidth = this.width;
-        this.staticExpiryTimeMs = this.vpos + STATIC_VISIBLE_DURATION_MS;
+        this.staticExpiryTimeMs = this.vposMs + STATIC_VISIBLE_DURATION_MS;
         this.lastUpdateTime = this.timeSource.now();
         this.isPaused = false;
         return;
