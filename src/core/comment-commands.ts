@@ -16,11 +16,11 @@ const COMMENT_SIZE_SCALE: Record<CommentSizeCommand, number> = {
 
 const FONT_FAMILY_MAP: Record<CommentFontCommand, string> = {
   defont:
-    'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif',
+    '"MS PGothic","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro","Yu Gothic UI","Yu Gothic","Meiryo","Segoe UI","Osaka","Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","IPAPGothic","TakaoPGothic","Roboto","Helvetica Neue","Helvetica","Arial","sans-serif"',
   gothic:
-    '"Noto Sans JP", "Yu Gothic", "Yu Gothic Medium", "Hiragino Kaku Gothic ProN", "Meiryo", "Segoe UI", sans-serif',
+    '"Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","Yu Gothic","Yu Gothic Medium","Meiryo","MS PGothic","Hiragino Kaku Gothic ProN","Segoe UI","Helvetica","Arial","sans-serif"',
   mincho:
-    '"Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", "Times New Roman", serif',
+    '"MS PMincho","MS Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","Noto Serif CJK JP","Noto Serif JP","Source Han Serif JP","Times New Roman","serif"',
 };
 
 const COLOR_COMMAND_MAP: Record<CommentColorCommand, string> = {
@@ -71,6 +71,49 @@ const normalizeHexColor = (command: CommentHexColorCommand): string | null => {
   return command.toUpperCase();
 };
 
+const parseNumericCommandValue = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const withoutPx = trimmed.toLowerCase().endsWith("px") ? trimmed.slice(0, -2) : trimmed;
+  const parsed = Number.parseFloat(withoutPx);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseLineHeightValue = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (trimmed.endsWith("%")) {
+    const numeric = Number.parseFloat(trimmed.slice(0, -1));
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    return numeric / 100;
+  }
+  return parseNumericCommandValue(trimmed);
+};
+
+const clampLetterSpacing = (value: number): number => {
+  const maxSpacing = 100;
+  const minSpacing = -100;
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(maxSpacing, Math.max(minSpacing, value));
+};
+
+const clampLineHeight = (value: number): number => {
+  const minHeight = 0.25;
+  const maxHeight = 5;
+  if (!Number.isFinite(value) || value === 0) {
+    return 1;
+  }
+  return Math.min(maxHeight, Math.max(minHeight, value));
+};
+
 const isLayoutCommand = (command: string): command is CommentLayoutCommand =>
   command === "naka" || command === "ue" || command === "shita";
 
@@ -94,6 +137,8 @@ export const parseCommentCommands = (
   let opacityMultiplier = 1;
   let opacityOverride: number | null = null;
   let isInvisible = false;
+  let letterSpacing = 0;
+  let lineHeight = 1;
 
   for (const rawCommand of commands) {
     const normalizedToken = normalizeCommandToken(typeof rawCommand === "string" ? rawCommand : "");
@@ -139,6 +184,29 @@ export const parseCommentCommands = (
     if (lower === "invisible") {
       opacityMultiplier = 0;
       isInvisible = true;
+      continue;
+    }
+
+    if (lower.startsWith("ls:") || lower.startsWith("letterspacing:")) {
+      const separatorIndex = normalizedToken.indexOf(":");
+      if (separatorIndex >= 0) {
+        const numericValue = parseNumericCommandValue(normalizedToken.slice(separatorIndex + 1));
+        if (numericValue !== null) {
+          letterSpacing = clampLetterSpacing(numericValue);
+        }
+      }
+      continue;
+    }
+
+    if (lower.startsWith("lh:") || lower.startsWith("lineheight:")) {
+      const separatorIndex = normalizedToken.indexOf(":");
+      if (separatorIndex >= 0) {
+        const numericValue = parseLineHeightValue(normalizedToken.slice(separatorIndex + 1));
+        if (numericValue !== null) {
+          lineHeight = clampLineHeight(numericValue);
+        }
+      }
+      continue;
     }
   }
 
@@ -158,5 +226,7 @@ export const parseCommentCommands = (
     opacityMultiplier: clampedOpacityMultiplier,
     opacityOverride: resolvedOpacityOverride,
     isInvisible,
+    letterSpacing,
+    lineHeight,
   };
 };

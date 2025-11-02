@@ -69,6 +69,8 @@ export interface CommentCommandParseResult {
   readonly opacityMultiplier: number;
   readonly opacityOverride: number | null;
   readonly isInvisible: boolean;
+  readonly letterSpacing: number;
+  readonly lineHeight: number;
 }
 
 export interface VideoMetadata {

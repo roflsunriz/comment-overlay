@@ -56,6 +56,10 @@ export declare class Comment {
     scrollDirection: ScrollDirection;
     renderStyle: RenderStyle;
     creationIndex: number;
+    letterSpacing: number;
+    lineHeightMultiplier: number;
+    lineHeightPx: number;
+    lines: string[];
     private directionSign;
     private readonly timeSource;
     constructor(text: string, vpos: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);

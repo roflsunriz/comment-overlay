@@ -137,6 +137,10 @@ export class Comment {
   scrollDirection: ScrollDirection = "rtl";
   renderStyle: RenderStyle = "outline-only";
   creationIndex = 0;
+  letterSpacing = 0;
+  lineHeightMultiplier = 1;
+  lineHeightPx = 0;
+  lines: string[] = [];
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
 
@@ -173,6 +177,8 @@ export class Comment {
     this.color = parsedCommands.resolvedColor;
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.renderStyle = settings.renderStyle;
+    this.letterSpacing = parsedCommands.letterSpacing;
+    this.lineHeightMultiplier = parsedCommands.lineHeight;
 
     this.timeSource = dependencies.timeSource ?? createDefaultTimeSource();
     this.applyScrollDirection(settings.scrollDirection);
@@ -201,8 +207,27 @@ export class Comment {
       const scaledFontSize = Math.max(24, Math.floor(baseFontSize * this.sizeScale));
       this.fontSize = scaledFontSize;
       ctx.font = `${this.fontSize}px ${this.fontFamily}`;
-      this.width = ctx.measureText(this.text).width;
-      this.height = this.fontSize;
+      const rawLines = this.text.includes("\n") ? this.text.split(/\r?\n/) : [this.text];
+      this.lines = rawLines.length > 0 ? rawLines : [""];
+      let maxLineWidth = 0;
+      const effectiveLetterSpacing = this.letterSpacing;
+      for (const line of this.lines) {
+        const baseWidth = ctx.measureText(line).width;
+        const extraSpacing = line.length > 1 ? effectiveLetterSpacing * (line.length - 1) : 0;
+        const totalWidth = Math.max(0, baseWidth + extraSpacing);
+        if (totalWidth > maxLineWidth) {
+          maxLineWidth = totalWidth;
+        }
+      }
+      this.width = maxLineWidth;
+      const computedLineHeightPx = Math.max(
+        1,
+        Math.floor(this.fontSize * this.lineHeightMultiplier),
+      );
+      this.lineHeightPx = computedLineHeightPx;
+      this.height =
+        this.fontSize +
+        (this.lines.length > 1 ? (this.lines.length - 1) * computedLineHeightPx : 0);
 
       if (!this.isScrolling) {
         this.bufferWidth = 0;
@@ -249,9 +274,10 @@ export class Comment {
       this.x = startLeft;
       this.exitThreshold = exitLeft;
 
-      const widthRatio = this.width / safeVisibleWidth;
+      const widthRatio = safeVisibleWidth > 0 ? this.width / safeVisibleWidth : 0;
+      const hasFixedDuration = options.maxVisibleDurationMs === options.minVisibleDurationMs;
       let visibleDurationMs = options.maxVisibleDurationMs;
-      if (widthRatio > 1) {
+      if (!hasFixedDuration && widthRatio > 1) {
         const clampedRatio = Math.min(widthRatio, options.maxWidthRatio);
         const adjustedDuration = options.maxVisibleDurationMs / Math.max(clampedRatio, 1);
         visibleDurationMs = Math.max(options.minVisibleDurationMs, Math.floor(adjustedDuration));
@@ -345,16 +371,61 @@ export class Comment {
       ctx.save();
       ctx.font = `${this.fontSize}px ${this.fontFamily}`;
       const effectiveOpacity = clampOpacity(this.opacity);
-      ctx.globalAlpha = effectiveOpacity;
-
       const drawX = interpolatedX ?? this.x;
-      const drawY = this.y + this.fontSize;
+      const linesToRender = this.lines.length > 0 ? this.lines : [this.text];
+      const lineAdvance =
+        this.lines.length > 1 && this.lineHeightPx > 0 ? this.lineHeightPx : this.fontSize;
+      const baselineStart = this.y + this.fontSize;
 
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = Math.max(3, this.fontSize / 8);
-      ctx.lineJoin = "round";
-      ctx.strokeText(this.text, drawX, drawY);
-      ctx.globalAlpha = 1;
+      const drawSegment = (line: string, baselineY: number, mode: "stroke" | "fill"): void => {
+        if (line.length === 0) {
+          return;
+        }
+        if (Math.abs(this.letterSpacing) < Number.EPSILON) {
+          if (mode === "stroke") {
+            ctx.strokeText(line, drawX, baselineY);
+          } else {
+            ctx.fillText(line, drawX, baselineY);
+          }
+          return;
+        }
+        let cursorX = drawX;
+        for (let index = 0; index < line.length; index += 1) {
+          const char = line[index];
+          if (mode === "stroke") {
+            ctx.strokeText(char, cursorX, baselineY);
+          } else {
+            ctx.fillText(char, cursorX, baselineY);
+          }
+          const metrics = ctx.measureText(char);
+          const advance = Number.isFinite(metrics.width) ? metrics.width : 0;
+          cursorX += advance;
+          if (index < line.length - 1) {
+            cursorX += this.letterSpacing;
+          }
+        }
+      };
+
+      const drawStroke = (): void => {
+        ctx.globalAlpha = effectiveOpacity;
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = Math.max(3, this.fontSize / 8);
+        ctx.lineJoin = "round";
+        linesToRender.forEach((line, index) => {
+          const baseline = baselineStart + index * lineAdvance;
+          drawSegment(line, baseline, "stroke");
+        });
+        ctx.globalAlpha = 1;
+      };
+
+      const drawFill = (): void => {
+        linesToRender.forEach((line, index) => {
+          const baseline = baselineStart + index * lineAdvance;
+          drawSegment(line, baseline, "fill");
+        });
+      };
+
+      drawStroke();
 
       if (this.renderStyle === "classic") {
         const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
@@ -390,7 +461,6 @@ export class Comment {
           },
         ];
 
-        // 透明な塗りでシャドウのみ描画し、文字色の重ね塗りによる不透明度の累積を防ぐ
         shadowLayers.forEach((layer) => {
           const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
           ctx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
@@ -398,9 +468,8 @@ export class Comment {
           ctx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
           ctx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
           ctx.fillStyle = "rgba(0, 0, 0, 0)";
-          ctx.fillText(this.text, drawX, drawY);
+          drawFill();
         });
-
         ctx.shadowColor = "transparent";
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
@@ -414,7 +483,7 @@ export class Comment {
 
       ctx.globalAlpha = 1;
       ctx.fillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
-      ctx.fillText(this.text, drawX, drawY);
+      drawFill();
 
       ctx.restore();
     } catch (error) {

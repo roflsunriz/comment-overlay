@@ -899,7 +899,10 @@ export class CommentRenderer {
     const laneMap = this.getStaticLaneMap(position);
     const laneIndices = Array.from({ length: this.laneCount }, (_, index) => index);
     if (position === "shita") {
+      // 下コメントは下段から順に埋めることで、ニコ動の下詰め挙動を再現する
       laneIndices.reverse();
+    } else {
+      // 上コメントは上段から詰め、既存のニコ動と同一の割り当て順を保つ
     }
     for (const lane of laneIndices) {
       if (!laneMap.has(lane)) {
@@ -1282,6 +1285,11 @@ export class CommentRenderer {
         comment.hasShown = false;
       }
     });
+
+    if (this._settings.isCommentVisible) {
+      this.lastDrawTime = this.timeSource.now();
+      this.draw();
+    }
   }
 
   private setupVideoEventListeners(videoElement: HTMLVideoElement): void {
