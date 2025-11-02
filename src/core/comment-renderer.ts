@@ -1119,7 +1119,10 @@ export class CommentRenderer {
         return a.creationIndex - b.creationIndex;
       });
       activeComments.forEach((comment) => {
-        const interpolatedX = comment.x + comment.getDirectionSign() * comment.speed * deltaTime;
+        const shouldInterpolate = this.isPlaying && !comment.isPaused;
+        const interpolatedX = shouldInterpolate
+          ? comment.x + comment.getDirectionSign() * comment.speed * deltaTime
+          : comment.x;
         comment.draw(context, interpolatedX);
       });
     }

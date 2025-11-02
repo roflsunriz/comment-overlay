@@ -896,8 +896,8 @@ class We {
         const o = c.vpos - d.vpos;
         return Math.abs(o) > M ? o : c.isScrolling !== d.isScrolling ? c.isScrolling ? 1 : -1 : c.creationIndex - d.creationIndex;
       }), r.forEach((c) => {
-        const d = c.x + c.getDirectionSign() * c.speed * h;
-        c.draw(t, d);
+        const o = this.isPlaying && !c.isPaused ? c.x + c.getDirectionSign() * c.speed * h : c.x;
+        c.draw(t, o);
       });
     }
     this.lastDrawTime = a;
