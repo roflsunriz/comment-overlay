@@ -1,10 +1,12 @@
 import type { RendererSettings } from "../shared/types";
 import { Comment, type TimeSource } from "./comment";
+import type { DebugLoggingOptions } from "../shared/debug";
 export interface CommentRendererConfig {
     loggerNamespace?: string;
     timeSource?: TimeSource;
     animationFrameProvider?: AnimationFrameProvider;
     createCanvasElement?: () => HTMLCanvasElement;
+    debug?: DebugLoggingOptions;
 }
 export interface CommentRendererInitializeOptions {
     video: HTMLVideoElement;

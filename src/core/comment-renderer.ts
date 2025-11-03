@@ -9,12 +9,20 @@ import {
   STATIC_VISIBLE_DURATION_MS,
 } from "./comment";
 import { createLogger, type Logger } from "../shared/logger";
+import {
+  configureDebugLogging,
+  debugLog,
+  formatCommentPreview,
+  isDebugLoggingEnabled,
+} from "../shared/debug";
+import type { DebugLoggingOptions } from "../shared/debug";
 
 export interface CommentRendererConfig {
   loggerNamespace?: string;
   timeSource?: TimeSource;
   animationFrameProvider?: AnimationFrameProvider;
   createCanvasElement?: () => HTMLCanvasElement;
+  debug?: DebugLoggingOptions;
 }
 
 export interface CommentRendererInitializeOptions {
@@ -50,11 +58,14 @@ interface LaneReservation {
 }
 
 const toMilliseconds = (seconds: number): number => seconds * 1000;
-const sanitizeVposMs = (value: number): number => {
+const sanitizeVposMs = (value: number): number | null => {
   if (!Number.isFinite(value)) {
-    return 0;
+    return null;
   }
-  return Math.max(0, Math.round(value));
+  if (value < 0) {
+    return null;
+  }
+  return Math.round(value);
 };
 const MAX_VISIBLE_DURATION_MS = 4_000;
 const MIN_VISIBLE_DURATION_MS = 1_800;
@@ -216,6 +227,10 @@ export class CommentRenderer {
     this.commentDependencies = { timeSource: this.timeSource };
     this._settings = normalizeSettings(baseSettings);
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
+
+    if (config.debug) {
+      configureDebugLogging(config.debug);
+    }
   }
 
   get settings(): RendererSettings {
@@ -310,14 +325,22 @@ export class CommentRenderer {
   }
 
   addComment(text: string, vposMs: number, commands: string[] = []): Comment | null {
+    const preview = formatCommentPreview(text);
     if (this.isNGComment(text)) {
+      debugLog("comment-skip-ng", { preview, vposMs });
       return null;
     }
     const normalizedVposMs = sanitizeVposMs(vposMs);
+    if (normalizedVposMs === null) {
+      this.log.warn("CommentRenderer.addComment.invalidVpos", { text, vposMs });
+      debugLog("comment-skip-invalid-vpos", { preview, vposMs });
+      return null;
+    }
     const duplicate = this.comments.some(
       (comment) => comment.text === text && comment.vposMs === normalizedVposMs,
     );
     if (duplicate) {
+      debugLog("comment-skip-duplicate", { preview, vposMs: normalizedVposMs });
       return null;
     }
 
@@ -329,6 +352,14 @@ export class CommentRenderer {
       this.commentDependencies,
     );
     comment.creationIndex = this.commentSequence++;
+    debugLog("comment-added", {
+      preview,
+      vposMs: normalizedVposMs,
+      commands: comment.commands.length,
+      layout: comment.layout,
+      isScrolling: comment.isScrolling,
+      invisible: comment.isInvisible,
+    });
     this.comments.push(comment);
     this.comments.sort((a, b) => {
       const vposMsDiff = a.vposMs - b.vposMs;
@@ -681,10 +712,37 @@ export class CommentRenderer {
     this.pruneStaticLaneReservations(this.currentTime);
 
     for (const comment of this.comments) {
+      const debugActive = isDebugLoggingEnabled();
+      const preview = debugActive ? formatCommentPreview(comment.text) : "";
+      if (debugActive) {
+        debugLog("comment-evaluate", {
+          stage: "update",
+          preview,
+          vposMs: comment.vposMs,
+          currentTime: this.currentTime,
+          isActive: comment.isActive,
+          hasShown: comment.hasShown,
+        });
+      }
+
       if (this.isNGComment(comment.text)) {
+        if (debugActive) {
+          debugLog("comment-eval-skip", {
+            preview,
+            vposMs: comment.vposMs,
+            reason: "ng-runtime",
+          });
+        }
         continue;
       }
       if (comment.isInvisible) {
+        if (debugActive) {
+          debugLog("comment-eval-skip", {
+            preview,
+            vposMs: comment.vposMs,
+            reason: "invisible",
+          });
+        }
         comment.isActive = false;
         comment.hasShown = true;
         comment.clearActivation();
@@ -693,7 +751,7 @@ export class CommentRenderer {
 
       comment.syncWithSettings(this._settings);
 
-      if (this.shouldActivateCommentAtTime(comment, this.currentTime)) {
+      if (this.shouldActivateCommentAtTime(comment, this.currentTime, preview)) {
         this.activateComment(
           comment,
           context,
@@ -748,10 +806,14 @@ export class CommentRenderer {
 
   private buildPrepareOptions(visibleWidth: number): CommentPrepareOptions {
     const overrideDuration = this._settings.scrollVisibleDurationMs;
-    const maxVisibleDurationMs =
-      overrideDuration !== null ? overrideDuration : MAX_VISIBLE_DURATION_MS;
-    const minVisibleDurationMs =
-      overrideDuration !== null ? overrideDuration : MIN_VISIBLE_DURATION_MS;
+    let maxVisibleDurationMs = MAX_VISIBLE_DURATION_MS;
+    let minVisibleDurationMs = MIN_VISIBLE_DURATION_MS;
+
+    if (overrideDuration !== null) {
+      maxVisibleDurationMs = overrideDuration;
+      minVisibleDurationMs = Math.max(1, Math.min(overrideDuration, MIN_VISIBLE_DURATION_MS));
+    }
+
     return {
       visibleWidth,
       virtualExtension: VIRTUAL_CANVAS_EXTENSION_PX,
@@ -824,15 +886,62 @@ export class CommentRenderer {
     return reserved;
   }
 
-  private shouldActivateCommentAtTime(comment: Comment, timeMs: number): boolean {
-    if (comment.isInvisible || comment.isActive) {
+  private shouldActivateCommentAtTime(
+    comment: Comment,
+    timeMs: number,
+    preview: string = "",
+  ): boolean {
+    const debugActive = preview.length > 0 && isDebugLoggingEnabled();
+
+    if (comment.isInvisible) {
+      if (debugActive) {
+        debugLog("comment-eval-skip", {
+          preview,
+          vposMs: comment.vposMs,
+          reason: "invisible",
+        });
+      }
+      return false;
+    }
+    if (comment.isActive) {
+      if (debugActive) {
+        debugLog("comment-eval-skip", {
+          preview,
+          vposMs: comment.vposMs,
+          reason: "already-active",
+        });
+      }
       return false;
     }
     if (comment.vposMs > timeMs + SEEK_DIRECTION_EPSILON_MS) {
+      if (debugActive) {
+        debugLog("comment-eval-pending", {
+          preview,
+          vposMs: comment.vposMs,
+          reason: "future",
+          currentTime: timeMs,
+        });
+      }
       return false;
     }
     if (comment.vposMs < timeMs - ACTIVE_WINDOW_MS) {
+      if (debugActive) {
+        debugLog("comment-eval-skip", {
+          preview,
+          vposMs: comment.vposMs,
+          reason: "expired-window",
+          currentTime: timeMs,
+        });
+      }
       return false;
+    }
+
+    if (debugActive) {
+      debugLog("comment-eval-ready", {
+        preview,
+        vposMs: comment.vposMs,
+        currentTime: timeMs,
+      });
     }
     return true;
   }
@@ -846,6 +955,18 @@ export class CommentRenderer {
     referenceTime: number,
   ): void {
     comment.prepare(context, displayWidth, displayHeight, options);
+
+    if (isDebugLoggingEnabled()) {
+      debugLog("comment-prepared", {
+        preview: formatCommentPreview(comment.text),
+        layout: comment.layout,
+        isScrolling: comment.isScrolling,
+        width: comment.width,
+        height: comment.height,
+        bufferWidth: comment.bufferWidth,
+        visibleDurationMs: comment.visibleDurationMs,
+      });
+    }
 
     if (comment.layout === "naka") {
       const elapsedMs = Math.max(0, referenceTime - comment.vposMs);
@@ -863,6 +984,13 @@ export class CommentRenderer {
         comment.hasShown = true;
         comment.clearActivation();
         comment.lane = -1;
+        if (isDebugLoggingEnabled()) {
+          debugLog("comment-skip-exited", {
+            preview: formatCommentPreview(comment.text),
+            vposMs: comment.vposMs,
+            referenceTime,
+          });
+        }
         return;
       }
 
@@ -874,6 +1002,15 @@ export class CommentRenderer {
       comment.isPaused = !this.isPlaying;
       comment.markActivated(referenceTime);
       comment.lastUpdateTime = this.timeSource.now();
+      if (isDebugLoggingEnabled()) {
+        debugLog("comment-activate-scroll", {
+          preview: formatCommentPreview(comment.text),
+          lane: comment.lane,
+          startX: comment.x,
+          width: comment.width,
+          visibleDurationMs: comment.visibleDurationMs,
+        });
+      }
       return;
     }
 
@@ -883,6 +1020,14 @@ export class CommentRenderer {
       comment.hasShown = true;
       comment.clearActivation();
       comment.lane = -1;
+      if (isDebugLoggingEnabled()) {
+        debugLog("comment-skip-expired", {
+          preview: formatCommentPreview(comment.text),
+          vposMs: comment.vposMs,
+          referenceTime,
+          displayEnd,
+        });
+      }
       return;
     }
 
@@ -898,6 +1043,14 @@ export class CommentRenderer {
     comment.lastUpdateTime = this.timeSource.now();
     comment.staticExpiryTimeMs = displayEnd;
     this.reserveStaticLane(staticPosition, laneIndex, displayEnd);
+    if (isDebugLoggingEnabled()) {
+      debugLog("comment-activate-static", {
+        preview: formatCommentPreview(comment.text),
+        lane: comment.lane,
+        position: staticPosition,
+        displayEnd,
+      });
+    }
   }
 
   private assignStaticLane(position: "ue" | "shita"): number {
@@ -1245,9 +1398,8 @@ export class CommentRenderer {
     }
 
     const nextTime = toMilliseconds(video.currentTime);
-
-    this.finalPhaseActive = false;
     this.currentTime = nextTime;
+    this.finalPhaseActive = false;
 
     this.reservedLanes.clear();
     this.topStaticLaneReservations.clear();
@@ -1259,13 +1411,40 @@ export class CommentRenderer {
     const prepareOptions = this.buildPrepareOptions(effectiveWidth);
 
     this.comments.forEach((comment) => {
+      const debugActive = isDebugLoggingEnabled();
+      const preview = debugActive ? formatCommentPreview(comment.text) : "";
+      if (debugActive) {
+        debugLog("comment-evaluate", {
+          stage: "seek",
+          preview,
+          vposMs: comment.vposMs,
+          currentTime: this.currentTime,
+          isActive: comment.isActive,
+          hasShown: comment.hasShown,
+        });
+      }
+
       if (this.isNGComment(comment.text)) {
+        if (debugActive) {
+          debugLog("comment-eval-skip", {
+            preview,
+            vposMs: comment.vposMs,
+            reason: "ng-runtime",
+          });
+        }
         comment.isActive = false;
         comment.clearActivation();
         return;
       }
 
       if (comment.isInvisible) {
+        if (debugActive) {
+          debugLog("comment-eval-skip", {
+            preview,
+            vposMs: comment.vposMs,
+            reason: "invisible",
+          });
+        }
         comment.isActive = false;
         comment.hasShown = true;
         comment.clearActivation();
@@ -1277,7 +1456,7 @@ export class CommentRenderer {
       comment.lane = -1;
       comment.clearActivation();
 
-      if (this.shouldActivateCommentAtTime(comment, this.currentTime)) {
+      if (this.shouldActivateCommentAtTime(comment, this.currentTime, preview)) {
         this.activateComment(
           comment,
           context,

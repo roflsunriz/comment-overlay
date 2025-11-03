@@ -1,13 +1,13 @@
 [
   {
     "text": "はじまった",
-    "vposMs": 5310,
+    "vposMs": 422,
     "commands": []
   },
   {
     "text": "きれい",
-    "vposMs": 12050,
-    "commands": []
+    "vposMs": 958,
+    "commands": ["ue","big","red","mincho"]
   },
   {
     "text": "おー",
@@ -16,117 +16,117 @@
   },
   {
     "text": "BGMいいな",
-    "vposMs": 24550,
+    "vposMs": 1952,
     "commands": []
   },
   {
     "text": "すごい",
-    "vposMs": 29980,
+    "vposMs": 2384,
     "commands": ["big"]
   },
   {
     "text": "どこだろうここ",
-    "vposMs": 34010,
+    "vposMs": 2704,
     "commands": []
   },
   {
     "text": "癒される",
-    "vposMs": 41330,
+    "vposMs": 3286,
     "commands": ["green"]
   },
   {
     "text": "水の音がいい",
-    "vposMs": 48920,
+    "vposMs": 3890,
     "commands": []
   },
   {
     "text": "うぽつ",
-    "vposMs": 52100,
+    "vposMs": 4143,
     "commands": []
   },
   {
     "text": "空が青い",
-    "vposMs": 59340,
+    "vposMs": 4719,
     "commands": ["ue", "blue"]
   },
   {
     "text": "神秘的",
-    "vposMs": 65000,
+    "vposMs": 5169,
     "commands": []
   },
   {
     "text": "画質いい！",
-    "vposMs": 68710,
+    "vposMs": 5464,
     "commands": []
   },
   {
     "text": "自然の音ASMR",
-    "vposMs": 73450,
+    "vposMs": 5841,
     "commands": []
   },
   {
     "text": "最高かよ",
-    "vposMs": 78990,
+    "vposMs": 6281,
     "commands": []
   },
   {
     "text": "草",
-    "vposMs": 82010,
+    "vposMs": 6521,
     "commands": []
   },
   {
     "text": "ｗｗｗ",
-    "vposMs": 84500,
+    "vposMs": 6720,
     "commands": []
   },
   {
     "text": "鳥の声",
-    "vposMs": 91230,
+    "vposMs": 7255,
     "commands": []
   },
   {
     "text": "行ってみたいなあ",
-    "vposMs": 97880,
+    "vposMs": 7784,
     "commands": []
   },
   {
     "text": "心が洗われるようだ",
-    "vposMs": 105670,
+    "vposMs": 8403,
     "commands": ["shita"]
   },
   {
     "text": "絶景",
-    "vposMs": 113210,
+    "vposMs": 9002,
     "commands": ["big", "red"]
   },
   {
     "text": "8888888888",
-    "vposMs": 118900,
+    "vposMs": 9456,
     "commands": []
   },
   {
     "text": "神動画",
-    "vposMs": 124550,
+    "vposMs": 9906,
     "commands": []
   },
   {
     "text": "マイナスイオン",
-    "vposMs": 132100,
+    "vposMs": 10506,
     "commands": []
   },
   {
     "text": "これはすごい",
-    "vposMs": 138760,
+    "vposMs": 11035,
     "commands": []
   },
   {
     "text": "日本かな？",
-    "vposMs": 145000,
+    "vposMs": 11529,
     "commands": []
   },
   {
     "text": "風が気持ちよさそう",
-    "vposMs": 152340,
+    "vposMs": 12113,
     "commands": []
   },
   {
@@ -136,117 +136,117 @@
   },
   {
     "text": "GJ",
-    "vposMs": 164210,
+    "vposMs": 13057,
     "commands": []
   },
   {
     "text": "何時間でもいれる",
-    "vposMs": 171000,
+    "vposMs": 13597,
     "commands": []
   },
   {
     "text": "綺麗すぎる",
-    "vposMs": 178650,
+    "vposMs": 14206,
     "commands": ["yellow"]
   },
   {
     "text": "BGM誰の曲？",
-    "vposMs": 185430,
+    "vposMs": 14745,
     "commands": []
   },
   {
     "text": "まさに楽園",
-    "vposMs": 192110,
+    "vposMs": 15277,
     "commands": []
   },
   {
     "text": "仕事の疲れが飛ぶ",
-    "vposMs": 199870,
+    "vposMs": 15895,
     "commands": []
   },
   {
     "text": "美しすぎて言葉が出ない",
-    "vposMs": 207540,
+    "vposMs": 16506,
     "commands": ["ue"]
   },
   {
     "text": "定期的に見に来ます",
-    "vposMs": 214320,
+    "vposMs": 17046,
     "commands": []
   },
   {
     "text": "ありがとう",
-    "vposMs": 221090,
+    "vposMs": 17585,
     "commands": []
   },
   {
     "text": "素晴らしい",
-    "vposMs": 228760,
+    "vposMs": 18196,
     "commands": ["big"]
   },
   {
     "text": "地球に感謝",
-    "vposMs": 235430,
+    "vposMs": 18727,
     "commands": []
   },
   {
     "text": "眠くなってきた...",
-    "vposMs": 242100,
+    "vposMs": 19258,
     "commands": ["small"]
   },
   {
     "text": "（　´∀｀）",
-    "vposMs": 249870,
+    "vposMs": 19877,
     "commands": []
   },
   {
     "text": "最高",
-    "vposMs": 256540,
+    "vposMs": 20408,
     "commands": []
   },
   {
     "text": "わー",
-    "vposMs": 263210,
+    "vposMs": 20939,
     "commands": []
   },
   {
     "text": "すごい...",
-    "vposMs": 270980,
+    "vposMs": 21558,
     "commands": []
   },
   {
     "text": "いい",
-    "vposMs": 277650,
+    "vposMs": 22089,
     "commands": []
   },
   {
     "text": "乙",
-    "vposMs": 284320,
+    "vposMs": 22620,
     "commands": []
   },
   {
     "text": "また来る",
-    "vposMs": 291090,
+    "vposMs": 23159,
     "commands": []
   },
   {
     "text": "おつかれさまでした",
-    "vposMs": 298760,
+    "vposMs": 23768,
     "commands": []
   },
   {
     "text": "88888888",
-    "vposMs": 305430,
+    "vposMs": 24299,
     "commands": ["shita"]
   },
   {
     "text": "終わらないでー",
-    "vposMs": 312100,
+    "vposMs": 24830,
     "commands": []
   },
   {
     "text": "感動した",
-    "vposMs": 319870,
+    "vposMs": 25449,
     "commands": []
   },
   {
@@ -256,117 +256,117 @@
   },
   {
     "text": "明日も頑張れる",
-    "vposMs": 333210,
+    "vposMs": 26511,
     "commands": []
   },
   {
     "text": "感謝",
-    "vposMs": 340980,
+    "vposMs": 27130,
     "commands": []
   },
   {
     "text": "本当にきれい",
-    "vposMs": 347650,
+    "vposMs": 27661,
     "commands": []
   },
   {
     "text": "シェアします",
-    "vposMs": 354320,
+    "vposMs": 28192,
     "commands": []
   },
   {
     "text": "神",
-    "vposMs": 361090,
+    "vposMs": 28731,
     "commands": ["big", "yellow"]
   },
   {
     "text": "ありがとう！",
-    "vposMs": 368760,
+    "vposMs": 29342,
     "commands": []
   },
   {
     "text": "最高でした",
-    "vposMs": 375430,
+    "vposMs": 29873,
     "commands": []
   },
   {
     "text": "また見に来ます",
-    "vposMs": 382100,
+    "vposMs": 30404,
     "commands": []
   },
   {
     "text": "おつ",
-    "vposMs": 389870,
+    "vposMs": 31000,
     "commands": []
   },
   {
     "text": "いい音",
-    "vposMs": 10510,
+    "vposMs": 836,
     "commands": []
   },
   {
     "text": "静かでいい",
-    "vposMs": 21020,
+    "vposMs": 1672,
     "commands": []
   },
   {
     "text": "うわー",
-    "vposMs": 31530,
+    "vposMs": 2508,
     "commands": []
   },
   {
     "text": "空気うまそう",
-    "vposMs": 42040,
+    "vposMs": 3343,
     "commands": []
   },
   {
     "text": "最高か",
-    "vposMs": 52550,
+    "vposMs": 4179,
     "commands": []
   },
   {
     "text": "深呼吸したくなる",
-    "vposMs": 63060,
+    "vposMs": 5015,
     "commands": ["green"]
   },
   {
     "text": "これは良い",
-    "vposMs": 73570,
+    "vposMs": 5851,
     "commands": []
   },
   {
     "text": "何回も見ちゃう",
-    "vposMs": 84080,
+    "vposMs": 6686,
     "commands": []
   },
   {
     "text": "BGMも合ってる",
-    "vposMs": 94590,
+    "vposMs": 7522,
     "commands": []
   },
   {
     "text": "神",
-    "vposMs": 105100,
+    "vposMs": 8358,
     "commands": ["big"]
   },
   {
     "text": "心が落ち着く",
-    "vposMs": 115610,
+    "vposMs": 9194,
     "commands": []
   },
   {
     "text": "旅行したい",
-    "vposMs": 126120,
+    "vposMs": 10030,
     "commands": []
   },
   {
     "text": "絶景かな",
-    "vposMs": 136630,
+    "vposMs": 10866,
     "commands": ["red"]
   },
   {
     "text": "水の透明度すごい",
-    "vposMs": 147140,
+    "vposMs": 11702,
     "commands": ["ue", "cyan"]
   },
   {
@@ -376,117 +376,117 @@
   },
   {
     "text": "仕事の合間に見てる",
-    "vposMs": 168160,
+    "vposMs": 13371,
     "commands": ["shita"]
   },
   {
     "text": "癒やしをありがとう",
-    "vposMs": 178670,
+    "vposMs": 14207,
     "commands": []
   },
   {
     "text": "4Kで見たい",
-    "vposMs": 189180,
+    "vposMs": 15044,
     "commands": []
   },
   {
     "text": "自然って偉大",
-    "vposMs": 199690,
+    "vposMs": 15881,
     "commands": []
   },
   {
     "text": "（´-`）.｡oO",
-    "vposMs": 210200,
+    "vposMs": 16717,
     "commands": []
   },
   {
     "text": "鳥の声がする",
-    "vposMs": 220710,
+    "vposMs": 17554,
     "commands": []
   },
   {
     "text": "風の音がいいね",
-    "vposMs": 231220,
+    "vposMs": 18390,
     "commands": []
   },
   {
     "text": "現実逃避",
-    "vposMs": 241730,
+    "vposMs": 19226,
     "commands": []
   },
   {
     "text": "素晴らしい景色",
-    "vposMs": 252240,
+    "vposMs": 20062,
     "commands": ["big", "yellow"]
   },
   {
     "text": "眠くなってきた",
-    "vposMs": 262750,
+    "vposMs": 20898,
     "commands": ["small"]
   },
   {
     "text": "また来よう",
-    "vposMs": 273260,
+    "vposMs": 21735,
     "commands": []
   },
   {
     "text": "ありがとう",
-    "vposMs": 283770,
+    "vposMs": 22571,
     "commands": []
   },
   {
     "text": "GJ",
-    "vposMs": 294280,
+    "vposMs": 23407,
     "commands": []
   },
   {
     "text": "888888",
-    "vposMs": 304790,
+    "vposMs": 24244,
     "commands": []
   },
   {
     "text": "おつ",
-    "vposMs": 315300,
+    "vposMs": 25080,
     "commands": []
   },
   {
     "text": "最高でした",
-    "vposMs": 325810,
+    "vposMs": 25916,
     "commands": []
   },
   {
     "text": "明日もがんばろ",
-    "vposMs": 336320,
+    "vposMs": 26757,
     "commands": []
   },
   {
     "text": "感謝しかない",
-    "vposMs": 346830,
+    "vposMs": 27593,
     "commands": []
   },
   {
     "text": "いい夢見れそう",
-    "vposMs": 357340,
+    "vposMs": 28429,
     "commands": []
   },
   {
     "text": "お疲れ様",
-    "vposMs": 367850,
+    "vposMs": 29269,
     "commands": []
   },
   {
     "text": "また見に来ます",
-    "vposMs": 378360,
+    "vposMs": 30105,
     "commands": []
   },
   {
     "text": "乙でした",
-    "vposMs": 388870,
+    "vposMs": 30941,
     "commands": []
   },
   {
     "text": "きれいだなぁ",
-    "vposMs": 14500,
+    "vposMs": 1153,
     "commands": []
   },
   {
@@ -496,117 +496,117 @@
   },
   {
     "text": "空気が澄んでる感じ",
-    "vposMs": 75000,
+    "vposMs": 5964,
     "commands": []
   },
   {
     "text": "ドローン撮影？",
-    "vposMs": 105000,
+    "vposMs": 8350,
     "commands": ["ue"]
   },
   {
     "text": "帰りたくない",
-    "vposMs": 135000,
+    "vposMs": 10735,
     "commands": []
   },
   {
     "text": "ここに住みたい",
-    "vposMs": 165000,
+    "vposMs": 13121,
     "commands": ["shita"]
   },
   {
     "text": "カメラワーク神",
-    "vposMs": 195000,
+    "vposMs": 15507,
     "commands": []
   },
   {
     "text": "心が浄化される",
-    "vposMs": 225000,
+    "vposMs": 17893,
     "commands": ["green"]
   },
   {
     "text": "マイナスイオン浴びてる",
-    "vposMs": 255000,
+    "vposMs": 20279,
     "commands": []
   },
   {
     "text": "言葉が出ない",
-    "vposMs": 285000,
+    "vposMs": 22665,
     "commands": []
   },
   {
     "text": "ループ再生しよ",
-    "vposMs": 315000,
+    "vposMs": 25051,
     "commands": []
   },
   {
     "text": "本当にありがとう",
-    "vposMs": 345000,
+    "vposMs": 27447,
     "commands": []
   },
   {
     "text": "おやすみなさい",
-    "vposMs": 375000,
+    "vposMs": 29833,
     "commands": ["small"]
   },
   {
     "text": "ただいま",
-    "vposMs": 8880,
+    "vposMs": 706,
     "commands": []
   },
   {
     "text": "作業用BGMにしてる",
-    "vposMs": 17770,
+    "vposMs": 1413,
     "commands": ["shita"]
   },
   {
     "text": "おすすめに出てきた",
-    "vposMs": 26660,
+    "vposMs": 2120,
     "commands": []
   },
   {
     "text": "α波でてる",
-    "vposMs": 35550,
+    "vposMs": 2828,
     "commands": ["gothic"]
   },
   {
     "text": "無心になれる",
-    "vposMs": 44440,
+    "vposMs": 3535,
     "commands": []
   },
   {
     "text": "せせらぎの音",
-    "vposMs": 53330,
+    "vposMs": 4242,
     "commands": ["cyan"]
   },
   {
     "text": "木漏れ日がいい感じ",
-    "vposMs": 62220,
+    "vposMs": 4948,
     "commands": ["yellow"]
   },
   {
     "text": "時間がゆっくり流れてる",
-    "vposMs": 71110,
+    "vposMs": 5655,
     "commands": ["mincho"]
   },
   {
     "text": "ストレスが溶けていく",
-    "vposMs": 80000,
+    "vposMs": 6362,
     "commands": ["green"]
   },
   {
     "text": "脳がとろける～",
-    "vposMs": 88880,
+    "vposMs": 7069,
     "commands": []
   },
   {
     "text": "語彙力がなくなる美しさ",
-    "vposMs": 97770,
+    "vposMs": 7775,
     "commands": ["ue"]
   },
   {
     "text": "この動画に出会えてよかった",
-    "vposMs": 106660,
+    "vposMs": 8482,
     "commands": ["pink"]
   },
   {
@@ -616,117 +616,117 @@
   },
   {
     "text": "チャンネル登録しました",
-    "vposMs": 124440,
+    "vposMs": 9897,
     "commands": ["shita"]
   },
   {
     "text": "まだ見てる人いる？",
-    "vposMs": 133330,
+    "vposMs": 10604,
     "commands": []
   },
   {
     "text": "毎日見てる",
-    "vposMs": 142220,
+    "vposMs": 11311,
     "commands": []
   },
   {
     "text": "寝る前に見るのが日課",
-    "vposMs": 151110,
+    "vposMs": 12017,
     "commands": ["purple", "small"]
   },
   {
     "text": "葉っぱが揺れる音もいい",
-    "vposMs": 160000,
+    "vposMs": 12725,
     "commands": ["green2"]
   },
   {
     "text": "光の筋がきれい",
-    "vposMs": 168880,
+    "vposMs": 13430,
     "commands": ["orange"]
   },
   {
     "text": "異世界みたい",
-    "vposMs": 177770,
+    "vposMs": 14136,
     "commands": ["gothic", "cyan2"]
   },
   {
     "text": "天国はこんな感じなのかな",
-    "vposMs": 186660,
+    "vposMs": 14843,
     "commands": ["mincho", "white2"]
   },
   {
     "text": "悩み事とかどうでもよくなるな",
-    "vposMs": 195550,
+    "vposMs": 15550,
     "commands": []
   },
   {
     "text": "ASMRだ",
-    "vposMs": 204440,
+    "vposMs": 16256,
     "commands": []
   },
   {
     "text": "広告つかないの神",
-    "vposMs": 213330,
+    "vposMs": 16963,
     "commands": ["big", "yellow"]
   },
   {
     "text": "通知から来ました",
-    "vposMs": 222220,
+    "vposMs": 17679,
     "commands": []
   },
   {
     "text": "何回目だろう...",
-    "vposMs": 231110,
+    "vposMs": 18386,
     "commands": ["_live"]
   },
   {
     "text": "落ち着くなぁ",
-    "vposMs": 240000,
+    "vposMs": 19093,
     "commands": []
   },
   {
     "text": "ゲームの世界みたい",
-    "vposMs": 248880,
+    "vposMs": 19798,
     "commands": ["blue2"]
   },
   {
     "text": "最高すぎる",
-    "vposMs": 257770,
+    "vposMs": 20504,
     "commands": ["red2"]
   },
   {
     "text": "ピンク色テスト",
-    "vposMs": 266660,
+    "vposMs": 21211,
     "commands": ["pink2", "big"]
   },
   {
     "text": "紫テスト",
-    "vposMs": 275550,
+    "vposMs": 21917,
     "commands": ["purple2", "ue"]
   },
   {
     "text": "オレンジ色！",
-    "vposMs": 284440,
+    "vposMs": 22624,
     "commands": ["orange2"]
   },
   {
     "text": "黒背景に白文字",
-    "vposMs": 293330,
+    "vposMs": 23331,
     "commands": ["black", "shita"]
   },
   {
     "text": "黒背景2",
-    "vposMs": 302220,
+    "vposMs": 24037,
     "commands": ["black2"]
   },
   {
     "text": "16進数カラー #32CD32",
-    "vposMs": 311110,
+    "vposMs": 24744,
     "commands": ["#32CD32", "gothic"]
   },
   {
     "text": "もう終わりかー",
-    "vposMs": 320000,
+    "vposMs": 25451,
     "commands": []
   },
   {
@@ -736,117 +736,117 @@
   },
   {
     "text": "寂しい",
-    "vposMs": 337770,
+    "vposMs": 26874,
     "commands": []
   },
   {
     "text": "ループしよ",
-    "vposMs": 346660,
+    "vposMs": 27581,
     "commands": []
   },
   {
     "text": "うｐ主ありがとう",
-    "vposMs": 355550,
+    "vposMs": 28288,
     "commands": ["mincho"]
   },
   {
     "text": "また明日も来ます",
-    "vposMs": 364440,
+    "vposMs": 28994,
     "commands": []
   },
   {
     "text": "最高の時間をありがとう",
-    "vposMs": 373330,
+    "vposMs": 29701,
     "commands": ["big", "pink"]
   },
   {
     "text": "8888888888888888",
-    "vposMs": 382220,
+    "vposMs": 30413,
     "commands": ["_live"]
   },
   {
     "text": "おつかれー",
-    "vposMs": 389000,
+    "vposMs": 30952,
     "commands": []
   },
   {
     "text": "ふぅ...",
-    "vposMs": 19000,
+    "vposMs": 1511,
     "commands": []
   },
   {
     "text": "これは良いものだ",
-    "vposMs": 38000,
+    "vposMs": 3022,
     "commands": []
   },
   {
     "text": "森林浴",
-    "vposMs": 57000,
+    "vposMs": 4533,
     "commands": ["green"]
   },
   {
     "text": "心が洗われる",
-    "vposMs": 76000,
+    "vposMs": 6044,
     "commands": ["mincho"]
   },
   {
     "text": "ずっと聞いていたい",
-    "vposMs": 95000,
+    "vposMs": 7555,
     "commands": []
   },
   {
     "text": "まさに楽園",
-    "vposMs": 114000,
+    "vposMs": 9066,
     "commands": ["gothic", "yellow"]
   },
   {
     "text": "日本じゃないみたい",
-    "vposMs": 133000,
+    "vposMs": 10577,
     "commands": []
   },
   {
     "text": "現実を忘れられる",
-    "vposMs": 152000,
+    "vposMs": 12088,
     "commands": ["shita", "_live"]
   },
   {
     "text": "鳥のさえずりが心地よい",
-    "vposMs": 171000,
+    "vposMs": 13597,
     "commands": []
   },
   {
     "text": "完璧な動画",
-    "vposMs": 190000,
+    "vposMs": 15109,
     "commands": ["big", "red"]
   },
   {
     "text": "リピート確定",
-    "vposMs": 209000,
+    "vposMs": 16620,
     "commands": []
   },
   {
     "text": "勉強中に最適",
-    "vposMs": 228000,
+    "vposMs": 18131,
     "commands": ["small"]
   },
   {
     "text": "なんて場所だ",
-    "vposMs": 247000,
+    "vposMs": 19642,
     "commands": []
   },
   {
     "text": "この透明感",
-    "vposMs": 266000,
+    "vposMs": 21153,
     "commands": ["cyan", "ue"]
   },
   {
     "text": "生きててよかった",
-    "vposMs": 285000,
+    "vposMs": 22665,
     "commands": ["pink"]
   },
   {
     "text": "終わらないでくれ",
-    "vposMs": 304000,
+    "vposMs": 24176,
     "commands": []
   },
   {
@@ -856,12 +856,12 @@
   },
   {
     "text": "また来るね",
-    "vposMs": 342000,
+    "vposMs": 27211,
     "commands": []
   },
   {
     "text": "お疲れ様でした！",
-    "vposMs": 361000,
+    "vposMs": 28724,
     "commands": []
   },
   {
@@ -869,11 +869,11 @@
     "vposMs": 380000,
     "commands": []
   },
-  { "text": "きたー", "vposMs": 1000, "commands": [] },
-  { "text": "wktk", "vposMs": 2500, "commands": [] },
-  { "text": "すき", "vposMs": 13000, "commands": ["pink"] },
-  { "text": "音量注意？", "vposMs": 14000, "commands": ["small"] },
-  { "text": "大丈夫だった", "vposMs": 15000, "commands": ["small"] },
+  { "text": "きたー", "vposMs": 80, "commands": [] },
+  { "text": "wktk", "vposMs": 199, "commands": [] },
+  { "text": "すき", "vposMs": 1034, "commands": ["pink"] },
+  { "text": "音量注意？", "vposMs": 1113, "commands": ["small"] },
+  { "text": "大丈夫だった", "vposMs": 1193, "commands": ["small"] },
   { "text": "このシリーズ好き", "vposMs": 16000, "commands": [] },
   { "text": "待ってた", "vposMs": 17000, "commands": ["big"] },
   { "text": "風の音？", "vposMs": 18000, "commands": [] },
@@ -882,11 +882,11 @@
   { "text": "どこだろう", "vposMs": 23500, "commands": [] },
   { "text": "海外かな", "vposMs": 25500, "commands": [] },
   { "text": "日本であってほしい", "vposMs": 27500, "commands": [] },
-  { "text": "緑が目に優しい", "vposMs": 29500, "commands": ["green2"] },
+  { "text": "緑が目に優しい", "vposMs": 2347, "commands": ["green2"] },
   { "text": "PCの壁紙にしたい", "vposMs": 31500, "commands": [] },
   { "text": "わかる", "vposMs": 33500, "commands": [] },
-  { "text": "この透明感よ", "vposMs": 35500, "commands": ["cyan2"] },
-  { "text": "飲めるかな", "vposMs": 37500, "commands": [] },
+  { "text": "この透明感よ", "vposMs": 2824, "commands": ["cyan2"] },
+  { "text": "飲めるかな", "vposMs": 2983, "commands": [] },
   { "text": "飲めそう", "vposMs": 39500, "commands": [] },
   { "text": "冷たそう", "vposMs": 41500, "commands": [] },
   { "text": "夏に見たい", "vposMs": 43500, "commands": [] },
@@ -894,11 +894,11 @@
   { "text": "ｗｗ", "vposMs": 47500, "commands": [] },
   { "text": "静かだ...", "vposMs": 49500, "commands": ["mincho"] },
   { "text": "時が止まったかのよう", "vposMs": 51500, "commands": ["mincho", "ue"] },
-  { "text": "BGM自作？", "vposMs": 53500, "commands": [] },
+  { "text": "BGM自作？", "vposMs": 4255, "commands": [] },
   { "text": "選曲いい", "vposMs": 55500, "commands": [] },
   { "text": "落ち着く音", "vposMs": 57500, "commands": [] },
-  { "text": "ヘッドホン推奨", "vposMs": 59500, "commands": ["big", "yellow"] },
-  { "text": "ほんとだ", "vposMs": 61500, "commands": [] },
+  { "text": "ヘッドホン推奨", "vposMs": 4732, "commands": ["big", "yellow"] },
+  { "text": "ほんとだ", "vposMs": 4891, "commands": [] },
   { "text": "立体音響すごい", "vposMs": 63500, "commands": [] },
   { "text": "右から鳥の声", "vposMs": 65500, "commands": [] },
   { "text": "左は水の音", "vposMs": 67500, "commands": [] },
@@ -907,11 +907,11 @@
   { "text": "機材なに使ってるんだろ", "vposMs": 73500, "commands": ["shita"] },
   { "text": "知りたい", "vposMs": 75500, "commands": ["shita"] },
   { "text": "概要欄に書いてほしい", "vposMs": 77500, "commands": ["shita"] },
-  { "text": "空のグラデーション", "vposMs": 79500, "commands": ["ue", "purple2"] },
-  { "text": "絵画みたい", "vposMs": 81500, "commands": ["gothic"] },
-  { "text": "芸術", "vposMs": 83500, "commands": ["red"] },
+  { "text": "空のグラデーション", "vposMs": 6322, "commands": ["ue", "purple2"] },
+  { "text": "絵画みたい", "vposMs": 6481, "commands": ["gothic"] },
+  { "text": "芸術", "vposMs": 6640, "commands": ["red"] },
   { "text": "まさにそれ", "vposMs": 85500, "commands": [] },
-  { "text": "言葉を失う", "vposMs": 87500, "commands": [] },
+  { "text": "言葉を失う", "vposMs": 6958, "commands": [] },
   { "text": "...", "vposMs": 89500, "commands": [] },
   { "text": "（無言）", "vposMs": 91500, "commands": [] },
   { "text": "ただただ見入ってしまう", "vposMs": 93500, "commands": [] },
@@ -922,11 +922,11 @@
   { "text": "変わるよ", "vposMs": 103500, "commands": [] },
   { "text": "ちっぽけな悩みだ", "vposMs": 105500, "commands": [] },
   { "text": "明日からまた頑張ろう", "vposMs": 107500, "commands": [] },
-  { "text": "うん", "vposMs": 109500, "commands": [] },
-  { "text": "ありがとう投稿主", "vposMs": 111500, "commands": ["pink"] },
-  { "text": "感謝！", "vposMs": 113500, "commands": ["pink"] },
-  { "text": "888888888888", "vposMs": 115500, "commands": ["orange"] },
-  { "text": "ぱちぱち", "vposMs": 117500, "commands": [] },
+  { "text": "うん", "vposMs": 8706, "commands": [] },
+  { "text": "ありがとう投稿主", "vposMs": 8865, "commands": ["pink"] },
+  { "text": "感謝！", "vposMs": 9024, "commands": ["pink"] },
+  { "text": "888888888888", "vposMs": 9183, "commands": ["orange"] },
+  { "text": "ぱちぱち", "vposMs": 9342, "commands": [] },
   { "text": "拍手", "vposMs": 119500, "commands": [] },
   { "text": "スタンディングオベーション", "vposMs": 121500, "commands": ["big"] },
   { "text": "大げさｗ", "vposMs": 123500, "commands": [] },
@@ -939,11 +939,11 @@
   { "text": "YouTubeありがとう", "vposMs": 137500, "commands": [] },
   { "text": "アルゴリズムに感謝", "vposMs": 139500, "commands": [] },
   { "text": "葉の揺れ方", "vposMs": 141500, "commands": ["green"] },
-  { "text": "そよ風かな", "vposMs": 143500, "commands": [] },
+  { "text": "そよ風かな", "vposMs": 11410, "commands": [] },
   { "text": "気持ちよさそう", "vposMs": 145500, "commands": [] },
   { "text": "昼寝したい", "vposMs": 147500, "commands": [] },
   { "text": "ここで昼寝したら最高だろうな", "vposMs": 149500, "commands": [] },
-  { "text": "虫は大丈夫か？", "vposMs": 151500, "commands": [] },
+  { "text": "虫は大丈夫か？", "vposMs": 12048, "commands": [] },
   { "text": "たしかにｗ", "vposMs": 153500, "commands": [] },
   { "text": "虫除け必須", "vposMs": 155500, "commands": [] },
   { "text": "現実的なコメントｗ", "vposMs": 157500, "commands": [] },
@@ -952,11 +952,11 @@
   { "text": "もののけ姫の世界", "vposMs": 163500, "commands": ["gothic"] },
   { "text": "こだま出てきそう", "vposMs": 165500, "commands": [] },
   { "text": "（ｶﾀｶﾀｶﾀ）", "vposMs": 167500, "commands": [] },
-  { "text": "ｗｗｗｗ", "vposMs": 169500, "commands": [] },
+  { "text": "ｗｗｗｗ", "vposMs": 13480, "commands": [] },
   { "text": "想像つく", "vposMs": 171500, "commands": [] },
   { "text": "シシ神様もいるかな", "vposMs": 173500, "commands": [] },
-  { "text": "ディダラボッチ", "vposMs": 175500, "commands": ["big", "blue2"] },
-  { "text": "夜は怖そう", "vposMs": 177500, "commands": [] },
+  { "text": "ディダラボッチ", "vposMs": 13957, "commands": ["big", "blue2"] },
+  { "text": "夜は怖そう", "vposMs": 14116, "commands": [] },
   { "text": "満点の星空が見えるかも", "vposMs": 179500, "commands": ["ue", "white2"] },
   { "text": "それも見たい", "vposMs": 181500, "commands": [] },
   { "text": "星空バージョンお願いします", "vposMs": 183500, "commands": [] },
@@ -964,11 +964,11 @@
   { "text": "期待", "vposMs": 187500, "commands": [] },
   { "text": "シリーズ化希望", "vposMs": 189500, "commands": [] },
   { "text": "春・夏・秋・冬で見たい", "vposMs": 191500, "commands": [] },
-  { "text": "雪景色とか絶対きれい", "vposMs": 193500, "commands": ["white", "big"] },
-  { "text": "紅葉もやばそう", "vposMs": 195500, "commands": ["orange2", "big"] },
-  { "text": "桜もいいな", "vposMs": 197500, "commands": ["pink", "big"] },
-  { "text": "夢が広がる", "vposMs": 199500, "commands": [] },
-  { "text": "投稿主さん見てるかな", "vposMs": 201500, "commands": [] },
+  { "text": "雪景色とか絶対きれい", "vposMs": 15386, "commands": ["white", "big"] },
+  { "text": "紅葉もやばそう", "vposMs": 15545, "commands": ["orange2", "big"] },
+  { "text": "桜もいいな", "vposMs": 15704, "commands": ["pink", "big"] },
+  { "text": "夢が広がる", "vposMs": 15863, "commands": [] },
+  { "text": "投稿主さん見てるかな", "vposMs": 16022, "commands": [] },
   { "text": "見てー！", "vposMs": 203500, "commands": [] },
   { "text": "お願いします！", "vposMs": 205500, "commands": [] },
   { "text": "とりあえずこの動画をリピートしよ", "vposMs": 207500, "commands": [] },
@@ -979,11 +979,11 @@
   { "text": "集中できる", "vposMs": 217500, "commands": ["shita"] },
   { "text": "逆に癒やされすぎて寝ちゃう", "vposMs": 219500, "commands": ["shita"] },
   { "text": "睡眠導入動画", "vposMs": 221500, "commands": [] },
-  { "text": "たしかに眠くなる", "vposMs": 223500, "commands": ["small"] },
-  { "text": "おやすみ...", "vposMs": 225500, "commands": ["small"] },
-  { "text": "まだ終わらんよｗ", "vposMs": 227500, "commands": [] },
-  { "text": "z z z", "vposMs": 229500, "commands": ["small", "purple"] },
-  { "text": "水面に映る空", "vposMs": 231500, "commands": ["ue", "cyan"] },
+  { "text": "たしかに眠くなる", "vposMs": 17778, "commands": ["small"] },
+  { "text": "おやすみ...", "vposMs": 17937, "commands": ["small"] },
+  { "text": "まだ終わらんよｗ", "vposMs": 18096, "commands": [] },
+  { "text": "z z z", "vposMs": 18255, "commands": ["small", "purple"] },
+  { "text": "水面に映る空", "vposMs": 18414, "commands": ["ue", "cyan"] },
   { "text": "リフレクションきれい", "vposMs": 233500, "commands": [] },
   { "text": "鏡みたい", "vposMs": 235500, "commands": [] },
   { "text": "吸い込まれそう", "vposMs": 237500, "commands": [] },
@@ -1000,11 +1000,11 @@
   { "text": "ジレンマ", "vposMs": 259500, "commands": [] },
   { "text": "このままでいい", "vposMs": 261500, "commands": [] },
   { "text": "動画で楽しめるだけで幸せ", "vposMs": 263500, "commands": [] },
-  { "text": "本当にそう", "vposMs": 265500, "commands": [] },
+  { "text": "本当にそう", "vposMs": 21118, "commands": [] },
   { "text": "高評価とチャンネル登録で応援", "vposMs": 267500, "commands": [] },
   { "text": "した", "vposMs": 269500, "commands": [] },
   { "text": "済", "vposMs": 271500, "commands": [] },
-  { "text": "ベルマークも押した", "vposMs": 273500, "commands": [] },
+  { "text": "ベルマークも押した", "vposMs": 21754, "commands": [] },
   { "text": "布教しよ", "vposMs": 275500, "commands": [] },
   { "text": "友達に教えた", "vposMs": 277500, "commands": [] },
   { "text": "もっと伸びろー", "vposMs": 279500, "commands": ["big", "red2"] },
@@ -1022,11 +1022,11 @@
   { "text": "これで無限に見れる", "vposMs": 303500, "commands": [] },
   { "text": "永久機関", "vposMs": 305500, "commands": [] },
   { "text": "終わりの挨拶しとくか", "vposMs": 307500, "commands": [] },
-  { "text": "おつかれさまでした", "vposMs": 309500, "commands": [] },
-  { "text": "おつ", "vposMs": 311500, "commands": [] },
-  { "text": "乙", "vposMs": 313500, "commands": [] },
-  { "text": "otsukare", "vposMs": 315500, "commands": [] },
-  { "text": "最高の動画をありがとう", "vposMs": 317500, "commands": ["big", "pink"] },
+  { "text": "おつかれさまでした", "vposMs": 24618, "commands": [] },
+  { "text": "おつ", "vposMs": 24777, "commands": [] },
+  { "text": "乙", "vposMs": 24936, "commands": [] },
+  { "text": "otsukare", "vposMs": 25095, "commands": [] },
+  { "text": "最高の動画をありがとう", "vposMs": 25254, "commands": ["big", "pink"] },
   { "text": "うｐ主ありがとう", "vposMs": 319500, "commands": [] },
   { "text": "主さん感謝", "vposMs": 321500, "commands": [] },
   { "text": "次回作も待ってます", "vposMs": 323500, "commands": [] },
@@ -1040,22 +1040,22 @@
   { "text": "また来ます", "vposMs": 339500, "commands": [] },
   { "text": "ﾉｼ", "vposMs": 341500, "commands": [] },
   { "text": "ノ", "vposMs": 343500, "commands": [] },
-  { "text": "8888888888888888888888888888", "vposMs": 345500, "commands": ["_live"] },
-  { "text": "8888888888888888888888888888", "vposMs": 348500, "commands": ["_live", "yellow"] },
-  { "text": "8888888888888888888888888888", "vposMs": 351500, "commands": ["_live", "orange"] },
-  { "text": "8888888888888888888888888888", "vposMs": 354500, "commands": ["_live", "red"] },
-  { "text": "8888888888888888888888888888", "vposMs": 357500, "commands": ["_live", "pink"] },
-  { "text": "8888888888888888888888888888", "vposMs": 360500, "commands": ["_live", "purple"] },
-  { "text": "8888888888888888888888888888", "vposMs": 363500, "commands": ["_live", "blue"] },
-  { "text": "8888888888888888888888888888", "vposMs": 366500, "commands": ["_live", "cyan"] },
-  { "text": "8888888888888888888888888888", "vposMs": 369500, "commands": ["_live", "green"] },
-  { "text": "虹だ", "vposMs": 372500, "commands": [] },
-  { "text": "きれい", "vposMs": 375500, "commands": [] },
-  { "text": "すごい一体感", "vposMs": 378500, "commands": [] },
-  { "text": "これぞニコニコ", "vposMs": 381500, "commands": [] },
-  { "text": "（ここはYouTube）", "vposMs": 383500, "commands": ["small"] },
-  { "text": "まあまあｗ", "vposMs": 385500, "commands": ["small"] },
-  { "text": "いい最終回だった", "vposMs": 387500, "commands": [] },
-  { "text": "まだ終わってないｗ", "vposMs": 388500, "commands": [] },
-  { "text": "最後まで見る", "vposMs": 389500, "commands": [] }
+  { "text": "8888888888888888888888888888", "vposMs": 27488, "commands": ["_live"] },
+  { "text": "8888888888888888888888888888", "vposMs": 27727, "commands": ["_live", "yellow"] },
+  { "text": "8888888888888888888888888888", "vposMs": 27966, "commands": ["_live", "orange"] },
+  { "text": "8888888888888888888888888888", "vposMs": 28205, "commands": ["_live", "red"] },
+  { "text": "8888888888888888888888888888", "vposMs": 28444, "commands": ["_live", "pink"] },
+  { "text": "8888888888888888888888888888", "vposMs": 28683, "commands": ["_live", "purple"] },
+  { "text": "8888888888888888888888888888", "vposMs": 28922, "commands": ["_live", "blue"] },
+  { "text": "8888888888888888888888888888", "vposMs": 29161, "commands": ["_live", "cyan"] },
+  { "text": "8888888888888888888888888888", "vposMs": 29400, "commands": ["_live", "green"] },
+  { "text": "虹だ", "vposMs": 29639, "commands": [] },
+  { "text": "きれい", "vposMs": 29878, "commands": [] },
+  { "text": "すごい一体感", "vposMs": 30117, "commands": [] },
+  { "text": "これぞニコニコ", "vposMs": 30356, "commands": [] },
+  { "text": "（ここはYouTube）", "vposMs": 30515, "commands": ["small"] },
+  { "text": "まあまあｗ", "vposMs": 30674, "commands": ["small"] },
+  { "text": "いい最終回だった", "vposMs": 30833, "commands": [] },
+  { "text": "まだ終わってないｗ", "vposMs": 30892, "commands": [] },
+  { "text": "最後まで見る", "vposMs": 30992, "commands": [] }
 ]

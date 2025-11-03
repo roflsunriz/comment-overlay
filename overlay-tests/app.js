@@ -4,6 +4,30 @@ const moduleCandidates = [
   "../dist/comment-overlay.es",
 ];
 
+let debugLogFn = null;
+let isDebugOverlayEnabled = false;
+
+const safeDebugLog = (category, payload) => {
+  if (!isDebugOverlayEnabled) {
+    return;
+  }
+  if (typeof debugLogFn !== "function") {
+    return;
+  }
+  debugLogFn(category, payload);
+};
+
+const formatPreview = (text) => {
+  if (typeof text !== "string") {
+    return "";
+  }
+  const trimmed = text.trim();
+  if (trimmed.length <= 40) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, 40)}…`;
+};
+
 const loadOverlayModule = async () => {
   const failures = [];
   for (const candidate of moduleCandidates) {
@@ -45,11 +69,17 @@ const reportStatus = (message) => {
 
 const sanitizeCommentEntry = (entry) => {
   if (!entry || typeof entry !== "object") {
+    safeDebugLog("overlay-sanitize-skip", { reason: "not-object" });
     return null;
   }
   const text = typeof entry.text === "string" ? entry.text.trim() : "";
   const vposMs = Number(entry.vposMs);
   if (!text || !Number.isFinite(vposMs) || vposMs < 0) {
+    safeDebugLog("overlay-sanitize-skip", {
+      reason: "invalid-values",
+      preview: formatPreview(text),
+      vposMs: Number.isFinite(vposMs) ? vposMs : String(entry.vposMs),
+    });
     return null;
   }
   const commands = Array.isArray(entry.commands)
@@ -74,9 +104,27 @@ const setup = async () => {
 
   reportStatus("Bootstrapping overlay module...");
 
-  const { CommentRenderer, cloneDefaultSettings } = await loadOverlayModule();
+  const {
+    CommentRenderer,
+    cloneDefaultSettings,
+    configureDebugLogging,
+    debugLog: exportedDebugLog,
+  } = await loadOverlayModule();
+
+  debugLogFn = typeof exportedDebugLog === "function" ? exportedDebugLog : null;
+
+  const query = new URLSearchParams(window.location.search);
+  const debugParam = query.get("overlayDebug");
+  isDebugOverlayEnabled =
+    debugParam === "1" || debugParam === "true" || debugParam === "yes" || debugParam === "on";
+
+  const debugOptions = { enabled: isDebugOverlayEnabled, maxLogsPerCategory: 60 };
+  if (typeof configureDebugLogging === "function") {
+    configureDebugLogging(debugOptions);
+  }
   const renderer = new CommentRenderer(cloneDefaultSettings(), {
     loggerNamespace: "OverlayTest",
+    debug: debugOptions,
   });
 
   renderer.initialize({ video: videoEl, container: containerEl });
@@ -185,6 +233,47 @@ const setup = async () => {
       : "正規表現フィルタは設定されていません。",
   );
 
+  const waitForEvent = (target, eventName) =>
+    new Promise((resolve) => {
+      const handler = () => {
+        target.removeEventListener(eventName, handler);
+        resolve();
+      };
+      target.addEventListener(eventName, handler);
+    });
+
+  const ensureMetadata = async () => {
+    if (Number.isFinite(videoEl.duration) && videoEl.readyState >= 1) {
+      return;
+    }
+    await waitForEvent(videoEl, "loadedmetadata");
+  };
+
+  const seekVideo = async (timeInSeconds) => {
+    await ensureMetadata();
+    const needsSeek = Math.abs(videoEl.currentTime - timeInSeconds) > 0.01;
+    if (!needsSeek) {
+      return;
+    }
+    const seeked = waitForEvent(videoEl, "seeked");
+    videoEl.currentTime = timeInSeconds;
+    await seeked.catch(() => undefined);
+  };
+
+  const pauseVideo = async () => {
+    if (videoEl.paused) {
+      return false;
+    }
+    const paused = waitForEvent(videoEl, "pause");
+    videoEl.pause();
+    await paused.catch(() => undefined);
+    return true;
+  };
+
+  const resumeVideo = async () => {
+    await videoEl.play().catch(() => undefined);
+  };
+
   const loadComments = async () => {
     reportStatus("Loading comment data...");
     try {
@@ -197,10 +286,26 @@ const setup = async () => {
         ? rawComments.map(sanitizeCommentEntry).filter(Boolean)
         : [];
 
-      renderer.clearComments();
-      cleaned.forEach(({ text, vposMs, commands }) => {
-        renderer.addComment(text, vposMs, commands);
-      });
+      safeDebugLog("overlay-load-comments", { total: cleaned.length });
+
+      const wasPlaying = await pauseVideo();
+      try {
+        await seekVideo(0);
+        renderer.resetState();
+        renderer.clearComments();
+        cleaned.forEach(({ text, vposMs, commands }) => {
+          safeDebugLog("overlay-ingest", {
+            preview: formatPreview(text),
+            vposMs,
+            commands: commands.length,
+          });
+          renderer.addComment(text, vposMs, commands);
+        });
+      } finally {
+        if (wasPlaying) {
+          await resumeVideo();
+        }
+      }
 
       reportStatus(`Loaded ${cleaned.length} comments.`);
       updateSettingsStatus();

@@ -3,4 +3,6 @@ export { CommentRenderer, type CommentRendererConfig, type CommentRendererInitia
 export { cloneDefaultSettings, DEFAULT_RENDERER_SETTINGS, COMMENT_OVERLAY_VERSION, } from "./config/default-settings";
 export type { RendererSettings, VideoMetadata } from "./shared/types";
 export { createLogger, type LogLevel, type Logger } from "./shared/logger";
+export { configureDebugLogging, debugLog, isDebugLoggingEnabled, resetDebugCounters, } from "./shared/debug";
+export type { DebugLoggingOptions } from "./shared/debug";
 //# sourceMappingURL=index.d.ts.map
