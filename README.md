@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/comment-overlay)](https://www.npmjs.com/package/comment-overlay)
 [![npm downloads](https://img.shields.io/npm/dm/comment-overlay)](https://www.npmjs.com/package/comment-overlay)
-[![license](https://img.shields.io/github/license/rofls/comment-overlay)](./LICENSE)
+[![license](https://img.shields.io/github/license/roflsunriz/comment-overlay)](./LICENSE)
 
 再利用可能なコメントオーバーレイ描画エンジンです。ニコニコ動画のような横流れコメントを、HTML5 動画など任意の再生コンテンツ上に重ねて表示できます。npm モジュールとして公開されており、`npm install comment-overlay` で導入できます。
 
