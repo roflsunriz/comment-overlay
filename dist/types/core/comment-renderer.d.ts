@@ -35,6 +35,7 @@ export declare class CommentRenderer {
     private ctx;
     private videoElement;
     private containerElement;
+    private fullscreenActive;
     private laneCount;
     private laneHeight;
     private displayWidth;
@@ -133,6 +134,13 @@ export declare class CommentRenderer {
     private setupVisibilityHandling;
     private setupResizeHandling;
     private cleanupResizeHandling;
+    private setupFullscreenHandling;
+    private resolveResizeObserverTarget;
+    private handleFullscreenChange;
+    private resolveFullscreenContainer;
+    private resolveActiveOverlayContainer;
+    private getFullscreenElement;
+    private promoteContainerToFullscreen;
     private addCleanup;
     private runCleanupTasks;
 }

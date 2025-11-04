@@ -189,6 +189,7 @@ export class CommentRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
   private videoElement: HTMLVideoElement | null = null;
   private containerElement: HTMLElement | null = null;
+  private fullscreenActive = false;
   private laneCount = DEFAULT_LANE_COUNT;
   private laneHeight = 0;
   private displayWidth = 0;
@@ -338,6 +339,7 @@ export class CommentRenderer {
       this.calculateLaneMetrics();
       this.setupVideoEventListeners(video);
       this.setupResizeHandling(video);
+      this.setupFullscreenHandling();
       this.setupVideoChangeDetection(video, container);
       this.startAnimation();
       this.setupVisibilityHandling();
@@ -848,6 +850,7 @@ export class CommentRenderer {
     this.displayWidth = 0;
     this.displayHeight = 0;
     this.canvasDpr = 1;
+    this.fullscreenActive = false;
   }
 
   private calculateLaneMetrics(): void {
@@ -2032,7 +2035,7 @@ export class CommentRenderer {
     this.cleanupResizeHandling();
 
     if (this._settings.useContainerResizeObserver && this.isResizeObserverAvailable) {
-      const target = videoElement.parentElement ?? videoElement;
+      const target = this.resolveResizeObserverTarget(videoElement);
       const observer = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const { width, height } = entry.contentRect;
@@ -2066,6 +2069,161 @@ export class CommentRenderer {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.resizeObserverTarget = null;
+  }
+
+  private setupFullscreenHandling(): void {
+    if (
+      typeof document === "undefined" ||
+      typeof document.addEventListener !== "function" ||
+      typeof document.removeEventListener !== "function"
+    ) {
+      return;
+    }
+
+    const onFullscreenChange = (): void => {
+      void this.handleFullscreenChange();
+    };
+
+    const events = [
+      "fullscreenchange",
+      "webkitfullscreenchange",
+      "mozfullscreenchange",
+      "MSFullscreenChange",
+    ];
+
+    events.forEach((eventName) => {
+      document.addEventListener(eventName, onFullscreenChange);
+      this.addCleanup(() => document.removeEventListener(eventName, onFullscreenChange));
+    });
+
+    void this.handleFullscreenChange();
+  }
+
+  private resolveResizeObserverTarget(videoElement: HTMLVideoElement): Element {
+    const fullscreenContainer = this.resolveFullscreenContainer(videoElement);
+    if (fullscreenContainer) {
+      return fullscreenContainer;
+    }
+    return videoElement.parentElement ?? videoElement;
+  }
+
+  private async handleFullscreenChange(): Promise<void> {
+    const canvas = this.canvas;
+    const video = this.videoElement;
+    if (!canvas || !video) {
+      return;
+    }
+
+    const baseContainer = this.containerElement ?? video.parentElement ?? null;
+    const fullscreenElement = this.getFullscreenElement();
+
+    if (
+      fullscreenElement === video &&
+      baseContainer instanceof HTMLElement &&
+      baseContainer !== video &&
+      baseContainer.contains(video) &&
+      typeof baseContainer.requestFullscreen === "function"
+    ) {
+      const promoted = await this.promoteContainerToFullscreen(baseContainer);
+      if (promoted) {
+        return;
+      }
+    }
+
+    const nextContainer = this.resolveActiveOverlayContainer(
+      video,
+      baseContainer,
+      fullscreenElement,
+    );
+
+    if (!(nextContainer instanceof HTMLElement)) {
+      return;
+    }
+
+    if (canvas.parentElement !== nextContainer) {
+      this.ensureContainerPositioning(nextContainer);
+      nextContainer.appendChild(canvas);
+    } else {
+      this.ensureContainerPositioning(nextContainer);
+    }
+
+    const fullscreenContainer =
+      fullscreenElement instanceof HTMLElement && fullscreenElement.contains(video)
+        ? fullscreenElement
+        : null;
+    const isFullscreenNow = fullscreenContainer !== null;
+    if (this.fullscreenActive !== isFullscreenNow) {
+      this.fullscreenActive = isFullscreenNow;
+      this.setupResizeHandling(video);
+    }
+
+    canvas.style.position = "absolute";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+
+    this.resize();
+  }
+
+  private resolveFullscreenContainer(videoElement: HTMLVideoElement): HTMLElement | null {
+    const fullscreenElement = this.getFullscreenElement();
+    if (!(fullscreenElement instanceof HTMLElement)) {
+      return null;
+    }
+    if (fullscreenElement === videoElement) {
+      return fullscreenElement;
+    }
+    if (fullscreenElement.contains(videoElement)) {
+      return fullscreenElement;
+    }
+    return null;
+  }
+
+  private resolveActiveOverlayContainer(
+    videoElement: HTMLVideoElement,
+    baseContainer: HTMLElement | null,
+    fullscreenElement: Element | null,
+  ): HTMLElement | null {
+    if (fullscreenElement instanceof HTMLElement && fullscreenElement.contains(videoElement)) {
+      if (fullscreenElement instanceof HTMLVideoElement) {
+        if (baseContainer instanceof HTMLElement) {
+          return baseContainer;
+        }
+        return fullscreenElement;
+      }
+      return fullscreenElement;
+    }
+    return baseContainer ?? null;
+  }
+
+  private getFullscreenElement(): Element | null {
+    if (typeof document === "undefined") {
+      return null;
+    }
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      msFullscreenElement?: Element | null;
+      mozFullScreenElement?: Element | null;
+    };
+    return (
+      document.fullscreenElement ??
+      doc.webkitFullscreenElement ??
+      doc.mozFullScreenElement ??
+      doc.msFullscreenElement ??
+      null
+    );
+  }
+
+  private async promoteContainerToFullscreen(container: HTMLElement): Promise<boolean> {
+    if (typeof container.requestFullscreen !== "function") {
+      return false;
+    }
+    try {
+      await container.requestFullscreen();
+      return true;
+    } catch (error) {
+      this.log.warn("CommentRenderer.promoteContainerToFullscreen", error as Error);
+      return false;
+    }
   }
 
   private addCleanup(task: () => void): void {
