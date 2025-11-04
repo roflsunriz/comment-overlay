@@ -28,6 +28,9 @@ export declare class CommentRenderer {
     private readonly animationFrameProvider;
     private readonly createCanvasElement;
     private readonly commentDependencies;
+    private settingsVersion;
+    private normalizedNgWords;
+    private compiledNgRegexps;
     private canvas;
     private ctx;
     private videoElement;
@@ -57,6 +60,11 @@ export declare class CommentRenderer {
     private resolveContainer;
     private ensureContainerPositioning;
     initialize(options: HTMLVideoElement | CommentRendererInitializeOptions): void;
+    addComments(entries: ReadonlyArray<{
+        text: string;
+        vposMs: number;
+        commands?: string[];
+    }>): Comment[];
     addComment(text: string, vposMs: number, commands?: string[]): Comment | null;
     clearComments(): void;
     resetState(): void;
@@ -65,6 +73,7 @@ export declare class CommentRenderer {
     getVideoElement(): HTMLVideoElement | null;
     getCurrentVideoSource(): string | null;
     getCommentsSnapshot(): Comment[];
+    private rebuildNgMatchers;
     isNGComment(text: string): boolean;
     resize(width?: number, height?: number): void;
     private resolveDevicePixelRatio;
@@ -109,6 +118,7 @@ export declare class CommentRenderer {
     private resetCommentActivity;
     private setupVideoChangeDetection;
     private extractVideoElement;
+    private setupVisibilityHandling;
     private setupResizeHandling;
     private cleanupResizeHandling;
     private addCleanup;

@@ -178,6 +178,9 @@ export class CommentRenderer {
   private readonly animationFrameProvider: AnimationFrameProvider;
   private readonly createCanvasElement: () => HTMLCanvasElement;
   private readonly commentDependencies: CommentDependencies;
+  private settingsVersion = 0;
+  private normalizedNgWords: string[] = [];
+  private compiledNgRegexps: RegExp[] = [];
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private videoElement: HTMLVideoElement | null = null;
@@ -224,9 +227,14 @@ export class CommentRenderer {
     this.animationFrameProvider =
       config.animationFrameProvider ?? createDefaultAnimationFrameProvider(this.timeSource);
     this.createCanvasElement = config.createCanvasElement ?? createBrowserCanvasFactory();
-    this.commentDependencies = { timeSource: this.timeSource };
+    this.commentDependencies = {
+      timeSource: this.timeSource,
+      settingsVersion: this.settingsVersion,
+    };
     this._settings = normalizeSettings(baseSettings);
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
+
+    this.rebuildNgMatchers();
 
     if (config.debug) {
       configureDebugLogging(config.debug);
@@ -239,6 +247,9 @@ export class CommentRenderer {
 
   set settings(value: RendererSettings) {
     this._settings = normalizeSettings(value);
+    this.settingsVersion += 1;
+    this.commentDependencies.settingsVersion = this.settingsVersion;
+    this.rebuildNgMatchers();
   }
 
   private resolveContainer(
@@ -318,49 +329,75 @@ export class CommentRenderer {
       this.setupResizeHandling(video);
       this.setupVideoChangeDetection(video, container);
       this.startAnimation();
+      this.setupVisibilityHandling();
     } catch (error) {
       this.log.error("CommentRenderer.initialize", error as Error);
       throw error;
     }
   }
 
-  addComment(text: string, vposMs: number, commands: string[] = []): Comment | null {
-    const preview = formatCommentPreview(text);
-    if (this.isNGComment(text)) {
-      debugLog("comment-skip-ng", { preview, vposMs });
-      return null;
-    }
-    const normalizedVposMs = sanitizeVposMs(vposMs);
-    if (normalizedVposMs === null) {
-      this.log.warn("CommentRenderer.addComment.invalidVpos", { text, vposMs });
-      debugLog("comment-skip-invalid-vpos", { preview, vposMs });
-      return null;
-    }
-    const duplicate = this.comments.some(
-      (comment) => comment.text === text && comment.vposMs === normalizedVposMs,
-    );
-    if (duplicate) {
-      debugLog("comment-skip-duplicate", { preview, vposMs: normalizedVposMs });
-      return null;
+  addComments(
+    entries: ReadonlyArray<{ text: string; vposMs: number; commands?: string[] }>,
+  ): Comment[] {
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return [];
     }
 
-    const comment = new Comment(
-      text,
-      normalizedVposMs,
-      commands,
-      this._settings,
-      this.commentDependencies,
-    );
-    comment.creationIndex = this.commentSequence++;
-    debugLog("comment-added", {
-      preview,
-      vposMs: normalizedVposMs,
-      commands: comment.commands.length,
-      layout: comment.layout,
-      isScrolling: comment.isScrolling,
-      invisible: comment.isInvisible,
-    });
-    this.comments.push(comment);
+    const addedComments: Comment[] = [];
+    this.commentDependencies.settingsVersion = this.settingsVersion;
+
+    for (const entry of entries) {
+      const { text, vposMs, commands = [] } = entry;
+      const preview = formatCommentPreview(text);
+
+      if (this.isNGComment(text)) {
+        debugLog("comment-skip-ng", { preview, vposMs });
+        continue;
+      }
+
+      const normalizedVposMs = sanitizeVposMs(vposMs);
+      if (normalizedVposMs === null) {
+        this.log.warn("CommentRenderer.addComment.invalidVpos", { text, vposMs });
+        debugLog("comment-skip-invalid-vpos", { preview, vposMs });
+        continue;
+      }
+
+      const duplicate =
+        this.comments.some(
+          (comment) => comment.text === text && comment.vposMs === normalizedVposMs,
+        ) ||
+        addedComments.some(
+          (comment) => comment.text === text && comment.vposMs === normalizedVposMs,
+        );
+      if (duplicate) {
+        debugLog("comment-skip-duplicate", { preview, vposMs: normalizedVposMs });
+        continue;
+      }
+
+      const comment = new Comment(
+        text,
+        normalizedVposMs,
+        commands,
+        this._settings,
+        this.commentDependencies,
+      );
+      comment.creationIndex = this.commentSequence++;
+      addedComments.push(comment);
+      debugLog("comment-added", {
+        preview,
+        vposMs: normalizedVposMs,
+        commands: comment.commands.length,
+        layout: comment.layout,
+        isScrolling: comment.isScrolling,
+        invisible: comment.isInvisible,
+      });
+    }
+
+    if (addedComments.length === 0) {
+      return [];
+    }
+
+    this.comments.push(...addedComments);
     this.comments.sort((a, b) => {
       const vposMsDiff = a.vposMs - b.vposMs;
       if (Math.abs(vposMsDiff) > EDGE_EPSILON) {
@@ -368,7 +405,13 @@ export class CommentRenderer {
       }
       return a.creationIndex - b.creationIndex;
     });
-    return comment;
+
+    return addedComments;
+  }
+
+  addComment(text: string, vposMs: number, commands: string[] = []): Comment | null {
+    const [comment] = this.addComments([{ text, vposMs, commands }]);
+    return comment ?? null;
   }
 
   clearComments(): void {
@@ -424,7 +467,7 @@ export class CommentRenderer {
     const syncModeChanged = previousSyncMode !== this._settings.syncMode;
 
     this.comments.forEach((comment) => {
-      comment.syncWithSettings(this._settings);
+      comment.syncWithSettings(this._settings, this.settingsVersion);
     });
 
     if (directionChanged) {
@@ -486,44 +529,56 @@ export class CommentRenderer {
     return [...this.comments];
   }
 
+  private rebuildNgMatchers(): void {
+    const normalizedWords: string[] = [];
+    const compiledRegexps: RegExp[] = [];
+
+    const sourceWords = Array.isArray(this._settings.ngWords) ? this._settings.ngWords : [];
+    for (const word of sourceWords) {
+      if (typeof word !== "string") {
+        continue;
+      }
+      const normalized = word.trim().toLowerCase();
+      if (normalized.length === 0) {
+        continue;
+      }
+      normalizedWords.push(normalized);
+    }
+
+    const sourcePatterns = Array.isArray(this._settings.ngRegexps) ? this._settings.ngRegexps : [];
+    for (const pattern of sourcePatterns) {
+      if (typeof pattern !== "string" || pattern.length === 0) {
+        continue;
+      }
+      try {
+        compiledRegexps.push(new RegExp(pattern));
+      } catch (regexError) {
+        this.log.error("CommentRenderer.rebuildNgMatchers.regex", regexError as Error, {
+          pattern,
+        });
+      }
+    }
+
+    this.normalizedNgWords = normalizedWords;
+    this.compiledNgRegexps = compiledRegexps;
+  }
+
   isNGComment(text: string): boolean {
     try {
       if (typeof text !== "string") {
         return true;
       }
 
-      if (Array.isArray(this._settings.ngWords) && this._settings.ngWords.length > 0) {
+      if (this.normalizedNgWords.length > 0) {
         const normalizedText = text.toLowerCase();
-        const containsNgWord = this._settings.ngWords.some((word) => {
-          if (typeof word !== "string") {
-            return false;
-          }
-          const normalizedWord = word.trim().toLowerCase();
-          if (normalizedWord.length === 0) {
-            return false;
-          }
-          return normalizedText.includes(normalizedWord);
-        });
+        const containsNgWord = this.normalizedNgWords.some((word) => normalizedText.includes(word));
         if (containsNgWord) {
           return true;
         }
       }
 
-      if (Array.isArray(this._settings.ngRegexps)) {
-        return this._settings.ngRegexps.some((pattern) => {
-          if (typeof pattern !== "string" || pattern.length === 0) {
-            return false;
-          }
-          try {
-            return new RegExp(pattern).test(text);
-          } catch (regexError) {
-            this.log.error("CommentRenderer.isNGComment.regex", regexError as Error, {
-              pattern,
-              text,
-            });
-            return false;
-          }
-        });
+      if (this.compiledNgRegexps.length > 0) {
+        return this.compiledNgRegexps.some((regexp) => regexp.test(text));
       }
 
       return false;
@@ -749,7 +804,7 @@ export class CommentRenderer {
         continue;
       }
 
-      comment.syncWithSettings(this._settings);
+      comment.syncWithSettings(this._settings, this.settingsVersion);
 
       if (this.shouldActivateCommentAtTime(comment, this.currentTime, preview)) {
         this.activateComment(
@@ -1451,7 +1506,7 @@ export class CommentRenderer {
         return;
       }
 
-      comment.syncWithSettings(this._settings);
+      comment.syncWithSettings(this._settings, this.settingsVersion);
       comment.isActive = false;
       comment.lane = -1;
       comment.clearActivation();
@@ -1698,6 +1753,35 @@ export class CommentRenderer {
       }
     }
     return null;
+  }
+
+  private setupVisibilityHandling(): void {
+    if (
+      typeof document === "undefined" ||
+      typeof document.addEventListener !== "function" ||
+      typeof document.removeEventListener !== "function"
+    ) {
+      return;
+    }
+
+    const enforceVisibilityState = (): void => {
+      const state = document.visibilityState;
+      if (state !== "visible") {
+        this.stopAnimation();
+        return;
+      }
+      if (!this._settings.isCommentVisible) {
+        return;
+      }
+      this.startAnimation();
+    };
+
+    document.addEventListener("visibilitychange", enforceVisibilityState);
+    this.addCleanup(() => document.removeEventListener("visibilitychange", enforceVisibilityState));
+
+    if (document.visibilityState !== "visible") {
+      this.stopAnimation();
+    }
   }
 
   private setupResizeHandling(videoElement: HTMLVideoElement): void {

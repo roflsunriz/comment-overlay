@@ -9,6 +9,35 @@ import { parseCommentCommands } from "./comment-commands";
 
 const logger = createLogger("CommentEngine:Comment");
 
+type TextMeasurementCache = Map<string, number>;
+
+const textMeasurementCaches = new WeakMap<CanvasRenderingContext2D, TextMeasurementCache>();
+
+const getTextMeasurementCache = (ctx: CanvasRenderingContext2D): TextMeasurementCache => {
+  let cache = textMeasurementCaches.get(ctx);
+  if (!cache) {
+    cache = new Map();
+    textMeasurementCaches.set(ctx, cache);
+  }
+  return cache;
+};
+
+const measureTextWidth = (ctx: CanvasRenderingContext2D, text: string): number => {
+  if (!ctx) {
+    return 0;
+  }
+  const fontKey = ctx.font ?? "";
+  const cacheKey = `${fontKey}::${text}`;
+  const cache = getTextMeasurementCache(ctx);
+  const cached = cache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const width = ctx.measureText(text).width;
+  cache.set(cacheKey, width);
+  return width;
+};
+
 export const STATIC_VISIBLE_DURATION_MS = 4_000;
 
 const HEX_COLOR_PATTERN = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i;
@@ -79,6 +108,7 @@ export const createDefaultTimeSource = (): TimeSource => createPerformanceTimeSo
 
 export interface CommentDependencies {
   timeSource?: TimeSource;
+  settingsVersion?: number;
 }
 
 const resolveScrollDirection = (input: ScrollDirection | string): ScrollDirection =>
@@ -143,6 +173,7 @@ export class Comment {
   lines: string[] = [];
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
+  private lastSyncedSettingsVersion = -1;
 
   constructor(
     text: string,
@@ -182,7 +213,7 @@ export class Comment {
 
     this.timeSource = dependencies.timeSource ?? createDefaultTimeSource();
     this.applyScrollDirection(settings.scrollDirection);
-    this.syncWithSettings(settings);
+    this.syncWithSettings(settings, dependencies.settingsVersion);
   }
 
   prepare(
@@ -212,7 +243,7 @@ export class Comment {
       let maxLineWidth = 0;
       const effectiveLetterSpacing = this.letterSpacing;
       for (const line of this.lines) {
-        const baseWidth = ctx.measureText(line).width;
+        const baseWidth = measureTextWidth(ctx, line);
         const extraSpacing = line.length > 1 ? effectiveLetterSpacing * (line.length - 1) : 0;
         const totalWidth = Math.max(0, baseWidth + extraSpacing);
         if (totalWidth > maxLineWidth) {
@@ -248,7 +279,7 @@ export class Comment {
       }
 
       this.staticExpiryTimeMs = null;
-      const maxReservationWidth = ctx.measureText("??".repeat(150)).width;
+      const maxReservationWidth = measureTextWidth(ctx, "??".repeat(150));
 
       const bufferFromWidth = this.width * Math.max(options.bufferRatio, 0);
       this.bufferWidth = Math.max(options.baseBufferPx, bufferFromWidth);
@@ -397,8 +428,7 @@ export class Comment {
           } else {
             ctx.fillText(char, cursorX, baselineY);
           }
-          const metrics = ctx.measureText(char);
-          const advance = Number.isFinite(metrics.width) ? metrics.width : 0;
+          const advance = measureTextWidth(ctx, char);
           cursorX += advance;
           if (index < line.length - 1) {
             cursorX += this.letterSpacing;
@@ -496,11 +526,17 @@ export class Comment {
     }
   }
 
-  syncWithSettings(settings: RendererSettings): void {
+  syncWithSettings(settings: RendererSettings, settingsVersion?: number): void {
+    if (typeof settingsVersion === "number" && settingsVersion === this.lastSyncedSettingsVersion) {
+      return;
+    }
     this.color = this.getEffectiveColor(settings.commentColor);
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.applyScrollDirection(settings.scrollDirection);
     this.renderStyle = settings.renderStyle;
+    if (typeof settingsVersion === "number") {
+      this.lastSyncedSettingsVersion = settingsVersion;
+    }
   }
 
   getEffectiveColor(defaultColor: string): string {

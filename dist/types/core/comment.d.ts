@@ -6,6 +6,7 @@ export interface TimeSource {
 export declare const createDefaultTimeSource: () => TimeSource;
 export interface CommentDependencies {
     timeSource?: TimeSource;
+    settingsVersion?: number;
 }
 export interface CommentPrepareOptions {
     visibleWidth: number;
@@ -62,11 +63,12 @@ export declare class Comment {
     lines: string[];
     private directionSign;
     private readonly timeSource;
+    private lastSyncedSettingsVersion;
     constructor(text: string, vposMs: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
     prepare(ctx: CanvasRenderingContext2D, visibleWidth: number, canvasHeight: number, options: CommentPrepareOptions): void;
     update(playbackRate?: number, isPaused?: boolean): void;
     draw(ctx: CanvasRenderingContext2D, interpolatedX?: number | null): void;
-    syncWithSettings(settings: RendererSettings): void;
+    syncWithSettings(settings: RendererSettings, settingsVersion?: number): void;
     getEffectiveColor(defaultColor: string): string;
     getEffectiveOpacity(defaultOpacity: number): number;
     markActivated(atTimeMs: number): void;
