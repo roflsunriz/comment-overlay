@@ -46,6 +46,11 @@ export declare class CommentRenderer {
     private isPlaying;
     private lastDrawTime;
     private finalPhaseActive;
+    private finalPhaseStartTime;
+    private finalPhaseScheduleDirty;
+    private playbackHasBegun;
+    private skipDrawingForCurrentFrame;
+    private readonly finalPhaseVposOverrides;
     private frameId;
     private videoFrameHandle;
     private resizeObserver;
@@ -69,6 +74,13 @@ export declare class CommentRenderer {
     clearComments(): void;
     resetState(): void;
     destroy(): void;
+    private resetFinalPhaseState;
+    private getEffectiveCommentVpos;
+    private getFinalPhaseDisplayDuration;
+    private resolveFinalPhaseVpos;
+    private recomputeFinalPhaseTimeline;
+    private shouldSuppressRendering;
+    private updatePlaybackProgressState;
     updateSettings(newSettings: RendererSettings): void;
     getVideoElement(): HTMLVideoElement | null;
     getCurrentVideoSource(): string | null;

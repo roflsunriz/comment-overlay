@@ -75,6 +75,10 @@ const BASE_COLLISION_BUFFER_PX = 32;
 const ENTRY_BUFFER_PX = 48;
 const RESERVATION_TIME_MARGIN_MS = 120;
 const FINAL_PHASE_THRESHOLD_MS = 4_000;
+const FINAL_PHASE_MIN_GAP_MS = 120;
+const FINAL_PHASE_MAX_GAP_MS = 800;
+const FINAL_PHASE_ORDER_EPSILON_MS = 2;
+const FINAL_PHASE_MIN_WINDOW_MS = 4_000;
 // シーク後も画面上に残る可能性があるコメントを拾えるよう、可視時間と静止時間の合計を参照する
 const ACTIVE_WINDOW_MS = STATIC_VISIBLE_DURATION_MS + MAX_VISIBLE_DURATION_MS;
 const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
@@ -196,6 +200,11 @@ export class CommentRenderer {
   private isPlaying = true;
   private lastDrawTime = 0;
   private finalPhaseActive = false;
+  private finalPhaseStartTime: number | null = null;
+  private finalPhaseScheduleDirty = false;
+  private playbackHasBegun = false;
+  private skipDrawingForCurrentFrame = false;
+  private readonly finalPhaseVposOverrides = new Map<Comment, number>();
   private frameId: ReturnType<typeof setTimeout> | null = null;
   private videoFrameHandle: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -301,6 +310,8 @@ export class CommentRenderer {
       this.playbackRate = video.playbackRate;
       this.isPlaying = !video.paused;
       this.lastDrawTime = this.timeSource.now();
+      this.playbackHasBegun = this.isPlaying || this.currentTime > SEEK_DIRECTION_EPSILON_MS;
+      this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
 
       const canvas = this.createCanvasElement();
       const context = canvas.getContext("2d");
@@ -398,6 +409,9 @@ export class CommentRenderer {
     }
 
     this.comments.push(...addedComments);
+    if (this.finalPhaseActive) {
+      this.finalPhaseScheduleDirty = true;
+    }
     this.comments.sort((a, b) => {
       const vposMsDiff = a.vposMs - b.vposMs;
       if (Math.abs(vposMsDiff) > EDGE_EPSILON) {
@@ -432,7 +446,9 @@ export class CommentRenderer {
   resetState(): void {
     this.clearComments();
     this.currentTime = 0;
-    this.finalPhaseActive = false;
+    this.resetFinalPhaseState();
+    this.playbackHasBegun = false;
+    this.skipDrawingForCurrentFrame = false;
   }
 
   destroy(): void {
@@ -449,11 +465,144 @@ export class CommentRenderer {
     this.containerElement = null;
     this.comments.length = 0;
     this.reservedLanes.clear();
-    this.finalPhaseActive = false;
+    this.resetFinalPhaseState();
     this.displayWidth = 0;
     this.displayHeight = 0;
     this.canvasDpr = 1;
     this.commentSequence = 0;
+    this.playbackHasBegun = false;
+    this.skipDrawingForCurrentFrame = false;
+  }
+
+  private resetFinalPhaseState(): void {
+    this.finalPhaseActive = false;
+    this.finalPhaseStartTime = null;
+    this.finalPhaseScheduleDirty = false;
+    this.finalPhaseVposOverrides.clear();
+  }
+
+  private getEffectiveCommentVpos(comment: Comment): number {
+    if (this.finalPhaseActive && this.finalPhaseScheduleDirty) {
+      this.recomputeFinalPhaseTimeline();
+    }
+    const override = this.finalPhaseVposOverrides.get(comment);
+    return override ?? comment.vposMs;
+  }
+
+  private getFinalPhaseDisplayDuration(comment: Comment): number {
+    if (!comment.isScrolling) {
+      return STATIC_VISIBLE_DURATION_MS;
+    }
+
+    const durations: number[] = [];
+    if (Number.isFinite(comment.visibleDurationMs) && comment.visibleDurationMs > 0) {
+      durations.push(comment.visibleDurationMs);
+    }
+    if (Number.isFinite(comment.totalDurationMs) && comment.totalDurationMs > 0) {
+      durations.push(comment.totalDurationMs);
+    }
+
+    if (durations.length > 0) {
+      return Math.max(...durations);
+    }
+
+    return MAX_VISIBLE_DURATION_MS;
+  }
+
+  private resolveFinalPhaseVpos(comment: Comment): number {
+    if (!this.finalPhaseActive || this.finalPhaseStartTime === null) {
+      this.finalPhaseVposOverrides.delete(comment);
+      return comment.vposMs;
+    }
+    if (this.finalPhaseScheduleDirty) {
+      this.recomputeFinalPhaseTimeline();
+    }
+    const override = this.finalPhaseVposOverrides.get(comment);
+    if (override !== undefined) {
+      return override;
+    }
+    const fallback = Math.max(comment.vposMs, this.finalPhaseStartTime);
+    this.finalPhaseVposOverrides.set(comment, fallback);
+    return fallback;
+  }
+
+  private recomputeFinalPhaseTimeline(): void {
+    if (!this.finalPhaseActive || this.finalPhaseStartTime === null) {
+      this.finalPhaseVposOverrides.clear();
+      this.finalPhaseScheduleDirty = false;
+      return;
+    }
+
+    const windowStart = this.finalPhaseStartTime;
+    const durationMs = this.duration > 0 ? this.duration : windowStart + FINAL_PHASE_MIN_WINDOW_MS;
+    const windowEnd = Math.max(windowStart + FINAL_PHASE_MIN_WINDOW_MS, durationMs);
+
+    const candidates = this.comments
+      .filter((comment) => {
+        if (comment.hasShown) {
+          return false;
+        }
+        if (comment.isInvisible) {
+          return false;
+        }
+        if (this.isNGComment(comment.text)) {
+          return false;
+        }
+        return comment.vposMs >= windowStart - ACTIVE_WINDOW_MS;
+      })
+      .sort((a, b) => {
+        const diff = a.vposMs - b.vposMs;
+        if (Math.abs(diff) > EDGE_EPSILON) {
+          return diff;
+        }
+        return a.creationIndex - b.creationIndex;
+      });
+
+    this.finalPhaseVposOverrides.clear();
+
+    if (candidates.length === 0) {
+      this.finalPhaseScheduleDirty = false;
+      return;
+    }
+
+    const windowSpan = Math.max(windowEnd - windowStart, FINAL_PHASE_MIN_WINDOW_MS);
+    const baseGap = windowSpan / Math.max(candidates.length, 1);
+    const boundedGap = Number.isFinite(baseGap) ? baseGap : FINAL_PHASE_MIN_GAP_MS;
+    const gap = Math.max(FINAL_PHASE_MIN_GAP_MS, Math.min(boundedGap, FINAL_PHASE_MAX_GAP_MS));
+
+    let nextStart = windowStart;
+    candidates.forEach((comment, index) => {
+      const durationNeeded = Math.max(1, this.getFinalPhaseDisplayDuration(comment));
+      const availableLatestStart = windowEnd - durationNeeded;
+      let assigned = Math.max(windowStart, Math.min(nextStart, availableLatestStart));
+      if (!Number.isFinite(assigned)) {
+        assigned = windowStart;
+      }
+      const epsilon = FINAL_PHASE_ORDER_EPSILON_MS * index;
+      if (assigned + epsilon <= availableLatestStart) {
+        assigned += epsilon;
+      }
+      this.finalPhaseVposOverrides.set(comment, assigned);
+      const spacing = Math.max(FINAL_PHASE_MIN_GAP_MS, Math.min(durationNeeded / 2, gap));
+      nextStart = assigned + spacing;
+    });
+
+    this.finalPhaseScheduleDirty = false;
+  }
+
+  private shouldSuppressRendering(): boolean {
+    return (
+      !this.playbackHasBegun && !this.isPlaying && this.currentTime <= SEEK_DIRECTION_EPSILON_MS
+    );
+  }
+
+  private updatePlaybackProgressState(): void {
+    if (this.playbackHasBegun) {
+      return;
+    }
+    if (this.isPlaying || this.currentTime > SEEK_DIRECTION_EPSILON_MS) {
+      this.playbackHasBegun = true;
+    }
   }
 
   updateSettings(newSettings: RendererSettings): void {
@@ -739,6 +888,11 @@ export class CommentRenderer {
     this.currentTime = referenceTime;
     this.playbackRate = video.playbackRate;
     this.isPlaying = !video.paused;
+    this.updatePlaybackProgressState();
+    this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
+    if (this.skipDrawingForCurrentFrame) {
+      return;
+    }
     const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
     const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
     const effectiveHeight =
@@ -750,6 +904,9 @@ export class CommentRenderer {
 
     if (isNearEnd && !this.finalPhaseActive) {
       this.finalPhaseActive = true;
+      this.finalPhaseStartTime = this.currentTime;
+      this.finalPhaseVposOverrides.clear();
+      this.finalPhaseScheduleDirty = true;
       context.clearRect(0, 0, effectiveWidth, effectiveHeight);
       this.comments.forEach((comment) => {
         comment.isActive = false;
@@ -761,7 +918,11 @@ export class CommentRenderer {
     }
 
     if (!isNearEnd && this.finalPhaseActive) {
-      this.finalPhaseActive = false;
+      this.resetFinalPhaseState();
+    }
+
+    if (this.finalPhaseActive && this.finalPhaseScheduleDirty) {
+      this.recomputeFinalPhaseTimeline();
     }
 
     this.pruneStaticLaneReservations(this.currentTime);
@@ -774,6 +935,7 @@ export class CommentRenderer {
           stage: "update",
           preview,
           vposMs: comment.vposMs,
+          effectiveVposMs: this.getEffectiveCommentVpos(comment),
           currentTime: this.currentTime,
           isActive: comment.isActive,
           hasShown: comment.hasShown,
@@ -785,6 +947,7 @@ export class CommentRenderer {
           debugLog("comment-eval-skip", {
             preview,
             vposMs: comment.vposMs,
+            effectiveVposMs: this.getEffectiveCommentVpos(comment),
             reason: "ng-runtime",
           });
         }
@@ -795,6 +958,7 @@ export class CommentRenderer {
           debugLog("comment-eval-skip", {
             preview,
             vposMs: comment.vposMs,
+            effectiveVposMs: this.getEffectiveCommentVpos(comment),
             reason: "invisible",
           });
         }
@@ -828,7 +992,7 @@ export class CommentRenderer {
 
         if (
           comment.layout === "naka" &&
-          comment.vposMs > this.currentTime + SEEK_DIRECTION_EPSILON_MS
+          this.getEffectiveCommentVpos(comment) > this.currentTime + SEEK_DIRECTION_EPSILON_MS
         ) {
           comment.x = comment.virtualStartX;
           comment.lastUpdateTime = this.timeSource.now();
@@ -947,12 +1111,32 @@ export class CommentRenderer {
     preview: string = "",
   ): boolean {
     const debugActive = preview.length > 0 && isDebugLoggingEnabled();
+    const effectiveVpos = this.resolveFinalPhaseVpos(comment);
+
+    if (
+      this.finalPhaseActive &&
+      this.finalPhaseStartTime !== null &&
+      comment.vposMs < this.finalPhaseStartTime - EDGE_EPSILON
+    ) {
+      if (debugActive) {
+        debugLog("comment-eval-skip", {
+          preview,
+          vposMs: comment.vposMs,
+          effectiveVposMs: effectiveVpos,
+          reason: "final-phase-trimmed",
+          finalPhaseStartTime: this.finalPhaseStartTime,
+        });
+      }
+      this.finalPhaseVposOverrides.delete(comment);
+      return false;
+    }
 
     if (comment.isInvisible) {
       if (debugActive) {
         debugLog("comment-eval-skip", {
           preview,
           vposMs: comment.vposMs,
+          effectiveVposMs: effectiveVpos,
           reason: "invisible",
         });
       }
@@ -963,27 +1147,30 @@ export class CommentRenderer {
         debugLog("comment-eval-skip", {
           preview,
           vposMs: comment.vposMs,
+          effectiveVposMs: effectiveVpos,
           reason: "already-active",
         });
       }
       return false;
     }
-    if (comment.vposMs > timeMs + SEEK_DIRECTION_EPSILON_MS) {
+    if (effectiveVpos > timeMs + SEEK_DIRECTION_EPSILON_MS) {
       if (debugActive) {
         debugLog("comment-eval-pending", {
           preview,
           vposMs: comment.vposMs,
+          effectiveVposMs: effectiveVpos,
           reason: "future",
           currentTime: timeMs,
         });
       }
       return false;
     }
-    if (comment.vposMs < timeMs - ACTIVE_WINDOW_MS) {
+    if (effectiveVpos < timeMs - ACTIVE_WINDOW_MS) {
       if (debugActive) {
         debugLog("comment-eval-skip", {
           preview,
           vposMs: comment.vposMs,
+          effectiveVposMs: effectiveVpos,
           reason: "expired-window",
           currentTime: timeMs,
         });
@@ -995,6 +1182,7 @@ export class CommentRenderer {
       debugLog("comment-eval-ready", {
         preview,
         vposMs: comment.vposMs,
+        effectiveVposMs: effectiveVpos,
         currentTime: timeMs,
       });
     }
@@ -1010,6 +1198,7 @@ export class CommentRenderer {
     referenceTime: number,
   ): void {
     comment.prepare(context, displayWidth, displayHeight, options);
+    const effectiveVpos = this.resolveFinalPhaseVpos(comment);
 
     if (isDebugLoggingEnabled()) {
       debugLog("comment-prepared", {
@@ -1020,12 +1209,43 @@ export class CommentRenderer {
         height: comment.height,
         bufferWidth: comment.bufferWidth,
         visibleDurationMs: comment.visibleDurationMs,
+        effectiveVposMs: effectiveVpos,
       });
     }
 
     if (comment.layout === "naka") {
-      const elapsedMs = Math.max(0, referenceTime - comment.vposMs);
+      const elapsedMs = Math.max(0, referenceTime - effectiveVpos);
       const displacement = comment.speedPixelsPerMs * elapsedMs;
+
+      // --- ファイナルフェーズ時の速度調整ロジック ---
+      if (this.finalPhaseActive && this.finalPhaseStartTime !== null) {
+        // コメントが画面を横断しきるべき最終時刻を決定
+        const videoDuration =
+          this.duration > 0 ? this.duration : this.finalPhaseStartTime + FINAL_PHASE_MIN_WINDOW_MS;
+        const finalPhaseWindowEnd = Math.max(
+          this.finalPhaseStartTime + FINAL_PHASE_MIN_WINDOW_MS,
+          videoDuration,
+        );
+
+        // コメントが移動すべき全距離
+        const travelDistance = Math.abs(comment.exitThreshold - comment.virtualStartX);
+        // コメントが移動に使える時間
+        const availableTravelTime = finalPhaseWindowEnd - effectiveVpos;
+
+        if (availableTravelTime > 0 && travelDistance > 0) {
+          const requiredSpeedPixelsPerMs = travelDistance / availableTravelTime;
+
+          // 必要な速度が現在の速度より速い場合のみ調整
+          if (requiredSpeedPixelsPerMs > comment.speedPixelsPerMs) {
+            comment.speedPixelsPerMs = requiredSpeedPixelsPerMs;
+            comment.baseSpeed = requiredSpeedPixelsPerMs * (1000 / 60); // px/ms を px/frame に変換
+            comment.speed = comment.baseSpeed; // 即座に適用 (playbackRate は update() で適用される)
+            comment.totalDurationMs = Math.ceil(travelDistance / requiredSpeedPixelsPerMs); // 総移動時間も更新
+          }
+        }
+      }
+      // --- ファイナルフェーズ時の速度調整ロジックここまで ---
+
       const directionSign = comment.getDirectionSign();
       const projectedX = comment.virtualStartX + directionSign * displacement;
       const exitThreshold = comment.exitThreshold;
@@ -1043,6 +1263,7 @@ export class CommentRenderer {
           debugLog("comment-skip-exited", {
             preview: formatCommentPreview(comment.text),
             vposMs: comment.vposMs,
+            effectiveVposMs: effectiveVpos,
             referenceTime,
           });
         }
@@ -1064,12 +1285,13 @@ export class CommentRenderer {
           startX: comment.x,
           width: comment.width,
           visibleDurationMs: comment.visibleDurationMs,
+          effectiveVposMs: effectiveVpos,
         });
       }
       return;
     }
 
-    const displayEnd = comment.vposMs + STATIC_VISIBLE_DURATION_MS;
+    const displayEnd = effectiveVpos + STATIC_VISIBLE_DURATION_MS;
     if (referenceTime > displayEnd) {
       comment.isActive = false;
       comment.hasShown = true;
@@ -1079,6 +1301,7 @@ export class CommentRenderer {
         debugLog("comment-skip-expired", {
           preview: formatCommentPreview(comment.text),
           vposMs: comment.vposMs,
+          effectiveVposMs: effectiveVpos,
           referenceTime,
           displayEnd,
         });
@@ -1104,6 +1327,7 @@ export class CommentRenderer {
         lane: comment.lane,
         position: staticPosition,
         displayEnd,
+        effectiveVposMs: effectiveVpos,
       });
     }
   }
@@ -1182,7 +1406,8 @@ export class CommentRenderer {
 
   private createLaneReservation(comment: Comment, referenceTime: number): LaneReservation {
     const speed = Math.max(comment.speedPixelsPerMs, EDGE_EPSILON);
-    const baseStartTime = Number.isFinite(comment.vposMs) ? comment.vposMs : referenceTime;
+    const effectiveStart = this.getEffectiveCommentVpos(comment);
+    const baseStartTime = Number.isFinite(effectiveStart) ? effectiveStart : referenceTime;
     const startTime = Math.max(0, baseStartTime);
     const endTime = startTime + comment.preCollisionDurationMs + RESERVATION_TIME_MARGIN_MS;
     const totalEndTime = startTime + comment.totalDurationMs + RESERVATION_TIME_MARGIN_MS;
@@ -1317,14 +1542,23 @@ export class CommentRenderer {
     const effectiveHeight =
       this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
 
+    const now = this.timeSource.now();
+
+    if (this.skipDrawingForCurrentFrame || this.shouldSuppressRendering()) {
+      context.clearRect(0, 0, effectiveWidth, effectiveHeight);
+      this.lastDrawTime = now;
+      return;
+    }
+
     context.clearRect(0, 0, effectiveWidth, effectiveHeight);
     const activeComments = this.comments.filter((comment) => comment.isActive);
-    const now = this.timeSource.now();
 
     if (this._settings.isCommentVisible) {
       const deltaTime = (now - this.lastDrawTime) / (1000 / 60);
       activeComments.sort((a, b) => {
-        const vposMsDiff = a.vposMs - b.vposMs;
+        const aVpos = this.getEffectiveCommentVpos(a);
+        const bVpos = this.getEffectiveCommentVpos(b);
+        const vposMsDiff = aVpos - bVpos;
         if (Math.abs(vposMsDiff) > EDGE_EPSILON) {
           return vposMsDiff;
         }
@@ -1454,7 +1688,8 @@ export class CommentRenderer {
 
     const nextTime = toMilliseconds(video.currentTime);
     this.currentTime = nextTime;
-    this.finalPhaseActive = false;
+    this.resetFinalPhaseState();
+    this.updatePlaybackProgressState();
 
     this.reservedLanes.clear();
     this.topStaticLaneReservations.clear();
@@ -1473,6 +1708,7 @@ export class CommentRenderer {
           stage: "seek",
           preview,
           vposMs: comment.vposMs,
+          effectiveVposMs: this.getEffectiveCommentVpos(comment),
           currentTime: this.currentTime,
           isActive: comment.isActive,
           hasShown: comment.hasShown,
@@ -1484,6 +1720,7 @@ export class CommentRenderer {
           debugLog("comment-eval-skip", {
             preview,
             vposMs: comment.vposMs,
+            effectiveVposMs: this.getEffectiveCommentVpos(comment),
             reason: "ng-runtime",
           });
         }
@@ -1497,6 +1734,7 @@ export class CommentRenderer {
           debugLog("comment-eval-skip", {
             preview,
             vposMs: comment.vposMs,
+            effectiveVposMs: this.getEffectiveCommentVpos(comment),
             reason: "invisible",
           });
         }
@@ -1523,7 +1761,8 @@ export class CommentRenderer {
         return;
       }
 
-      if (comment.vposMs < this.currentTime - ACTIVE_WINDOW_MS) {
+      const effectiveVpos = this.getEffectiveCommentVpos(comment);
+      if (effectiveVpos < this.currentTime - ACTIVE_WINDOW_MS) {
         comment.hasShown = true;
       } else {
         comment.hasShown = false;
@@ -1540,6 +1779,7 @@ export class CommentRenderer {
     try {
       const onPlay = (): void => {
         this.isPlaying = true;
+        this.playbackHasBegun = true;
         const now = this.timeSource.now();
         this.lastDrawTime = now;
         this.comments.forEach((comment) => {
@@ -1614,12 +1854,12 @@ export class CommentRenderer {
     const target = videoElement ?? this.videoElement;
     if (!target) {
       this.isPlaying = false;
-      this.finalPhaseActive = false;
+      this.resetFinalPhaseState();
       this.resetCommentActivity();
       return;
     }
     this.syncVideoState(target);
-    this.finalPhaseActive = false;
+    this.resetFinalPhaseState();
     this.resetCommentActivity();
   }
 
@@ -1630,6 +1870,7 @@ export class CommentRenderer {
     this.currentTime = toMilliseconds(videoElement.currentTime);
     this.playbackRate = videoElement.playbackRate;
     this.isPlaying = !videoElement.paused;
+    this.playbackHasBegun = this.isPlaying || this.currentTime > SEEK_DIRECTION_EPSILON_MS;
     this.lastDrawTime = this.timeSource.now();
   }
 
@@ -1637,6 +1878,9 @@ export class CommentRenderer {
     const now = this.timeSource.now();
     const canvas = this.canvas;
     const context = this.ctx;
+    this.resetFinalPhaseState();
+    this.skipDrawingForCurrentFrame = false;
+    this.playbackHasBegun = this.isPlaying || this.currentTime > SEEK_DIRECTION_EPSILON_MS;
     if (canvas && context) {
       const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
       const width = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
