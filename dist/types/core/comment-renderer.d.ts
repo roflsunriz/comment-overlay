@@ -20,6 +20,7 @@ export declare const createDefaultAnimationFrameProvider: (timeSource: TimeSourc
 export declare class CommentRenderer {
     private _settings;
     private readonly comments;
+    private readonly activeComments;
     private readonly reservedLanes;
     private readonly topStaticLaneReservations;
     private readonly bottomStaticLaneReservations;
@@ -97,6 +98,14 @@ export declare class CommentRenderer {
     private findAvailableLane;
     private pruneLaneReservations;
     private pruneStaticLaneReservations;
+    /**
+     * 二分探索で、指定した時刻以上の最初のコメントのインデックスを返す
+     */
+    private findCommentIndexAtOrAfter;
+    /**
+     * 指定した時刻範囲内のコメントのみを返す
+     */
+    private getCommentsInTimeWindow;
     private getStaticLaneMap;
     private getStaticReservedLaneSet;
     private shouldActivateCommentAtTime;
@@ -140,7 +149,6 @@ export declare class CommentRenderer {
     private resolveFullscreenContainer;
     private resolveActiveOverlayContainer;
     private getFullscreenElement;
-    private promoteContainerToFullscreen;
     private addCleanup;
     private runCleanupTasks;
 }

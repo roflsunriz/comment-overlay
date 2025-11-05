@@ -174,6 +174,7 @@ const isRendererSettings = (input: unknown): input is RendererSettings => {
 export class CommentRenderer {
   private _settings: RendererSettings;
   private readonly comments: Comment[] = [];
+  private readonly activeComments = new Set<Comment>();
   private readonly reservedLanes = new Map<number, LaneReservation[]>();
   private readonly topStaticLaneReservations = new Map<number, number>();
   private readonly bottomStaticLaneReservations = new Map<number, number>();
@@ -432,6 +433,7 @@ export class CommentRenderer {
 
   clearComments(): void {
     this.comments.length = 0;
+    this.activeComments.clear();
     this.reservedLanes.clear();
     this.topStaticLaneReservations.clear();
     this.bottomStaticLaneReservations.clear();
@@ -466,6 +468,7 @@ export class CommentRenderer {
     this.videoElement = null;
     this.containerElement = null;
     this.comments.length = 0;
+    this.activeComments.clear();
     this.reservedLanes.clear();
     this.resetFinalPhaseState();
     this.displayWidth = 0;
@@ -630,6 +633,7 @@ export class CommentRenderer {
         comment.isActive = false;
         comment.clearActivation();
       });
+      this.activeComments.clear();
       const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
       const width = this.displayWidth > 0 ? this.displayWidth : this.canvas.width / effectiveDpr;
       const height =
@@ -915,6 +919,7 @@ export class CommentRenderer {
         comment.isActive = false;
         comment.clearActivation();
       });
+      this.activeComments.clear();
       this.reservedLanes.clear();
       this.topStaticLaneReservations.clear();
       this.bottomStaticLaneReservations.clear();
@@ -930,7 +935,10 @@ export class CommentRenderer {
 
     this.pruneStaticLaneReservations(this.currentTime);
 
-    for (const comment of this.comments) {
+    // 時間インデックスを用いて、アクティブウィンドウ内のコメントのみを処理
+    const activeWindowComments = this.getCommentsInTimeWindow(this.currentTime, ACTIVE_WINDOW_MS);
+
+    for (const comment of activeWindowComments) {
       const debugActive = isDebugLoggingEnabled();
       const preview = debugActive ? formatCommentPreview(comment.text) : "";
       if (debugActive) {
@@ -966,6 +974,7 @@ export class CommentRenderer {
           });
         }
         comment.isActive = false;
+        this.activeComments.delete(comment);
         comment.hasShown = true;
         comment.clearActivation();
         continue;
@@ -989,6 +998,7 @@ export class CommentRenderer {
           const staticPosition = comment.layout === "ue" ? "ue" : "shita";
           this.releaseStaticLane(staticPosition, comment.lane);
           comment.isActive = false;
+          this.activeComments.delete(comment);
           comment.clearActivation();
           continue;
         }
@@ -1008,6 +1018,7 @@ export class CommentRenderer {
           const staticPosition = comment.layout === "ue" ? "ue" : "shita";
           this.releaseStaticLane(staticPosition, comment.lane);
           comment.isActive = false;
+          this.activeComments.delete(comment);
           comment.clearActivation();
         }
       }
@@ -1021,6 +1032,7 @@ export class CommentRenderer {
           (comment.scrollDirection === "ltr" && comment.x >= comment.exitThreshold))
       ) {
         comment.isActive = false;
+        this.activeComments.delete(comment);
         comment.clearActivation();
       }
     }
@@ -1091,6 +1103,50 @@ export class CommentRenderer {
         this.bottomStaticLaneReservations.delete(lane);
       }
     }
+  }
+
+  /**
+   * 二分探索で、指定した時刻以上の最初のコメントのインデックスを返す
+   */
+  private findCommentIndexAtOrAfter(targetVposMs: number): number {
+    let left = 0;
+    let right = this.comments.length;
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      const comment = this.comments[mid];
+      if (comment !== undefined && comment.vposMs < targetVposMs) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+    return left;
+  }
+
+  /**
+   * 指定した時刻範囲内のコメントのみを返す
+   */
+  private getCommentsInTimeWindow(centerTimeMs: number, windowMs: number): Comment[] {
+    if (this.comments.length === 0) {
+      return [];
+    }
+    const startTime = centerTimeMs - windowMs;
+    const endTime = centerTimeMs + windowMs;
+    const startIndex = this.findCommentIndexAtOrAfter(startTime);
+
+    // 開始インデックスから順に、終了時刻までのコメントを集める
+    const result: Comment[] = [];
+    for (let i = startIndex; i < this.comments.length; i++) {
+      const comment = this.comments[i];
+      if (comment === undefined) {
+        break;
+      }
+      if (comment.vposMs > endTime) {
+        break;
+      }
+      result.push(comment);
+    }
+    return result;
   }
 
   private getStaticLaneMap(position: "ue" | "shita"): Map<number, number> {
@@ -1259,6 +1315,7 @@ export class CommentRenderer {
 
       if (alreadyExited) {
         comment.isActive = false;
+        this.activeComments.delete(comment);
         comment.hasShown = true;
         comment.clearActivation();
         comment.lane = -1;
@@ -1277,6 +1334,7 @@ export class CommentRenderer {
       comment.y = comment.lane * this.laneHeight;
       comment.x = projectedX;
       comment.isActive = true;
+      this.activeComments.add(comment);
       comment.hasShown = true;
       comment.isPaused = !this.isPlaying;
       comment.markActivated(referenceTime);
@@ -1297,6 +1355,7 @@ export class CommentRenderer {
     const displayEnd = effectiveVpos + STATIC_VISIBLE_DURATION_MS;
     if (referenceTime > displayEnd) {
       comment.isActive = false;
+      this.activeComments.delete(comment);
       comment.hasShown = true;
       comment.clearActivation();
       comment.lane = -1;
@@ -1318,6 +1377,7 @@ export class CommentRenderer {
     comment.y = laneIndex * this.laneHeight;
     comment.x = comment.virtualStartX;
     comment.isActive = true;
+    this.activeComments.add(comment);
     comment.hasShown = true;
     comment.isPaused = !this.isPlaying;
     comment.markActivated(referenceTime);
@@ -1554,7 +1614,7 @@ export class CommentRenderer {
     }
 
     context.clearRect(0, 0, effectiveWidth, effectiveHeight);
-    const activeComments = this.comments.filter((comment) => comment.isActive);
+    const activeComments = Array.from(this.activeComments);
 
     if (this._settings.isCommentVisible) {
       const deltaTime = (now - this.lastDrawTime) / (1000 / 60);
@@ -1703,7 +1763,11 @@ export class CommentRenderer {
       this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
     const prepareOptions = this.buildPrepareOptions(effectiveWidth);
 
-    this.comments.forEach((comment) => {
+    // シーク時も時間インデックスを用いて範囲を限定
+    // ただし、シーク後のhasShown状態更新のため、範囲外も一部処理する
+    const seekWindowComments = this.getCommentsInTimeWindow(this.currentTime, ACTIVE_WINDOW_MS);
+
+    seekWindowComments.forEach((comment) => {
       const debugActive = isDebugLoggingEnabled();
       const preview = debugActive ? formatCommentPreview(comment.text) : "";
       if (debugActive) {
@@ -1728,6 +1792,7 @@ export class CommentRenderer {
           });
         }
         comment.isActive = false;
+        this.activeComments.delete(comment);
         comment.clearActivation();
         return;
       }
@@ -1742,6 +1807,7 @@ export class CommentRenderer {
           });
         }
         comment.isActive = false;
+        this.activeComments.delete(comment);
         comment.hasShown = true;
         comment.clearActivation();
         return;
@@ -1749,6 +1815,7 @@ export class CommentRenderer {
 
       comment.syncWithSettings(this._settings, this.settingsVersion);
       comment.isActive = false;
+      this.activeComments.delete(comment);
       comment.lane = -1;
       comment.clearActivation();
 
@@ -1903,6 +1970,7 @@ export class CommentRenderer {
       comment.lastUpdateTime = now;
       comment.clearActivation();
     });
+    this.activeComments.clear();
   }
 
   private setupVideoChangeDetection(videoElement: HTMLVideoElement, container: HTMLElement): void {
