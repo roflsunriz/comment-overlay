@@ -1079,16 +1079,42 @@ export class CommentRenderer {
     return fallbackLane;
   }
 
+  /**
+   * 二分探索で、指定した時刻より後に終了する最初の予約のインデックスを返す
+   */
+  private findFirstValidReservationIndex(
+    reservations: LaneReservation[],
+    cutoffTime: number,
+  ): number {
+    let left = 0;
+    let right = reservations.length;
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      const reservation = reservations[mid];
+      if (
+        reservation !== undefined &&
+        reservation.totalEndTime + RESERVATION_TIME_MARGIN_MS <= cutoffTime
+      ) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+    return left;
+  }
+
   private pruneLaneReservations(currentTime: number): void {
     for (const [lane, reservations] of this.reservedLanes.entries()) {
-      const filtered = reservations.filter(
-        (reservation) => reservation.totalEndTime + RESERVATION_TIME_MARGIN_MS > currentTime,
-      );
-      if (filtered.length > 0) {
-        this.reservedLanes.set(lane, filtered);
-      } else {
+      // 二分探索で有効な予約の開始インデックスを取得
+      const firstValidIndex = this.findFirstValidReservationIndex(reservations, currentTime);
+      if (firstValidIndex >= reservations.length) {
+        // 全て期限切れ
         this.reservedLanes.delete(lane);
+      } else if (firstValidIndex > 0) {
+        // 一部を削除
+        this.reservedLanes.set(lane, reservations.slice(firstValidIndex));
       }
+      // firstValidIndex === 0 の場合は何もしない（全て有効）
     }
   }
 
@@ -1460,9 +1486,14 @@ export class CommentRenderer {
     if (!reservations || reservations.length === 0) {
       return currentTime;
     }
+    // 有効な予約から開始して最大のendTimeを見つける
+    const firstValidIndex = this.findFirstValidReservationIndex(reservations, currentTime);
     let nextTime = currentTime;
-    for (const reservation of reservations) {
-      nextTime = Math.max(nextTime, reservation.endTime);
+    for (let i = firstValidIndex; i < reservations.length; i++) {
+      const reservation = reservations[i];
+      if (reservation !== undefined) {
+        nextTime = Math.max(nextTime, reservation.endTime);
+      }
     }
     return nextTime;
   }
@@ -1492,9 +1523,12 @@ export class CommentRenderer {
     if (!reservations || reservations.length === 0) {
       return true;
     }
-    for (const reservation of reservations) {
-      if (reservation.totalEndTime + RESERVATION_TIME_MARGIN_MS <= currentTime) {
-        continue;
+    // リストはtotalEndTimeでソート済みなので、有効な予約から開始
+    const firstValidIndex = this.findFirstValidReservationIndex(reservations, currentTime);
+    for (let i = firstValidIndex; i < reservations.length; i++) {
+      const reservation = reservations[i];
+      if (reservation === undefined) {
+        break;
       }
       if (this.areReservationsConflicting(reservation, candidate)) {
         return false;
@@ -1505,7 +1539,8 @@ export class CommentRenderer {
 
   private storeLaneReservation(lane: number, reservation: LaneReservation): void {
     const existing = this.reservedLanes.get(lane) ?? [];
-    const updated = [...existing, reservation].sort((a, b) => a.endTime - b.endTime);
+    // totalEndTimeでソートすることで、期限切れ予約の削除を効率化
+    const updated = [...existing, reservation].sort((a, b) => a.totalEndTime - b.totalEndTime);
     this.reservedLanes.set(lane, updated);
   }
 
@@ -1754,6 +1789,7 @@ export class CommentRenderer {
     this.resetFinalPhaseState();
     this.updatePlaybackProgressState();
 
+    this.activeComments.clear();
     this.reservedLanes.clear();
     this.topStaticLaneReservations.clear();
     this.bottomStaticLaneReservations.clear();

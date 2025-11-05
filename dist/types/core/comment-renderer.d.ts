@@ -96,6 +96,10 @@ export declare class CommentRenderer {
     private updateComments;
     private buildPrepareOptions;
     private findAvailableLane;
+    /**
+     * 二分探索で、指定した時刻より後に終了する最初の予約のインデックスを返す
+     */
+    private findFirstValidReservationIndex;
     private pruneLaneReservations;
     private pruneStaticLaneReservations;
     /**
