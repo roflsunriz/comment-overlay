@@ -55,6 +55,7 @@ const videoEl = document.querySelector("#test-video");
 const containerEl = document.querySelector(".overlay-container");
 const toggleEl = document.querySelector("#toggle-visibility");
 const reloadButton = document.querySelector("#reload-comments");
+const fullscreenButton = document.querySelector("#fullscreen-button");
 const settingsStatusEl = document.querySelector("#settings-status");
 const directionSelect = document.querySelector("#scroll-direction");
 const ngWordsInput = document.querySelector("#ng-words-input");
@@ -94,6 +95,7 @@ const setup = async () => {
     !(containerEl instanceof HTMLElement) ||
     !(toggleEl instanceof HTMLInputElement) ||
     !(reloadButton instanceof HTMLButtonElement) ||
+    !(fullscreenButton instanceof HTMLButtonElement) ||
     !(directionSelect instanceof HTMLSelectElement) ||
     !(ngWordsInput instanceof HTMLTextAreaElement) ||
     !(ngRegexInput instanceof HTMLTextAreaElement)
@@ -347,6 +349,17 @@ const setup = async () => {
   reloadButton.addEventListener("click", () => {
     renderer.resetState();
     void loadComments();
+  });
+
+  fullscreenButton.addEventListener("click", () => {
+    if (!(containerEl instanceof HTMLElement)) {
+      return;
+    }
+    if (typeof containerEl.requestFullscreen === "function") {
+      containerEl.requestFullscreen().catch((err) => {
+        reportStatus(`フルスクリーンへの移行に失敗しました: ${err.message}`);
+      });
+    }
   });
 
   const videoSources = ["./video.mp4", "./video2.mp4"];

@@ -2116,20 +2116,6 @@ export class CommentRenderer {
 
     const baseContainer = this.containerElement ?? video.parentElement ?? null;
     const fullscreenElement = this.getFullscreenElement();
-
-    if (
-      fullscreenElement === video &&
-      baseContainer instanceof HTMLElement &&
-      baseContainer !== video &&
-      baseContainer.contains(video) &&
-      typeof baseContainer.requestFullscreen === "function"
-    ) {
-      const promoted = await this.promoteContainerToFullscreen(baseContainer);
-      if (promoted) {
-        return;
-      }
-    }
-
     const nextContainer = this.resolveActiveOverlayContainer(
       video,
       baseContainer,
@@ -2211,19 +2197,6 @@ export class CommentRenderer {
       doc.msFullscreenElement ??
       null
     );
-  }
-
-  private async promoteContainerToFullscreen(container: HTMLElement): Promise<boolean> {
-    if (typeof container.requestFullscreen !== "function") {
-      return false;
-    }
-    try {
-      await container.requestFullscreen();
-      return true;
-    } catch (error) {
-      this.log.warn("CommentRenderer.promoteContainerToFullscreen", error as Error);
-      return false;
-    }
   }
 
   private addCleanup(task: () => void): void {
