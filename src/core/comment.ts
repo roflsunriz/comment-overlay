@@ -6,6 +6,7 @@ import type {
 } from "../shared/types";
 import { createLogger } from "../shared/logger";
 import { parseCommentCommands } from "./comment-commands";
+import { isDebugLoggingEnabled } from "../shared/debug";
 
 const logger = createLogger("CommentEngine:Comment");
 
@@ -171,6 +172,7 @@ export class Comment {
   lineHeightMultiplier = 1;
   lineHeightPx = 0;
   lines: string[] = [];
+  strokeTextThreshold = 30;
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
   private lastSyncedSettingsVersion = -1;
@@ -400,6 +402,61 @@ export class Comment {
     return `v2::${this.text}::${this.fontSize}::${this.fontFamily}::${this.color}::${this.opacity}::${this.renderStyle}::${this.letterSpacing}::${this.lines.length}`;
   }
 
+  // デバッグ用：キャッシュ統計
+  private static cacheStats = {
+    hits: 0,
+    misses: 0,
+    creates: 0,
+    fallbacks: 0,
+    strokeCallsInCache: 0,
+    fillCallsInCache: 0,
+    strokeCallsInFallback: 0,
+    fillCallsInFallback: 0,
+    letterSpacingComments: 0,
+    normalComments: 0,
+    multiLineComments: 0,
+    totalCharactersDrawn: 0,
+    strokeSkippedCount: 0,
+    strokeUsedCount: 0,
+    smallFontComments: 0,
+    largeFontComments: 0,
+    lastReported: 0,
+  };
+
+  private static reportCacheStats(): void {
+    if (!isDebugLoggingEnabled()) {
+      return;
+    }
+    const now = performance.now();
+    if (now - Comment.cacheStats.lastReported > 5000) {
+      const total = Comment.cacheStats.hits + Comment.cacheStats.misses;
+      const hitRate = total > 0 ? (Comment.cacheStats.hits / total) * 100 : 0;
+      const avgCharsPerComment =
+        Comment.cacheStats.creates > 0
+          ? (Comment.cacheStats.totalCharactersDrawn / Comment.cacheStats.creates).toFixed(1)
+          : "0";
+      const strokeReductionRate =
+        Comment.cacheStats.strokeUsedCount + Comment.cacheStats.strokeSkippedCount > 0
+          ? (
+              (Comment.cacheStats.strokeSkippedCount /
+                (Comment.cacheStats.strokeUsedCount + Comment.cacheStats.strokeSkippedCount)) *
+              100
+            ).toFixed(1)
+          : "0";
+      console.log(
+        `[TextureCache Stats]`,
+        `\n  Cache: Hits=${Comment.cacheStats.hits}, Misses=${Comment.cacheStats.misses}, Hit Rate=${hitRate.toFixed(1)}%`,
+        `\n  Creates: ${Comment.cacheStats.creates}, Fallbacks: ${Comment.cacheStats.fallbacks}`,
+        `\n  Comments: Normal=${Comment.cacheStats.normalComments}, LetterSpacing=${Comment.cacheStats.letterSpacingComments}, MultiLine=${Comment.cacheStats.multiLineComments}`,
+        `\n  Font Sizes: Small(<30px)=${Comment.cacheStats.smallFontComments}, Large(≥30px)=${Comment.cacheStats.largeFontComments}`,
+        `\n  Stroke: Used=${Comment.cacheStats.strokeUsedCount}, Skipped=${Comment.cacheStats.strokeSkippedCount}, Reduction=${strokeReductionRate}%`,
+        `\n  Draw Calls: StrokeText=${Comment.cacheStats.strokeCallsInCache + Comment.cacheStats.strokeCallsInFallback}, FillText=${Comment.cacheStats.fillCallsInCache + Comment.cacheStats.fillCallsInFallback}`,
+        `\n  Avg Characters/Comment: ${avgCharsPerComment}`,
+      );
+      Comment.cacheStats.lastReported = now;
+    }
+  }
+
   private isOffscreenCanvasSupported(): boolean {
     return typeof OffscreenCanvas !== "undefined";
   }
@@ -407,6 +464,27 @@ export class Comment {
   private createTextureCanvas(ctx: CanvasRenderingContext2D): OffscreenCanvas | null {
     if (!this.isOffscreenCanvasSupported()) {
       return null;
+    }
+
+    // 統計収集
+    const hasLetterSpacing = Math.abs(this.letterSpacing) >= Number.EPSILON;
+    const isMultiLine = this.lines.length > 1;
+    if (hasLetterSpacing) {
+      Comment.cacheStats.letterSpacingComments++;
+    }
+    if (isMultiLine) {
+      Comment.cacheStats.multiLineComments++;
+    }
+    if (!hasLetterSpacing && !isMultiLine) {
+      Comment.cacheStats.normalComments++;
+    }
+    Comment.cacheStats.totalCharactersDrawn += this.text.length;
+
+    // フォントサイズ統計
+    if (this.fontSize < this.strokeTextThreshold) {
+      Comment.cacheStats.smallFontComments++;
+    } else {
+      Comment.cacheStats.largeFontComments++;
     }
 
     // テクスチャサイズは実際のコメントサイズより少し大きめに取る（影やエフェクトのため）
@@ -444,8 +522,10 @@ export class Comment {
 
       if (Math.abs(this.letterSpacing) < Number.EPSILON) {
         if (mode === "stroke") {
+          Comment.cacheStats.strokeCallsInCache++;
           offscreenCtx.strokeText(trimmedLine, effectiveDrawX, baselineY);
         } else {
+          Comment.cacheStats.fillCallsInCache++;
           offscreenCtx.fillText(trimmedLine, effectiveDrawX, baselineY);
         }
         return;
@@ -455,8 +535,10 @@ export class Comment {
       for (let index = 0; index < trimmedLine.length; index += 1) {
         const char = trimmedLine[index];
         if (mode === "stroke") {
+          Comment.cacheStats.strokeCallsInCache++;
           offscreenCtx.strokeText(char, cursorX, baselineY);
         } else {
+          Comment.cacheStats.fillCallsInCache++;
           offscreenCtx.fillText(char, cursorX, baselineY);
         }
         const advance = measureTextWidth(ctx, char); // 元のコンテキストで計測
@@ -467,7 +549,15 @@ export class Comment {
       }
     };
 
+    const useStrokeText = this.fontSize >= this.strokeTextThreshold;
+
     const drawStroke = (): void => {
+      if (!useStrokeText) {
+        // 小フォントの場合はstrokeTextをスキップ
+        Comment.cacheStats.strokeSkippedCount++;
+        return;
+      }
+      Comment.cacheStats.strokeUsedCount++;
       offscreenCtx.globalAlpha = effectiveOpacity;
       offscreenCtx.strokeStyle = "#000000";
       offscreenCtx.lineWidth = Math.max(3, this.fontSize / 8);
@@ -480,10 +570,21 @@ export class Comment {
     };
 
     const drawFill = (): void => {
+      // 小フォントの場合はshadowBlurで擬似アウトライン
+      if (!useStrokeText) {
+        offscreenCtx.shadowColor = "#000000";
+        offscreenCtx.shadowBlur = Math.max(2, this.fontSize * 0.1);
+        offscreenCtx.shadowOffsetX = 0;
+        offscreenCtx.shadowOffsetY = 0;
+      }
       linesToRender.forEach((line, index) => {
         const baseline = baselineStart + index * lineAdvance;
         drawSegment(line, baseline, "fill");
       });
+      if (!useStrokeText) {
+        offscreenCtx.shadowColor = "transparent";
+        offscreenCtx.shadowBlur = 0;
+      }
     };
 
     drawStroke();
@@ -560,8 +661,12 @@ export class Comment {
       const currentCacheKey = this.generateTextureCacheKey();
       if (this.textureCacheKey !== currentCacheKey || !this.cachedTexture) {
         // キャッシュが無効または古い場合は再生成
+        Comment.cacheStats.misses++;
+        Comment.cacheStats.creates++;
         this.cachedTexture = this.createTextureCanvas(ctx);
         this.textureCacheKey = currentCacheKey;
+      } else {
+        Comment.cacheStats.hits++;
       }
 
       // テクスチャが利用可能な場合はdrawImageで描画
@@ -569,8 +674,12 @@ export class Comment {
         const drawX = interpolatedX ?? this.x;
         const padding = Math.max(10, this.fontSize * 0.5);
         ctx.drawImage(this.cachedTexture, drawX - padding, this.y - padding);
+        Comment.reportCacheStats();
         return;
       }
+
+      // フォールバック使用
+      Comment.cacheStats.fallbacks++;
 
       // フォールバック: 通常の描画処理
 
@@ -597,8 +706,10 @@ export class Comment {
 
         if (Math.abs(this.letterSpacing) < Number.EPSILON) {
           if (mode === "stroke") {
+            Comment.cacheStats.strokeCallsInFallback++;
             ctx.strokeText(trimmedLine, effectiveDrawX, baselineY);
           } else {
+            Comment.cacheStats.fillCallsInFallback++;
             ctx.fillText(trimmedLine, effectiveDrawX, baselineY);
           }
           return;
@@ -607,8 +718,10 @@ export class Comment {
         for (let index = 0; index < trimmedLine.length; index += 1) {
           const char = trimmedLine[index];
           if (mode === "stroke") {
+            Comment.cacheStats.strokeCallsInFallback++;
             ctx.strokeText(char, cursorX, baselineY);
           } else {
+            Comment.cacheStats.fillCallsInFallback++;
             ctx.fillText(char, cursorX, baselineY);
           }
           const advance = measureTextWidth(ctx, char);
@@ -619,7 +732,15 @@ export class Comment {
         }
       };
 
+      const useStrokeText = this.fontSize >= this.strokeTextThreshold;
+
       const drawStroke = (): void => {
+        if (!useStrokeText) {
+          // 小フォントの場合はstrokeTextをスキップ
+          Comment.cacheStats.strokeSkippedCount++;
+          return;
+        }
+        Comment.cacheStats.strokeUsedCount++;
         ctx.globalAlpha = effectiveOpacity;
         ctx.strokeStyle = "#000000";
         ctx.lineWidth = Math.max(3, this.fontSize / 8);
@@ -632,10 +753,21 @@ export class Comment {
       };
 
       const drawFill = (): void => {
+        // 小フォントの場合はshadowBlurで擬似アウトライン
+        if (!useStrokeText) {
+          ctx.shadowColor = "#000000";
+          ctx.shadowBlur = Math.max(2, this.fontSize * 0.1);
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+        }
         linesToRender.forEach((line, index) => {
           const baseline = baselineStart + index * lineAdvance;
           drawSegment(line, baseline, "fill");
         });
+        if (!useStrokeText) {
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+        }
       };
 
       drawStroke();
@@ -699,6 +831,7 @@ export class Comment {
       drawFill();
 
       ctx.restore();
+      Comment.reportCacheStats();
     } catch (error) {
       logger.error("Comment.draw", error as Error, {
         text: this.text,
@@ -717,6 +850,7 @@ export class Comment {
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.applyScrollDirection(settings.scrollDirection);
     this.renderStyle = settings.renderStyle;
+    this.strokeTextThreshold = settings.strokeTextThreshold;
     if (typeof settingsVersion === "number") {
       this.lastSyncedSettingsVersion = settingsVersion;
     }

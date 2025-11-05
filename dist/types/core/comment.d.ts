@@ -61,6 +61,7 @@ export declare class Comment {
     lineHeightMultiplier: number;
     lineHeightPx: number;
     lines: string[];
+    strokeTextThreshold: number;
     private directionSign;
     private readonly timeSource;
     private lastSyncedSettingsVersion;
@@ -70,6 +71,8 @@ export declare class Comment {
     prepare(ctx: CanvasRenderingContext2D, visibleWidth: number, canvasHeight: number, options: CommentPrepareOptions): void;
     update(playbackRate?: number, isPaused?: boolean): void;
     private generateTextureCacheKey;
+    private static cacheStats;
+    private static reportCacheStats;
     private isOffscreenCanvasSupported;
     private createTextureCanvas;
     draw(ctx: CanvasRenderingContext2D, interpolatedX?: number | null): void;

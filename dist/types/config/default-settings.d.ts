@@ -5,6 +5,6 @@ type ReadonlySettings = {
 export declare const NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS = 4000;
 export declare const DEFAULT_RENDERER_SETTINGS: ReadonlySettings;
 export declare const cloneDefaultSettings: () => RendererSettings;
-export declare const COMMENT_OVERLAY_VERSION = "v1.1.0";
+export declare const COMMENT_OVERLAY_VERSION = "v2.2.0";
 export {};
 //# sourceMappingURL=default-settings.d.ts.map

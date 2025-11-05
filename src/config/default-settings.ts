@@ -27,6 +27,7 @@ const BASE_SETTINGS: RendererSettings = {
   useFixedLaneCount: false,
   fixedLaneCount: 12,
   useDprScaling: true,
+  strokeTextThreshold: 30,
 };
 
 export const DEFAULT_RENDERER_SETTINGS: ReadonlySettings = BASE_SETTINGS;
@@ -37,4 +38,4 @@ export const cloneDefaultSettings = (): RendererSettings => ({
   ngRegexps: [...BASE_SETTINGS.ngRegexps],
 });
 
-export const COMMENT_OVERLAY_VERSION = "v1.1.0";
+export const COMMENT_OVERLAY_VERSION = "v2.2.0";

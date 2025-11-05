@@ -15,6 +15,7 @@ export interface RendererSettings {
     useFixedLaneCount: boolean;
     fixedLaneCount: number;
     useDprScaling: boolean;
+    strokeTextThreshold: number;
 }
 export type CommentLayoutCommand = "naka" | "ue" | "shita";
 export type CommentSizeCommand = "small" | "medium" | "big";
