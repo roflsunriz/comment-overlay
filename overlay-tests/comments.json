@@ -871,6 +871,11 @@
   },
   { "text": "きたー", "vposMs": 80, "commands": [] },
   { "text": "wktk", "vposMs": 199, "commands": [] },
+  { "text": "　　　テスト", "vposMs": 250, "commands": ["big"] },
+  { "text": "　　　１行目\n　　２行目\n　３行目", "vposMs": 350, "commands": ["big", "red"] },
+  { "text": "■■■可視化\n■■２行目\n■３行目", "vposMs": 450, "commands": ["big", "green"] },
+  { "text": "　　３行目\n　　２行目\n　　　１行目", "vposMs": 550, "commands": ["big", "cyan"] },
+  { "text": "AAA全角スペース後\nBBB全角スペース後\nCCC全角スペース後", "vposMs": 650, "commands": ["big", "yellow"] },
   { "text": "すき", "vposMs": 1034, "commands": ["pink"] },
   { "text": "音量注意？", "vposMs": 1113, "commands": ["small"] },
   { "text": "大丈夫だった", "vposMs": 1193, "commands": ["small"] },
@@ -1057,5 +1062,50 @@
   { "text": "まあまあｗ", "vposMs": 30674, "commands": ["small"] },
   { "text": "いい最終回だった", "vposMs": 30833, "commands": [] },
   { "text": "まだ終わってないｗ", "vposMs": 30892, "commands": [] },
-  { "text": "最後まで見る", "vposMs": 30992, "commands": [] }
+  { "text": "最後まで見る", "vposMs": 30992, "commands": [] },
+  {
+    "text": "　　　　＿＿＿_\n　　／　　　　　＼\n　　/　 _ノ　ヽ、_　＼\n　/　ｏﾟ((●)) ((●))ﾟo ＼\n　|　　　　（__人__）　　|\n　＼　　　　｀⌒´　　 ／",
+    "vposMs": 5000,
+    "commands": ["big"]
+  },
+  {
+    "text": "　　　　＿＿＿\n　　／　　　　＼\n　　/　　 _ノ　　＼\n　|　　　（ ●）（●）\n.　|　　　　（__人__）\n　 |　　　　　｀ ⌒´ﾉ\n.　 |　　　　　　　　}\n.　 ヽ　　　　　　　}\n　　 ヽ　　　　　ノ\n　　　i⌒＼ ,__(‐- ､\n　　　l ＼　巛ー─;＼\n　　　|　`ヽ-‐ーく_）\n.　　 |　　　　　　l",
+    "vposMs": 10000,
+    "commands": ["ue"]
+  },
+  {
+    "text": "　　　∧＿∧\n　　（　´∀｀）\n　　（　　　　　）\n　　｜ ｜　|\n　　（_＿)＿)",
+    "vposMs": 15000,
+    "commands": ["green"]
+  },
+  {
+    "text": "　　　／⌒ヽ\n二（　＾ω＾）二⊃\n　　|　　　/　　　　　ﾌﾞｰﾝ\n　　（　ヽノ\n　　　ﾉ>ノ\n　　三　レﾚ",
+    "vposMs": 20000,
+    "commands": ["yellow"]
+  },
+  {
+    "text": "　　　／￣￣＼\n　　／　 ＿ノ　　＼\n　　|　　（ ●）（●）\n.　　|　　　　（__人__）\n　　 |　　　　　｀ ⌒´ﾉ\n.　　 |　　　　　　　　}\n.　　 ヽ　　　　　　　}\n　　　　ヽ　　　　　ノ　　　　＼\n　　　／⌒　　　　⌒＼　　　　ﾉ\n　　　|　　　 ＼　　／　　　　　|\n　　　|　　　　 ＼　　　　　　　|",
+    "vposMs": 22000,
+    "commands": ["shita", "big"]
+  },
+  {
+    "text": "　　　　　　　　,. -─-　、._\n　　　　　　,. ‐'´　　　　　　｀‐、\n　　　　 ／　　　　　　　　　　　＼\n　　　 /　　　　　　　　　　　　　　 ヽ、\n　　　/　　　　　　　　　　　　　　　　　',\n　　./　　　　　　　　　　　　　　　　　　i\n　　{　　　　　　　　　　　　　　　　　　 l\n　　l　　　　　　　　　　　　　　　　　　 |\n　　|　　　　　　　　　　　　　　　　　　 l\n　　|　　　　　　　　　　　　　　　　　　 |\n　　l　　　　　　　　　　　　　　　　　　 l\n　　 ヽ　　　　　　　　　　　　　　　　 /\n　　　 ゝ　　　　　　　　　　　　　　イ\n　　／｀ｰ- .,_　　　　　　　　　_,. -'´ヽ\n/　　　　　　　￣￣￣￣￣　　　　　 ヽ",
+    "vposMs": 24500,
+    "commands": ["red", "big"]
+  },
+  {
+    "text": "　　　　　　　　　　　　　　＿\n　　　　　　　　　　　　／＿＿＼\n　　　　　　　　　　　（　（ ´・ω・｀））\n　　　　　　　　　　　 ｀u‐u--u‐u'",
+    "vposMs": 26500,
+    "commands": ["cyan"]
+  },
+  {
+    "text": "　　　　　　　　　　＿人人人人人人人人人人人人人人人＿\n　　　　　　　　　＞　　　わりとどうでもいい　　　　　＜\n　　　　　　　　　￣^Y^Y^Y^Y^Y^Y^Y^Y^Y^Y^Y^Y^Y^Y￣",
+    "vposMs": 28000,
+    "commands": ["big", "yellow"]
+  },
+  {
+    "text": "　　　　　　　　　　　　　　　　　　　　-‐…‐-ミ\n　　　　　　　　　　　　　　　　　　　. :´: : : : : : : : : :`ヽ、\n　　　　　　　　　　　　　　　　　 ／: : : : : : : : : : : : : : : ＼\n　　　　　　　　　　　　　　　　／: : : : : : : : : : : : : : : : : : : :ヽ\n　　　　　　　　　　　　　　 　 ; : : : : : : : : : : : : : : : : : : : : : : :\n　　　　　　　　　　　　　　　 i: : : : : : : : : : : : : : : : : : : : : : : : :\n　　　　　　　　　　　　　　　 |: : : : : : : : : : : : : : : : : : : : : : : : : :\n　　　　　　　　　　　　　　　 |: : : : : : : : : : : : : : : : : : : : : : : : : : i",
+    "vposMs": 30000,
+    "commands": ["pink"]
+  }
 ]

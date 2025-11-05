@@ -64,9 +64,14 @@ export declare class Comment {
     private directionSign;
     private readonly timeSource;
     private lastSyncedSettingsVersion;
+    private cachedTexture;
+    private textureCacheKey;
     constructor(text: string, vposMs: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
     prepare(ctx: CanvasRenderingContext2D, visibleWidth: number, canvasHeight: number, options: CommentPrepareOptions): void;
     update(playbackRate?: number, isPaused?: boolean): void;
+    private generateTextureCacheKey;
+    private isOffscreenCanvasSupported;
+    private createTextureCanvas;
     draw(ctx: CanvasRenderingContext2D, interpolatedX?: number | null): void;
     syncWithSettings(settings: RendererSettings, settingsVersion?: number): void;
     getEffectiveColor(defaultColor: string): string;

@@ -174,6 +174,8 @@ export class Comment {
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
   private lastSyncedSettingsVersion = -1;
+  private cachedTexture: OffscreenCanvas | null = null;
+  private textureCacheKey = "";
 
   constructor(
     text: string,
@@ -393,11 +395,184 @@ export class Comment {
     }
   }
 
+  private generateTextureCacheKey(): string {
+    // v2: 行頭スペース処理を追加したためキャッシュを無効化
+    return `v2::${this.text}::${this.fontSize}::${this.fontFamily}::${this.color}::${this.opacity}::${this.renderStyle}::${this.letterSpacing}::${this.lines.length}`;
+  }
+
+  private isOffscreenCanvasSupported(): boolean {
+    return typeof OffscreenCanvas !== "undefined";
+  }
+
+  private createTextureCanvas(ctx: CanvasRenderingContext2D): OffscreenCanvas | null {
+    if (!this.isOffscreenCanvasSupported()) {
+      return null;
+    }
+
+    // テクスチャサイズは実際のコメントサイズより少し大きめに取る（影やエフェクトのため）
+    const padding = Math.max(10, this.fontSize * 0.5);
+    const textureWidth = Math.ceil(this.width + padding * 2);
+    const textureHeight = Math.ceil(this.height + padding * 2);
+
+    const offscreen = new OffscreenCanvas(textureWidth, textureHeight);
+    const offscreenCtx = offscreen.getContext("2d");
+    if (!offscreenCtx) {
+      return null;
+    }
+
+    // オフスクリーンキャンバスに描画
+    offscreenCtx.save();
+    offscreenCtx.font = `${this.fontSize}px ${this.fontFamily}`;
+    const effectiveOpacity = clampOpacity(this.opacity);
+    const drawX = padding; // パディング分オフセット
+    const linesToRender = this.lines.length > 0 ? this.lines : [this.text];
+    const lineAdvance =
+      this.lines.length > 1 && this.lineHeightPx > 0 ? this.lineHeightPx : this.fontSize;
+    const baselineStart = padding + this.fontSize;
+
+    const drawSegment = (line: string, baselineY: number, mode: "stroke" | "fill"): void => {
+      if (line.length === 0) {
+        return;
+      }
+      // 行頭の全角スペースを検出してオフセットを計算（ブラウザのバグ回避）
+      const leadingSpaces = line.match(/^[\u3000\u00A0]+/);
+      const leadingSpaceCount = leadingSpaces ? leadingSpaces[0].length : 0;
+      const leadingSpaceOffset =
+        leadingSpaceCount > 0 ? measureTextWidth(ctx, leadingSpaces![0]) : 0;
+      const effectiveDrawX = drawX + leadingSpaceOffset;
+      const trimmedLine = leadingSpaceCount > 0 ? line.substring(leadingSpaceCount) : line;
+
+      if (Math.abs(this.letterSpacing) < Number.EPSILON) {
+        if (mode === "stroke") {
+          offscreenCtx.strokeText(trimmedLine, effectiveDrawX, baselineY);
+        } else {
+          offscreenCtx.fillText(trimmedLine, effectiveDrawX, baselineY);
+        }
+        return;
+      }
+      // letterSpacing使用時も行頭スペースを考慮
+      let cursorX = effectiveDrawX;
+      for (let index = 0; index < trimmedLine.length; index += 1) {
+        const char = trimmedLine[index];
+        if (mode === "stroke") {
+          offscreenCtx.strokeText(char, cursorX, baselineY);
+        } else {
+          offscreenCtx.fillText(char, cursorX, baselineY);
+        }
+        const advance = measureTextWidth(ctx, char); // 元のコンテキストで計測
+        cursorX += advance;
+        if (index < trimmedLine.length - 1) {
+          cursorX += this.letterSpacing;
+        }
+      }
+    };
+
+    const drawStroke = (): void => {
+      offscreenCtx.globalAlpha = effectiveOpacity;
+      offscreenCtx.strokeStyle = "#000000";
+      offscreenCtx.lineWidth = Math.max(3, this.fontSize / 8);
+      offscreenCtx.lineJoin = "round";
+      linesToRender.forEach((line, index) => {
+        const baseline = baselineStart + index * lineAdvance;
+        drawSegment(line, baseline, "stroke");
+      });
+      offscreenCtx.globalAlpha = 1;
+    };
+
+    const drawFill = (): void => {
+      linesToRender.forEach((line, index) => {
+        const baseline = baselineStart + index * lineAdvance;
+        drawSegment(line, baseline, "fill");
+      });
+    };
+
+    drawStroke();
+
+    if (this.renderStyle === "classic") {
+      const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
+      const baseShadowBlur = this.fontSize * 0.18;
+      type ShadowLayer = Readonly<{
+        offsetXMultiplier: number;
+        offsetYMultiplier: number;
+        blurMultiplier: number;
+        alpha: number;
+        rgb: string;
+      }>;
+      const shadowLayers: ReadonlyArray<ShadowLayer> = [
+        {
+          offsetXMultiplier: 0.9,
+          offsetYMultiplier: 1.1,
+          blurMultiplier: 0.55,
+          alpha: 0.52,
+          rgb: "20, 28, 40",
+        },
+        {
+          offsetXMultiplier: 2.4,
+          offsetYMultiplier: 2.7,
+          blurMultiplier: 1.45,
+          alpha: 0.32,
+          rgb: "0, 0, 0",
+        },
+        {
+          offsetXMultiplier: -0.7,
+          offsetYMultiplier: -0.6,
+          blurMultiplier: 0.4,
+          alpha: 0.42,
+          rgb: "255, 255, 255",
+        },
+      ];
+
+      shadowLayers.forEach((layer) => {
+        const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
+        offscreenCtx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
+        offscreenCtx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
+        offscreenCtx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
+        offscreenCtx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
+        offscreenCtx.fillStyle = "rgba(0, 0, 0, 0)";
+        drawFill();
+      });
+      offscreenCtx.shadowColor = "transparent";
+      offscreenCtx.shadowBlur = 0;
+      offscreenCtx.shadowOffsetX = 0;
+      offscreenCtx.shadowOffsetY = 0;
+    } else {
+      offscreenCtx.shadowColor = "transparent";
+      offscreenCtx.shadowBlur = 0;
+      offscreenCtx.shadowOffsetX = 0;
+      offscreenCtx.shadowOffsetY = 0;
+    }
+
+    offscreenCtx.globalAlpha = 1;
+    offscreenCtx.fillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
+    drawFill();
+
+    offscreenCtx.restore();
+    return offscreen;
+  }
+
   draw(ctx: CanvasRenderingContext2D, interpolatedX: number | null = null): void {
     try {
       if (!this.isActive || !ctx) {
         return;
       }
+
+      // テクスチャキャッシュを使用
+      const currentCacheKey = this.generateTextureCacheKey();
+      if (this.textureCacheKey !== currentCacheKey || !this.cachedTexture) {
+        // キャッシュが無効または古い場合は再生成
+        this.cachedTexture = this.createTextureCanvas(ctx);
+        this.textureCacheKey = currentCacheKey;
+      }
+
+      // テクスチャが利用可能な場合はdrawImageで描画
+      if (this.cachedTexture) {
+        const drawX = interpolatedX ?? this.x;
+        const padding = Math.max(10, this.fontSize * 0.5);
+        ctx.drawImage(this.cachedTexture, drawX - padding, this.y - padding);
+        return;
+      }
+
+      // フォールバック: 通常の描画処理
 
       ctx.save();
       ctx.font = `${this.fontSize}px ${this.fontFamily}`;
@@ -412,17 +587,25 @@ export class Comment {
         if (line.length === 0) {
           return;
         }
+        // 行頭の全角スペースを検出してオフセットを計算（ブラウザのバグ回避）
+        const leadingSpaces = line.match(/^[\u3000\u00A0]+/);
+        const leadingSpaceCount = leadingSpaces ? leadingSpaces[0].length : 0;
+        const leadingSpaceOffset =
+          leadingSpaceCount > 0 ? measureTextWidth(ctx, leadingSpaces![0]) : 0;
+        const effectiveDrawX = drawX + leadingSpaceOffset;
+        const trimmedLine = leadingSpaceCount > 0 ? line.substring(leadingSpaceCount) : line;
+
         if (Math.abs(this.letterSpacing) < Number.EPSILON) {
           if (mode === "stroke") {
-            ctx.strokeText(line, drawX, baselineY);
+            ctx.strokeText(trimmedLine, effectiveDrawX, baselineY);
           } else {
-            ctx.fillText(line, drawX, baselineY);
+            ctx.fillText(trimmedLine, effectiveDrawX, baselineY);
           }
           return;
         }
-        let cursorX = drawX;
-        for (let index = 0; index < line.length; index += 1) {
-          const char = line[index];
+        let cursorX = effectiveDrawX;
+        for (let index = 0; index < trimmedLine.length; index += 1) {
+          const char = trimmedLine[index];
           if (mode === "stroke") {
             ctx.strokeText(char, cursorX, baselineY);
           } else {
@@ -430,7 +613,7 @@ export class Comment {
           }
           const advance = measureTextWidth(ctx, char);
           cursorX += advance;
-          if (index < line.length - 1) {
+          if (index < trimmedLine.length - 1) {
             cursorX += this.letterSpacing;
           }
         }
@@ -567,6 +750,9 @@ export class Comment {
     if (!this.isScrolling) {
       this.staticExpiryTimeMs = null;
     }
+    // テクスチャキャッシュをクリア
+    this.cachedTexture = null;
+    this.textureCacheKey = "";
   }
 
   hasStaticExpired(currentTimeMs: number): boolean {
