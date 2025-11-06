@@ -145,6 +145,7 @@ export declare class CommentRenderer {
     private setupVideoChangeDetection;
     private extractVideoElement;
     private setupVisibilityHandling;
+    private handleVisibilityRestore;
     private setupResizeHandling;
     private cleanupResizeHandling;
     private setupFullscreenHandling;

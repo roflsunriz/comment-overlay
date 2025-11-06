@@ -2124,6 +2124,8 @@ export class CommentRenderer {
       if (!this._settings.isCommentVisible) {
         return;
       }
+      // ビジビリティ復帰時にコメント状態をリセット
+      this.handleVisibilityRestore();
       this.startAnimation();
     };
 
@@ -2133,6 +2135,76 @@ export class CommentRenderer {
     if (document.visibilityState !== "visible") {
       this.stopAnimation();
     }
+  }
+
+  private handleVisibilityRestore(): void {
+    const canvas = this.canvas;
+    const ctx = this.ctx;
+    const video = this.videoElement;
+    if (!canvas || !ctx || !video) {
+      return;
+    }
+
+    // ビデオ時刻を更新（visibilitychange中に時間が進んでいる可能性がある）
+    this.currentTime = toMilliseconds(video.currentTime);
+    this.isPlaying = !video.paused;
+
+    // 内部状態を完全にクリア
+    this.activeComments.clear();
+    this.reservedLanes.clear();
+    this.topStaticLaneReservations.clear();
+    this.bottomStaticLaneReservations.clear();
+
+    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+
+    // キャンバスをクリア
+    ctx.clearRect(0, 0, effectiveWidth, effectiveHeight);
+
+    const prepareOptions = this.buildPrepareOptions(effectiveWidth);
+    const now = this.timeSource.now();
+
+    // アクティブウィンドウ内のコメントを再評価
+    const windowComments = this.getCommentsInTimeWindow(this.currentTime, ACTIVE_WINDOW_MS);
+
+    windowComments.forEach((comment) => {
+      if (this.isNGComment(comment.text) || comment.isInvisible) {
+        comment.isActive = false;
+        this.activeComments.delete(comment);
+        comment.clearActivation();
+        return;
+      }
+
+      comment.syncWithSettings(this._settings, this.settingsVersion);
+      comment.isActive = false;
+      this.activeComments.delete(comment);
+      comment.lane = -1;
+      comment.clearActivation();
+      comment.lastUpdateTime = now;
+
+      if (this.shouldActivateCommentAtTime(comment, this.currentTime)) {
+        this.activateComment(
+          comment,
+          ctx,
+          effectiveWidth,
+          effectiveHeight,
+          prepareOptions,
+          this.currentTime,
+        );
+      }
+
+      const effectiveVpos = this.getEffectiveCommentVpos(comment);
+      if (effectiveVpos < this.currentTime - ACTIVE_WINDOW_MS) {
+        comment.hasShown = true;
+      } else if (effectiveVpos > this.currentTime) {
+        comment.hasShown = false;
+      }
+    });
+
+    // lastDrawTimeを更新して補間計算を正常化
+    this.lastDrawTime = now;
   }
 
   private setupResizeHandling(videoElement: HTMLVideoElement): void {
