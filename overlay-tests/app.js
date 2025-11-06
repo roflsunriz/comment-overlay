@@ -3,6 +3,7 @@ const moduleCandidates = [
   "../dist/comment-overlay.es.js",
   "../dist/comment-overlay.es",
 ];
+const DEFAULT_COMMENT_DATA_SOURCES = ["./so45409498-comments.json", "./comments.json"];
 
 let debugLogFn = null;
 let isDebugOverlayEnabled = false;
@@ -73,7 +74,13 @@ const sanitizeCommentEntry = (entry) => {
     safeDebugLog("overlay-sanitize-skip", { reason: "not-object" });
     return null;
   }
-  const text = typeof entry.text === "string" ? entry.text.trim() : "";
+  const rawText =
+    typeof entry.text === "string"
+      ? entry.text
+      : typeof entry.body === "string"
+        ? entry.body
+        : "";
+  const text = rawText.trim();
   const vposMs = Number(entry.vposMs);
   if (!text || !Number.isFinite(vposMs) || vposMs < 0) {
     safeDebugLog("overlay-sanitize-skip", {
@@ -87,6 +94,28 @@ const sanitizeCommentEntry = (entry) => {
     ? entry.commands.filter((value) => typeof value === "string" && value.length > 0)
     : [];
   return { text, vposMs, commands };
+};
+
+const extractCommentEntries = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && typeof payload === "object") {
+    const entries = Array.isArray(payload.comments) ? payload.comments : [];
+    return entries.map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return entry;
+      }
+      if (typeof entry.text === "string") {
+        return entry;
+      }
+      return {
+        ...entry,
+        text: typeof entry.body === "string" ? entry.body : "",
+      };
+    });
+  }
+  return [];
 };
 
 const setup = async () => {
@@ -276,19 +305,46 @@ const setup = async () => {
     await videoEl.play().catch(() => undefined);
   };
 
+  const resolveCommentData = async () => {
+    const overrideSource = query.get("comments");
+    const sourceCandidates =
+      typeof overrideSource === "string" && overrideSource.length > 0
+        ? [overrideSource]
+        : DEFAULT_COMMENT_DATA_SOURCES;
+    const failures = [];
+    for (const source of sourceCandidates) {
+      try {
+        const response = await fetch(source, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = await response.json();
+        return { payload, source };
+      } catch (error) {
+        failures.push({ source, error });
+      }
+    }
+    const detail = failures
+      .map(({ source, error }) => {
+        const message = error instanceof Error ? error.message : String(error);
+        return `${source}: ${message}`;
+      })
+      .join("; ");
+    const aggregateError = new Error(
+      detail.length > 0 ? `コメントデータ取得失敗 (${detail})` : "コメントデータ取得失敗",
+    );
+    aggregateError.details = failures;
+    throw aggregateError;
+  };
+
   const loadComments = async () => {
     reportStatus("Loading comment data...");
     try {
-      const response = await fetch("./comments.json", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const rawComments = await response.json();
-      const cleaned = Array.isArray(rawComments)
-        ? rawComments.map(sanitizeCommentEntry).filter(Boolean)
-        : [];
+      const { payload, source } = await resolveCommentData();
+      const rawEntries = extractCommentEntries(payload);
+      const cleaned = rawEntries.map(sanitizeCommentEntry).filter(Boolean);
 
-      safeDebugLog("overlay-load-comments", { total: cleaned.length });
+      safeDebugLog("overlay-load-comments", { total: cleaned.length, source });
 
       const wasPlaying = await pauseVideo();
       try {
@@ -300,6 +356,7 @@ const setup = async () => {
             preview: formatPreview(text),
             vposMs,
             commands: commands.length,
+            source,
           });
           renderer.addComment(text, vposMs, commands);
         });
@@ -309,11 +366,21 @@ const setup = async () => {
         }
       }
 
-      reportStatus(`Loaded ${cleaned.length} comments.`);
+      const displaySource = source.startsWith("./") ? source.slice(2) : source;
+      reportStatus(`Loaded ${cleaned.length} comments from ${displaySource}.`);
       updateSettingsStatus();
       return cleaned.length;
     } catch (error) {
-      console.error("Failed to load comments.json", error);
+      const details =
+        error && typeof error === "object" && Array.isArray(error.details)
+          ? error.details
+          : [];
+      if (details.length > 0) {
+        details.forEach(({ source, error: itemError }) => {
+          console.error("Failed to load comments source", source, itemError);
+        });
+      }
+      console.error("Failed to load comment data", error);
       reportStatus(
         `Failed to load comments. ${error instanceof Error ? error.message : String(error)}`,
       );
