@@ -1228,13 +1228,54 @@ export class CommentRenderer {
     return position === "ue" ? this.topStaticLaneReservations : this.bottomStaticLaneReservations;
   }
 
+  private getStaticLaneDepth(position: "ue" | "shita"): number {
+    const laneMap = this.getStaticLaneMap(position);
+    let maxIndex = -1;
+    for (const lane of laneMap.keys()) {
+      if (lane > maxIndex) {
+        maxIndex = lane;
+      }
+    }
+    return Math.max(0, maxIndex + 1);
+  }
+
+  private getStaticLaneLimit(position: "ue" | "shita"): number {
+    const otherPosition = position === "ue" ? "shita" : "ue";
+    const otherDepth = this.getStaticLaneDepth(otherPosition);
+    const available = this.laneCount - otherDepth;
+    if (available <= 0) {
+      return -1;
+    }
+    return available - 1;
+  }
+
+  private getGlobalLaneIndexForBottom(localIndex: number): number {
+    const clampedLaneCount = Math.max(1, this.laneCount);
+    const clampedIndex = Math.max(0, localIndex);
+    return Math.max(0, clampedLaneCount - 1 - clampedIndex);
+  }
+
+  private resolveStaticCommentOffset(
+    position: "ue" | "shita",
+    lane: number,
+    displayHeight: number,
+  ): number {
+    if (position === "ue") {
+      return lane * this.laneHeight;
+    }
+    const effectiveHeight = Math.max(1, displayHeight);
+    const offsetFromBottom = (lane + 1) * this.laneHeight;
+    const y = effectiveHeight - offsetFromBottom;
+    return Math.max(0, y);
+  }
+
   private getStaticReservedLaneSet(): Set<number> {
     const reserved = new Set<number>();
     for (const lane of this.topStaticLaneReservations.keys()) {
       reserved.add(lane);
     }
     for (const lane of this.bottomStaticLaneReservations.keys()) {
-      reserved.add(lane);
+      reserved.add(this.getGlobalLaneIndexForBottom(lane));
     }
     return reserved;
   }
@@ -1449,7 +1490,7 @@ export class CommentRenderer {
     const staticPosition = comment.layout === "ue" ? "ue" : "shita";
     const laneIndex = this.assignStaticLane(staticPosition);
     comment.lane = laneIndex;
-    comment.y = laneIndex * this.laneHeight;
+    comment.y = this.resolveStaticCommentOffset(staticPosition, laneIndex, displayHeight);
     comment.x = comment.virtualStartX;
     comment.isActive = true;
     this.activeComments.add(comment);
@@ -1472,12 +1513,13 @@ export class CommentRenderer {
 
   private assignStaticLane(position: "ue" | "shita"): number {
     const laneMap = this.getStaticLaneMap(position);
-    const laneIndices = Array.from({ length: this.laneCount }, (_, index) => index);
+    const limit = this.getStaticLaneLimit(position);
+    const laneCount = limit >= 0 ? limit + 1 : 0;
+    const laneIndices = Array.from({ length: laneCount }, (_, index) => index);
     if (position === "shita") {
-      // 下コメントは下段から順に埋めることで、ニコ動の下詰め挙動を再現する
-      laneIndices.reverse();
+      // 下コメントは下段から順に埋めるため、0から順に評価する
     } else {
-      // 上コメントは上段から詰め、既存のニコ動と同一の割り当て順を保つ
+      // 上コメントは上段から詰めるため、0から順に評価する
     }
     for (const lane of laneIndices) {
       if (!laneMap.has(lane)) {

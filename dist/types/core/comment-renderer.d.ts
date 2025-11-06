@@ -113,6 +113,10 @@ export declare class CommentRenderer {
      */
     private getCommentsInTimeWindow;
     private getStaticLaneMap;
+    private getStaticLaneDepth;
+    private getStaticLaneLimit;
+    private getGlobalLaneIndexForBottom;
+    private resolveStaticCommentOffset;
     private getStaticReservedLaneSet;
     private shouldActivateCommentAtTime;
     private activateComment;
