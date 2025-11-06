@@ -3,7 +3,7 @@ const moduleCandidates = [
   "../dist/comment-overlay.es.js",
   "../dist/comment-overlay.es",
 ];
-const DEFAULT_COMMENT_DATA_SOURCES = ["./so45409498-comments.json", "./comments.json"];
+const DEFAULT_COMMENT_DATA_SOURCES = ["./so45409498-comments.json"];
 
 let debugLogFn = null;
 let isDebugOverlayEnabled = false;

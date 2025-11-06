@@ -7,7 +7,6 @@ export declare const createDefaultTimeSource: () => TimeSource;
 export interface CommentDependencies {
     timeSource?: TimeSource;
     settingsVersion?: number;
-    strokeTextThreshold?: number;
 }
 export interface CommentPrepareOptions {
     visibleWidth: number;
@@ -62,11 +61,9 @@ export declare class Comment {
     lineHeightMultiplier: number;
     lineHeightPx: number;
     lines: string[];
-    strokeTextThreshold: number;
     private directionSign;
     private readonly timeSource;
     private lastSyncedSettingsVersion;
-    private lastAppliedStrokeTextThreshold;
     private cachedTexture;
     private textureCacheKey;
     constructor(text: string, vposMs: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
@@ -78,7 +75,7 @@ export declare class Comment {
     private isOffscreenCanvasSupported;
     private createTextureCanvas;
     draw(ctx: CanvasRenderingContext2D, interpolatedX?: number | null): void;
-    syncWithSettings(settings: RendererSettings, settingsVersion?: number, strokeTextThresholdOverride?: number): void;
+    syncWithSettings(settings: RendererSettings, settingsVersion?: number): void;
     getEffectiveColor(defaultColor: string): string;
     getEffectiveOpacity(defaultOpacity: number): number;
     markActivated(atTimeMs: number): void;
@@ -86,6 +83,8 @@ export declare class Comment {
     hasStaticExpired(currentTimeMs: number): boolean;
     getDirectionSign(): -1 | 1;
     private applyScrollDirection;
+    private createSegmentDrawer;
+    private getOutlineOffsets;
     private updateTextMetrics;
 }
 //# sourceMappingURL=comment.d.ts.map

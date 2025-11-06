@@ -11,6 +11,7 @@ import { isDebugLoggingEnabled } from "../shared/debug";
 const logger = createLogger("CommentEngine:Comment");
 
 type TextMeasurementCache = Map<string, number>;
+type DrawMode = "fill" | "outline";
 
 const textMeasurementCaches = new WeakMap<CanvasRenderingContext2D, TextMeasurementCache>();
 
@@ -113,7 +114,6 @@ export const createDefaultTimeSource = (): TimeSource => createPerformanceTimeSo
 export interface CommentDependencies {
   timeSource?: TimeSource;
   settingsVersion?: number;
-  strokeTextThreshold?: number;
 }
 
 const resolveScrollDirection = (input: ScrollDirection | string): ScrollDirection =>
@@ -176,11 +176,9 @@ export class Comment {
   lineHeightMultiplier = 1;
   lineHeightPx = 0;
   lines: string[] = [];
-  strokeTextThreshold = 30;
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
   private lastSyncedSettingsVersion = -1;
-  private lastAppliedStrokeTextThreshold = 30;
   private cachedTexture: OffscreenCanvas | null = null;
   private textureCacheKey = "";
 
@@ -222,7 +220,7 @@ export class Comment {
 
     this.timeSource = dependencies.timeSource ?? createDefaultTimeSource();
     this.applyScrollDirection(settings.scrollDirection);
-    this.syncWithSettings(settings, dependencies.settingsVersion, dependencies.strokeTextThreshold);
+    this.syncWithSettings(settings, dependencies.settingsVersion);
   }
 
   prepare(
@@ -436,18 +434,14 @@ export class Comment {
     misses: 0,
     creates: 0,
     fallbacks: 0,
-    strokeCallsInCache: 0,
+    outlineCallsInCache: 0,
     fillCallsInCache: 0,
-    strokeCallsInFallback: 0,
+    outlineCallsInFallback: 0,
     fillCallsInFallback: 0,
     letterSpacingComments: 0,
     normalComments: 0,
     multiLineComments: 0,
     totalCharactersDrawn: 0,
-    strokeSkippedCount: 0,
-    strokeUsedCount: 0,
-    smallFontComments: 0,
-    largeFontComments: 0,
     lastReported: 0,
   };
 
@@ -463,22 +457,16 @@ export class Comment {
         Comment.cacheStats.creates > 0
           ? (Comment.cacheStats.totalCharactersDrawn / Comment.cacheStats.creates).toFixed(1)
           : "0";
-      const strokeReductionRate =
-        Comment.cacheStats.strokeUsedCount + Comment.cacheStats.strokeSkippedCount > 0
-          ? (
-              (Comment.cacheStats.strokeSkippedCount /
-                (Comment.cacheStats.strokeUsedCount + Comment.cacheStats.strokeSkippedCount)) *
-              100
-            ).toFixed(1)
-          : "0";
+      const totalOutlineCalls =
+        Comment.cacheStats.outlineCallsInCache + Comment.cacheStats.outlineCallsInFallback;
+      const totalFillCalls =
+        Comment.cacheStats.fillCallsInCache + Comment.cacheStats.fillCallsInFallback;
       console.log(
         `[TextureCache Stats]`,
         `\n  Cache: Hits=${Comment.cacheStats.hits}, Misses=${Comment.cacheStats.misses}, Hit Rate=${hitRate.toFixed(1)}%`,
         `\n  Creates: ${Comment.cacheStats.creates}, Fallbacks: ${Comment.cacheStats.fallbacks}`,
         `\n  Comments: Normal=${Comment.cacheStats.normalComments}, LetterSpacing=${Comment.cacheStats.letterSpacingComments}, MultiLine=${Comment.cacheStats.multiLineComments}`,
-        `\n  Font Sizes: Small(<30px)=${Comment.cacheStats.smallFontComments}, Large(≥30px)=${Comment.cacheStats.largeFontComments}`,
-        `\n  Stroke: Used=${Comment.cacheStats.strokeUsedCount}, Skipped=${Comment.cacheStats.strokeSkippedCount}, Reduction=${strokeReductionRate}%`,
-        `\n  Draw Calls: StrokeText=${Comment.cacheStats.strokeCallsInCache + Comment.cacheStats.strokeCallsInFallback}, FillText=${Comment.cacheStats.fillCallsInCache + Comment.cacheStats.fillCallsInFallback}`,
+        `\n  Draw Calls: Outline=${totalOutlineCalls}, Fill=${totalFillCalls}`,
         `\n  Avg Characters/Comment: ${avgCharsPerComment}`,
       );
       Comment.cacheStats.lastReported = now;
@@ -508,13 +496,6 @@ export class Comment {
     }
     Comment.cacheStats.totalCharactersDrawn += this.text.length;
 
-    // フォントサイズ統計
-    if (this.fontSize < this.strokeTextThreshold) {
-      Comment.cacheStats.smallFontComments++;
-    } else {
-      Comment.cacheStats.largeFontComments++;
-    }
-
     // テクスチャサイズは実際のコメントサイズより少し大きめに取る（影やエフェクトのため）
     const padding = Math.max(10, this.fontSize * 0.5);
     const textureWidth = Math.ceil(this.width + padding * 2);
@@ -535,87 +516,34 @@ export class Comment {
     const lineAdvance =
       this.lines.length > 1 && this.lineHeightPx > 0 ? this.lineHeightPx : this.fontSize;
     const baselineStart = padding + this.fontSize;
+    const drawSegment = this.createSegmentDrawer(offscreenCtx, ctx, "cache", drawX);
 
-    const drawSegment = (line: string, baselineY: number, mode: "stroke" | "fill"): void => {
-      if (line.length === 0) {
-        return;
-      }
-      // 行頭の全角スペースを検出してオフセットを計算（ブラウザのバグ回避）
-      const leadingSpaces = line.match(/^[\u3000\u00A0]+/);
-      const leadingSpaceCount = leadingSpaces ? leadingSpaces[0].length : 0;
-      const leadingSpaceOffset =
-        leadingSpaceCount > 0 ? measureTextWidth(ctx, leadingSpaces![0]) : 0;
-      const effectiveDrawX = drawX + leadingSpaceOffset;
-      const trimmedLine = leadingSpaceCount > 0 ? line.substring(leadingSpaceCount) : line;
+    const outlineOffsets = this.getOutlineOffsets();
 
-      if (Math.abs(this.letterSpacing) < Number.EPSILON) {
-        if (mode === "stroke") {
-          Comment.cacheStats.strokeCallsInCache++;
-          offscreenCtx.strokeText(trimmedLine, effectiveDrawX, baselineY);
-        } else {
-          Comment.cacheStats.fillCallsInCache++;
-          offscreenCtx.fillText(trimmedLine, effectiveDrawX, baselineY);
-        }
-        return;
+    const drawOutline = (): void => {
+      const outlineAlpha = clampOpacity(effectiveOpacity * 0.6);
+      offscreenCtx.save();
+      offscreenCtx.fillStyle = `rgba(0, 0, 0, ${outlineAlpha})`;
+      for (const [offsetX, offsetY] of outlineOffsets) {
+        linesToRender.forEach((line, index) => {
+          const baseline = baselineStart + index * lineAdvance + offsetY;
+          drawSegment(line, baseline, "outline", offsetX);
+        });
       }
-      // letterSpacing使用時も行頭スペースを考慮
-      let cursorX = effectiveDrawX;
-      for (let index = 0; index < trimmedLine.length; index += 1) {
-        const char = trimmedLine[index];
-        if (mode === "stroke") {
-          Comment.cacheStats.strokeCallsInCache++;
-          offscreenCtx.strokeText(char, cursorX, baselineY);
-        } else {
-          Comment.cacheStats.fillCallsInCache++;
-          offscreenCtx.fillText(char, cursorX, baselineY);
-        }
-        const advance = measureTextWidth(ctx, char); // 元のコンテキストで計測
-        cursorX += advance;
-        if (index < trimmedLine.length - 1) {
-          cursorX += this.letterSpacing;
-        }
-      }
+      offscreenCtx.restore();
     };
 
-    const useStrokeText = this.fontSize >= this.strokeTextThreshold;
-
-    const drawStroke = (): void => {
-      if (!useStrokeText) {
-        // 小フォントの場合はstrokeTextをスキップ
-        Comment.cacheStats.strokeSkippedCount++;
-        return;
-      }
-      Comment.cacheStats.strokeUsedCount++;
-      offscreenCtx.globalAlpha = effectiveOpacity;
-      offscreenCtx.strokeStyle = "#000000";
-      offscreenCtx.lineWidth = Math.max(3, this.fontSize / 8);
-      offscreenCtx.lineJoin = "round";
-      linesToRender.forEach((line, index) => {
-        const baseline = baselineStart + index * lineAdvance;
-        drawSegment(line, baseline, "stroke");
-      });
-      offscreenCtx.globalAlpha = 1;
-    };
-
-    const drawFill = (): void => {
-      // 小フォントの場合はshadowBlurで擬似アウトライン
-      if (!useStrokeText) {
-        offscreenCtx.shadowColor = "#000000";
-        offscreenCtx.shadowBlur = Math.max(2, this.fontSize * 0.1);
-        offscreenCtx.shadowOffsetX = 0;
-        offscreenCtx.shadowOffsetY = 0;
-      }
+    const drawFill = (fillStyle: string): void => {
+      offscreenCtx.save();
+      offscreenCtx.fillStyle = fillStyle;
       linesToRender.forEach((line, index) => {
         const baseline = baselineStart + index * lineAdvance;
         drawSegment(line, baseline, "fill");
       });
-      if (!useStrokeText) {
-        offscreenCtx.shadowColor = "transparent";
-        offscreenCtx.shadowBlur = 0;
-      }
+      offscreenCtx.restore();
     };
 
-    drawStroke();
+    drawOutline();
 
     if (this.renderStyle === "classic") {
       const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
@@ -653,27 +581,22 @@ export class Comment {
 
       shadowLayers.forEach((layer) => {
         const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
+        offscreenCtx.save();
         offscreenCtx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
         offscreenCtx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
         offscreenCtx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
         offscreenCtx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
         offscreenCtx.fillStyle = "rgba(0, 0, 0, 0)";
-        drawFill();
+        linesToRender.forEach((line, index) => {
+          const baseline = baselineStart + index * lineAdvance;
+          drawSegment(line, baseline, "fill");
+        });
+        offscreenCtx.restore();
       });
-      offscreenCtx.shadowColor = "transparent";
-      offscreenCtx.shadowBlur = 0;
-      offscreenCtx.shadowOffsetX = 0;
-      offscreenCtx.shadowOffsetY = 0;
-    } else {
-      offscreenCtx.shadowColor = "transparent";
-      offscreenCtx.shadowBlur = 0;
-      offscreenCtx.shadowOffsetX = 0;
-      offscreenCtx.shadowOffsetY = 0;
     }
 
-    offscreenCtx.globalAlpha = 1;
-    offscreenCtx.fillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
-    drawFill();
+    const resolvedFillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
+    drawFill(resolvedFillStyle);
 
     offscreenCtx.restore();
     return offscreen;
@@ -720,85 +643,33 @@ export class Comment {
         this.lines.length > 1 && this.lineHeightPx > 0 ? this.lineHeightPx : this.fontSize;
       const baselineStart = this.y + this.fontSize;
 
-      const drawSegment = (line: string, baselineY: number, mode: "stroke" | "fill"): void => {
-        if (line.length === 0) {
-          return;
-        }
-        // 行頭の全角スペースを検出してオフセットを計算（ブラウザのバグ回避）
-        const leadingSpaces = line.match(/^[\u3000\u00A0]+/);
-        const leadingSpaceCount = leadingSpaces ? leadingSpaces[0].length : 0;
-        const leadingSpaceOffset =
-          leadingSpaceCount > 0 ? measureTextWidth(ctx, leadingSpaces![0]) : 0;
-        const effectiveDrawX = drawX + leadingSpaceOffset;
-        const trimmedLine = leadingSpaceCount > 0 ? line.substring(leadingSpaceCount) : line;
+      const drawSegment = this.createSegmentDrawer(ctx, ctx, "fallback", drawX);
+      const outlineOffsets = this.getOutlineOffsets();
 
-        if (Math.abs(this.letterSpacing) < Number.EPSILON) {
-          if (mode === "stroke") {
-            Comment.cacheStats.strokeCallsInFallback++;
-            ctx.strokeText(trimmedLine, effectiveDrawX, baselineY);
-          } else {
-            Comment.cacheStats.fillCallsInFallback++;
-            ctx.fillText(trimmedLine, effectiveDrawX, baselineY);
-          }
-          return;
+      const drawOutline = (): void => {
+        const outlineAlpha = clampOpacity(effectiveOpacity * 0.6);
+        ctx.save();
+        ctx.fillStyle = `rgba(0, 0, 0, ${outlineAlpha})`;
+        for (const [offsetX, offsetY] of outlineOffsets) {
+          linesToRender.forEach((line, index) => {
+            const baseline = baselineStart + index * lineAdvance + offsetY;
+            drawSegment(line, baseline, "outline", offsetX);
+          });
         }
-        let cursorX = effectiveDrawX;
-        for (let index = 0; index < trimmedLine.length; index += 1) {
-          const char = trimmedLine[index];
-          if (mode === "stroke") {
-            Comment.cacheStats.strokeCallsInFallback++;
-            ctx.strokeText(char, cursorX, baselineY);
-          } else {
-            Comment.cacheStats.fillCallsInFallback++;
-            ctx.fillText(char, cursorX, baselineY);
-          }
-          const advance = measureTextWidth(ctx, char);
-          cursorX += advance;
-          if (index < trimmedLine.length - 1) {
-            cursorX += this.letterSpacing;
-          }
-        }
+        ctx.restore();
       };
 
-      const useStrokeText = this.fontSize >= this.strokeTextThreshold;
-
-      const drawStroke = (): void => {
-        if (!useStrokeText) {
-          // 小フォントの場合はstrokeTextをスキップ
-          Comment.cacheStats.strokeSkippedCount++;
-          return;
-        }
-        Comment.cacheStats.strokeUsedCount++;
-        ctx.globalAlpha = effectiveOpacity;
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = Math.max(3, this.fontSize / 8);
-        ctx.lineJoin = "round";
-        linesToRender.forEach((line, index) => {
-          const baseline = baselineStart + index * lineAdvance;
-          drawSegment(line, baseline, "stroke");
-        });
-        ctx.globalAlpha = 1;
-      };
-
-      const drawFill = (): void => {
-        // 小フォントの場合はshadowBlurで擬似アウトライン
-        if (!useStrokeText) {
-          ctx.shadowColor = "#000000";
-          ctx.shadowBlur = Math.max(2, this.fontSize * 0.1);
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-        }
+      const drawFill = (fillStyle: string): void => {
+        ctx.save();
+        ctx.fillStyle = fillStyle;
         linesToRender.forEach((line, index) => {
           const baseline = baselineStart + index * lineAdvance;
           drawSegment(line, baseline, "fill");
         });
-        if (!useStrokeText) {
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-        }
+        ctx.restore();
       };
 
-      drawStroke();
+      drawOutline();
 
       if (this.renderStyle === "classic") {
         const baseShadowOffset = Math.max(1, this.fontSize * 0.04);
@@ -836,27 +707,22 @@ export class Comment {
 
         shadowLayers.forEach((layer) => {
           const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
+          ctx.save();
           ctx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
           ctx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
           ctx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
           ctx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
           ctx.fillStyle = "rgba(0, 0, 0, 0)";
-          drawFill();
+          linesToRender.forEach((line, index) => {
+            const baseline = baselineStart + index * lineAdvance;
+            drawSegment(line, baseline, "fill");
+          });
+          ctx.restore();
         });
-        ctx.shadowColor = "transparent";
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-      } else {
-        ctx.shadowColor = "transparent";
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
       }
 
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
-      drawFill();
+      const resolvedFillStyle = resolveFillStyleWithOpacity(this.color, effectiveOpacity);
+      drawFill(resolvedFillStyle);
 
       ctx.restore();
       Comment.reportCacheStats();
@@ -870,29 +736,16 @@ export class Comment {
     }
   }
 
-  syncWithSettings(
-    settings: RendererSettings,
-    settingsVersion?: number,
-    strokeTextThresholdOverride?: number,
-  ): void {
-    const hasOverride =
-      typeof strokeTextThresholdOverride === "number" &&
-      Number.isFinite(strokeTextThresholdOverride);
-    const nextThresholdCandidate = hasOverride
-      ? Math.max(0, Math.floor(strokeTextThresholdOverride))
-      : Math.max(0, Math.floor(settings.strokeTextThreshold));
-    const thresholdChanged = nextThresholdCandidate !== this.lastAppliedStrokeTextThreshold;
+  syncWithSettings(settings: RendererSettings, settingsVersion?: number): void {
     const hasSyncedVersion =
       typeof settingsVersion === "number" && settingsVersion === this.lastSyncedSettingsVersion;
-    if (hasSyncedVersion && !thresholdChanged) {
+    if (hasSyncedVersion) {
       return;
     }
     this.color = this.getEffectiveColor(settings.commentColor);
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.applyScrollDirection(settings.scrollDirection);
     this.renderStyle = settings.renderStyle;
-    this.strokeTextThreshold = nextThresholdCandidate;
-    this.lastAppliedStrokeTextThreshold = nextThresholdCandidate;
     if (typeof settingsVersion === "number") {
       this.lastSyncedSettingsVersion = settingsVersion;
     }
@@ -949,6 +802,77 @@ export class Comment {
     const resolved = resolveScrollDirection(direction);
     this.scrollDirection = resolved;
     this.directionSign = getDirectionSign(resolved);
+  }
+
+  private createSegmentDrawer(
+    targetCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    measurementCtx: CanvasRenderingContext2D,
+    statsTarget: "cache" | "fallback",
+    baseDrawX: number,
+  ): (line: string, baselineY: number, mode: DrawMode, offsetX?: number) => void {
+    return (line, baselineY, mode, offsetX = 0) => {
+      if (line.length === 0) {
+        return;
+      }
+      const leadingSpaces = line.match(/^[\u3000\u00A0]+/);
+      const leadingSpaceCount = leadingSpaces ? leadingSpaces[0].length : 0;
+      const leadingSpaceOffset =
+        leadingSpaceCount > 0 ? measureTextWidth(measurementCtx, leadingSpaces![0]) : 0;
+      const effectiveDrawX = baseDrawX + leadingSpaceOffset + offsetX;
+      const trimmedLine = leadingSpaceCount > 0 ? line.substring(leadingSpaceCount) : line;
+
+      const recordDraw = (): void => {
+        if (statsTarget === "cache") {
+          if (mode === "outline") {
+            Comment.cacheStats.outlineCallsInCache++;
+          } else {
+            Comment.cacheStats.fillCallsInCache++;
+          }
+        } else if (mode === "outline") {
+          Comment.cacheStats.outlineCallsInFallback++;
+        } else {
+          Comment.cacheStats.fillCallsInFallback++;
+        }
+      };
+
+      if (Math.abs(this.letterSpacing) < Number.EPSILON) {
+        recordDraw();
+        targetCtx.fillText(trimmedLine, effectiveDrawX, baselineY);
+        return;
+      }
+
+      let cursorX = effectiveDrawX;
+      for (let index = 0; index < trimmedLine.length; index += 1) {
+        const char = trimmedLine[index];
+        recordDraw();
+        targetCtx.fillText(char, cursorX, baselineY);
+        const advance = measureTextWidth(measurementCtx, char);
+        cursorX += advance;
+        if (index < trimmedLine.length - 1) {
+          cursorX += this.letterSpacing;
+        }
+      }
+    };
+  }
+
+  private getOutlineOffsets(): Array<[number, number]> {
+    const outlineThickness = Math.max(1, Math.round(this.fontSize * 0.08));
+    const offsets: Array<[number, number]> = [
+      [-outlineThickness, 0],
+      [outlineThickness, 0],
+      [0, -outlineThickness],
+      [0, outlineThickness],
+    ];
+    if (outlineThickness > 1) {
+      const diagonal = Math.max(1, Math.round(outlineThickness * 0.7));
+      offsets.push(
+        [-diagonal, -diagonal],
+        [-diagonal, diagonal],
+        [diagonal, -diagonal],
+        [diagonal, diagonal],
+      );
+    }
+    return offsets;
   }
 
   private updateTextMetrics(ctx: CanvasRenderingContext2D): void {

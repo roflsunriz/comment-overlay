@@ -27,7 +27,6 @@ const BASE_SETTINGS: RendererSettings = {
   useFixedLaneCount: false,
   fixedLaneCount: 12,
   useDprScaling: true,
-  strokeTextThreshold: 30,
 };
 
 export const DEFAULT_RENDERER_SETTINGS: ReadonlySettings = BASE_SETTINGS;

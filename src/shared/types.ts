@@ -20,8 +20,6 @@ export interface RendererSettings {
   fixedLaneCount: number;
   // DPR対応の可否（キャンバス実解像度スケーリング）。実装は後続。
   useDprScaling: boolean;
-  // strokeText使用の閾値（px）。この値未満のフォントサイズではshadowBlurで代替
-  strokeTextThreshold: number;
 }
 
 export type CommentLayoutCommand = "naka" | "ue" | "shita";

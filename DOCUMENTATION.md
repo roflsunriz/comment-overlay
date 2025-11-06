@@ -62,13 +62,12 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 | `useFixedLaneCount` | `boolean` | レーン数を固定するかどうか |
 | `fixedLaneCount` | `number` | 固定する場合のレーン数 |
 | `useDprScaling` | `boolean` | `devicePixelRatio` に応じた高解像度描画を行うか |
-| `strokeTextThreshold` | `number` | `strokeText` 使用の閾値（px）。この値未満のフォントサイズでは `shadowBlur` で代替（デフォルト: 30） |
 
 `ngWords` は入力をトリムしたうえで部分一致・大文字小文字を区別せずに評価されます。`scrollDirection` を `'ltr'` にするとコメントが左側から右方向へ流れ、デフォルトの `'rtl'` では従来通り右側から左方向へ流れます。
 
 ### パフォーマンス最適化
 
-`strokeTextThreshold` は描画パフォーマンスに影響します。小さなコメントでは高負荷な `strokeText` の代わりに軽量な `shadowBlur` を使用することで、描画コストを大幅に削減できます。デフォルト値（30px）では約89%のコメントで `strokeText` がスキップされ、描画性能が向上します。
+`comment-overlay` は `strokeText` を使用せず、複数回の `fillText` と軽量なシャドウ処理でアウトラインを生成します。フォントサイズに応じてアウトラインの太さを自動調整し、描画コストを一定に抑えながら従来の視認性を維持します。
 
 配列を共有しないためにも `cloneDefaultSettings()` の戻り値を編集するか、自前でディープコピーしてください。
 
@@ -122,7 +121,7 @@ console.log(`comment-overlay version: ${COMMENT_OVERLAY_VERSION}`);
 - OffscreenCanvasでのテクスチャキャッシュ使用時に発生します
 
 **技術的詳細:**
-- ブラウザのCanvas API (`fillText`/`strokeText`) が、OffscreenCanvas上で行頭の全角スペース（`\u3000`）や非破壊スペース（`\u00A0`）を無視する動作が確認されています
+- ブラウザのCanvas API (`fillText`) が、OffscreenCanvas上で行頭の全角スペース（`\u3000`）や非破壊スペース（`\u00A0`）を無視する動作が確認されています（旧実装の `strokeText` でも同様）
 - 行頭スペースを検出してその幅を測定し、描画X座標を調整する対策コードは実装済みですが、OffscreenCanvas側で反映されません
 - オフセット計算のロジック自体は正しく動作していることを確認済みです
 
