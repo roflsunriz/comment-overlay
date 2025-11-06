@@ -43,6 +43,9 @@ export const STATIC_VISIBLE_DURATION_MS = 4_000;
 
 const HEX_COLOR_PATTERN = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i;
 
+const STATIC_COMMENT_SIDE_MARGIN_PX = 8;
+const MIN_STATIC_FONT_SIZE_PX = 12;
+
 const clampOpacity = (value: number): number => {
   if (!Number.isFinite(value)) {
     return 0;
@@ -110,6 +113,7 @@ export const createDefaultTimeSource = (): TimeSource => createPerformanceTimeSo
 export interface CommentDependencies {
   timeSource?: TimeSource;
   settingsVersion?: number;
+  strokeTextThreshold?: number;
 }
 
 const resolveScrollDirection = (input: ScrollDirection | string): ScrollDirection =>
@@ -176,6 +180,7 @@ export class Comment {
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
   private lastSyncedSettingsVersion = -1;
+  private lastAppliedStrokeTextThreshold = 30;
   private cachedTexture: OffscreenCanvas | null = null;
   private textureCacheKey = "";
 
@@ -217,7 +222,7 @@ export class Comment {
 
     this.timeSource = dependencies.timeSource ?? createDefaultTimeSource();
     this.applyScrollDirection(settings.scrollDirection);
-    this.syncWithSettings(settings, dependencies.settingsVersion);
+    this.syncWithSettings(settings, dependencies.settingsVersion, dependencies.strokeTextThreshold);
   }
 
   prepare(
@@ -244,31 +249,54 @@ export class Comment {
       ctx.font = `${this.fontSize}px ${this.fontFamily}`;
       const rawLines = this.text.includes("\n") ? this.text.split(/\r?\n/) : [this.text];
       this.lines = rawLines.length > 0 ? rawLines : [""];
-      let maxLineWidth = 0;
-      const effectiveLetterSpacing = this.letterSpacing;
-      for (const line of this.lines) {
-        const baseWidth = measureTextWidth(ctx, line);
-        const extraSpacing = line.length > 1 ? effectiveLetterSpacing * (line.length - 1) : 0;
-        const totalWidth = Math.max(0, baseWidth + extraSpacing);
-        if (totalWidth > maxLineWidth) {
-          maxLineWidth = totalWidth;
+      this.updateTextMetrics(ctx);
+
+      const isStaticTopOrBottom =
+        !this.isScrolling && (this.layout === "ue" || this.layout === "shita");
+      if (isStaticTopOrBottom) {
+        const maxStaticWidth = Math.max(1, safeVisibleWidth - STATIC_COMMENT_SIDE_MARGIN_PX * 2);
+        if (this.width > maxStaticWidth) {
+          const minimumFontSize = Math.max(
+            MIN_STATIC_FONT_SIZE_PX,
+            Math.min(this.fontSize, Math.floor(baseFontSize * 0.6)),
+          );
+          const shrinkFactor = maxStaticWidth / Math.max(this.width, 1);
+          const initialShrink = Math.max(
+            minimumFontSize,
+            Math.floor(this.fontSize * Math.min(shrinkFactor, 1)),
+          );
+          if (initialShrink < this.fontSize) {
+            this.fontSize = initialShrink;
+            ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+            this.updateTextMetrics(ctx);
+          }
+          let iteration = 0;
+          while (this.width > maxStaticWidth && this.fontSize > minimumFontSize && iteration < 5) {
+            const currentShrink = maxStaticWidth / Math.max(this.width, 1);
+            const proposedSize = Math.max(
+              minimumFontSize,
+              Math.floor(this.fontSize * Math.max(currentShrink, 0.7)),
+            );
+            if (proposedSize >= this.fontSize) {
+              this.fontSize = Math.max(minimumFontSize, this.fontSize - 1);
+            } else {
+              this.fontSize = proposedSize;
+            }
+            ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+            this.updateTextMetrics(ctx);
+            iteration += 1;
+          }
         }
       }
-      this.width = maxLineWidth;
-      const computedLineHeightPx = Math.max(
-        1,
-        Math.floor(this.fontSize * this.lineHeightMultiplier),
-      );
-      this.lineHeightPx = computedLineHeightPx;
-      this.height =
-        this.fontSize +
-        (this.lines.length > 1 ? (this.lines.length - 1) * computedLineHeightPx : 0);
 
       if (!this.isScrolling) {
         this.bufferWidth = 0;
-        const centeredX = Math.max((safeVisibleWidth - this.width) / 2, 0);
-        this.virtualStartX = centeredX;
-        this.x = centeredX;
+        const margin = isStaticTopOrBottom ? STATIC_COMMENT_SIDE_MARGIN_PX : 0;
+        const centeredX = Math.max((safeVisibleWidth - this.width) / 2, margin);
+        const maxStart = Math.max(margin, safeVisibleWidth - this.width - margin);
+        const clampedX = Math.min(centeredX, Math.max(maxStart, margin));
+        this.virtualStartX = clampedX;
+        this.x = clampedX;
         this.baseSpeed = 0;
         this.speed = 0;
         this.speedPixelsPerMs = 0;
@@ -842,15 +870,29 @@ export class Comment {
     }
   }
 
-  syncWithSettings(settings: RendererSettings, settingsVersion?: number): void {
-    if (typeof settingsVersion === "number" && settingsVersion === this.lastSyncedSettingsVersion) {
+  syncWithSettings(
+    settings: RendererSettings,
+    settingsVersion?: number,
+    strokeTextThresholdOverride?: number,
+  ): void {
+    const hasOverride =
+      typeof strokeTextThresholdOverride === "number" &&
+      Number.isFinite(strokeTextThresholdOverride);
+    const nextThresholdCandidate = hasOverride
+      ? Math.max(0, Math.floor(strokeTextThresholdOverride))
+      : Math.max(0, Math.floor(settings.strokeTextThreshold));
+    const thresholdChanged = nextThresholdCandidate !== this.lastAppliedStrokeTextThreshold;
+    const hasSyncedVersion =
+      typeof settingsVersion === "number" && settingsVersion === this.lastSyncedSettingsVersion;
+    if (hasSyncedVersion && !thresholdChanged) {
       return;
     }
     this.color = this.getEffectiveColor(settings.commentColor);
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.applyScrollDirection(settings.scrollDirection);
     this.renderStyle = settings.renderStyle;
-    this.strokeTextThreshold = settings.strokeTextThreshold;
+    this.strokeTextThreshold = nextThresholdCandidate;
+    this.lastAppliedStrokeTextThreshold = nextThresholdCandidate;
     if (typeof settingsVersion === "number") {
       this.lastSyncedSettingsVersion = settingsVersion;
     }
@@ -907,5 +949,24 @@ export class Comment {
     const resolved = resolveScrollDirection(direction);
     this.scrollDirection = resolved;
     this.directionSign = getDirectionSign(resolved);
+  }
+
+  private updateTextMetrics(ctx: CanvasRenderingContext2D): void {
+    let maxLineWidth = 0;
+    const effectiveLetterSpacing = this.letterSpacing;
+    for (const line of this.lines) {
+      const baseWidth = measureTextWidth(ctx, line);
+      const extraSpacing = line.length > 1 ? effectiveLetterSpacing * (line.length - 1) : 0;
+      const totalWidth = Math.max(0, baseWidth + extraSpacing);
+      if (totalWidth > maxLineWidth) {
+        maxLineWidth = totalWidth;
+      }
+    }
+    this.width = maxLineWidth;
+    const computedLineHeightPx = Math.max(1, Math.floor(this.fontSize * this.lineHeightMultiplier));
+    this.lineHeightPx = computedLineHeightPx;
+    const additionalHeight =
+      this.lines.length > 1 ? (this.lines.length - 1) * computedLineHeightPx : 0;
+    this.height = this.fontSize + additionalHeight;
   }
 }

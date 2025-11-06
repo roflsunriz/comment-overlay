@@ -30,6 +30,7 @@ export declare class CommentRenderer {
     private readonly createCanvasElement;
     private readonly commentDependencies;
     private settingsVersion;
+    private dynamicStrokeTextThreshold;
     private normalizedNgWords;
     private compiledNgRegexps;
     private canvas;
@@ -93,6 +94,7 @@ export declare class CommentRenderer {
     private resolveDevicePixelRatio;
     private destroyCanvasOnly;
     private calculateLaneMetrics;
+    private estimateStrokeTextThreshold;
     private updateComments;
     private buildPrepareOptions;
     private findAvailableLane;

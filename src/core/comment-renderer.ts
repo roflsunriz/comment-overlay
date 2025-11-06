@@ -85,6 +85,8 @@ const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
 const MIN_LANE_COUNT = 1;
 const DEFAULT_LANE_COUNT = 12;
 const MIN_FONT_SIZE_PX = 24;
+const SMALL_COMMENT_SCALE = 0.8;
+const BIG_COMMENT_SCALE = 1.4;
 const EDGE_EPSILON = 1e-3;
 const SEEK_DIRECTION_EPSILON_MS = 50;
 
@@ -184,6 +186,7 @@ export class CommentRenderer {
   private readonly createCanvasElement: () => HTMLCanvasElement;
   private readonly commentDependencies: CommentDependencies;
   private settingsVersion = 0;
+  private dynamicStrokeTextThreshold = 30;
   private normalizedNgWords: string[] = [];
   private compiledNgRegexps: RegExp[] = [];
   private canvas: HTMLCanvasElement | null = null;
@@ -234,6 +237,8 @@ export class CommentRenderer {
       baseSettings = normalizeSettings(cloneDefaultSettings());
     }
 
+    this._settings = normalizeSettings(baseSettings);
+    this.dynamicStrokeTextThreshold = Math.max(0, Math.floor(this._settings.strokeTextThreshold));
     this.timeSource = config.timeSource ?? createDefaultTimeSource();
     this.animationFrameProvider =
       config.animationFrameProvider ?? createDefaultAnimationFrameProvider(this.timeSource);
@@ -241,8 +246,8 @@ export class CommentRenderer {
     this.commentDependencies = {
       timeSource: this.timeSource,
       settingsVersion: this.settingsVersion,
+      strokeTextThreshold: this.dynamicStrokeTextThreshold,
     };
-    this._settings = normalizeSettings(baseSettings);
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
 
     this.rebuildNgMatchers();
@@ -260,6 +265,8 @@ export class CommentRenderer {
     this._settings = normalizeSettings(value);
     this.settingsVersion += 1;
     this.commentDependencies.settingsVersion = this.settingsVersion;
+    this.dynamicStrokeTextThreshold = Math.max(0, Math.floor(this._settings.strokeTextThreshold));
+    this.commentDependencies.strokeTextThreshold = this.dynamicStrokeTextThreshold;
     this.rebuildNgMatchers();
   }
 
@@ -621,7 +628,11 @@ export class CommentRenderer {
     const syncModeChanged = previousSyncMode !== this._settings.syncMode;
 
     this.comments.forEach((comment) => {
-      comment.syncWithSettings(this._settings, this.settingsVersion);
+      comment.syncWithSettings(
+        this._settings,
+        this.settingsVersion,
+        this.dynamicStrokeTextThreshold,
+      );
     });
 
     if (directionChanged) {
@@ -655,6 +666,8 @@ export class CommentRenderer {
     if (syncModeChanged && this.videoElement) {
       this.startAnimation();
     }
+
+    this.calculateLaneMetrics();
   }
 
   getVideoElement(): HTMLVideoElement | null {
@@ -878,8 +891,40 @@ export class CommentRenderer {
     } else {
       this.laneCount = Math.max(MIN_LANE_COUNT, availableLanes);
     }
+    this.dynamicStrokeTextThreshold = this.estimateStrokeTextThreshold(
+      effectiveHeight,
+      this.laneCount,
+      baseHeight,
+    );
+    this.commentDependencies.strokeTextThreshold = this.dynamicStrokeTextThreshold;
     this.topStaticLaneReservations.clear();
     this.bottomStaticLaneReservations.clear();
+  }
+
+  private estimateStrokeTextThreshold(
+    effectiveHeight: number,
+    laneCount: number,
+    baseFontSizeCandidate: number,
+  ): number {
+    const normalizedBase = Math.max(MIN_FONT_SIZE_PX, baseFontSizeCandidate);
+    const laneHeightEstimate =
+      laneCount > 0 ? Math.max(1, Math.floor(effectiveHeight / laneCount)) : normalizedBase * 1.2;
+    const laneBasedMedium = Math.max(MIN_FONT_SIZE_PX, Math.floor(laneHeightEstimate / 1.2));
+    const mediumFontSize = Math.max(MIN_FONT_SIZE_PX, Math.min(normalizedBase, laneBasedMedium));
+    const smallFontSize = Math.max(
+      MIN_FONT_SIZE_PX,
+      Math.floor(mediumFontSize * SMALL_COMMENT_SCALE),
+    );
+    const delta = Math.max(0, mediumFontSize - smallFontSize);
+    const densityScale = Math.min(1.5, Math.max(0.7, DEFAULT_LANE_COUNT / Math.max(laneCount, 1)));
+    const thresholdBase = mediumFontSize + Math.ceil(delta / 2);
+    const scaledThreshold = Math.floor(thresholdBase * densityScale);
+    const bigFontSize = Math.max(mediumFontSize, Math.floor(mediumFontSize * BIG_COMMENT_SCALE));
+    const maxThreshold = bigFontSize > mediumFontSize ? bigFontSize - 1 : bigFontSize;
+    const boundedThreshold = Math.max(mediumFontSize, scaledThreshold);
+    const candidate =
+      maxThreshold > mediumFontSize ? Math.min(boundedThreshold, maxThreshold) : boundedThreshold;
+    return Math.max(MIN_FONT_SIZE_PX, candidate);
   }
 
   private updateComments(frameTimeMs?: number): void {
@@ -980,7 +1025,11 @@ export class CommentRenderer {
         continue;
       }
 
-      comment.syncWithSettings(this._settings, this.settingsVersion);
+      comment.syncWithSettings(
+        this._settings,
+        this.settingsVersion,
+        this.dynamicStrokeTextThreshold,
+      );
 
       if (this.shouldActivateCommentAtTime(comment, this.currentTime, preview)) {
         this.activateComment(
@@ -1849,7 +1898,11 @@ export class CommentRenderer {
         return;
       }
 
-      comment.syncWithSettings(this._settings, this.settingsVersion);
+      comment.syncWithSettings(
+        this._settings,
+        this.settingsVersion,
+        this.dynamicStrokeTextThreshold,
+      );
       comment.isActive = false;
       this.activeComments.delete(comment);
       comment.lane = -1;
@@ -2177,7 +2230,11 @@ export class CommentRenderer {
         return;
       }
 
-      comment.syncWithSettings(this._settings, this.settingsVersion);
+      comment.syncWithSettings(
+        this._settings,
+        this.settingsVersion,
+        this.dynamicStrokeTextThreshold,
+      );
       comment.isActive = false;
       this.activeComments.delete(comment);
       comment.lane = -1;
