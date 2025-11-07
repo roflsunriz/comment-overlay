@@ -1,6 +1,6 @@
 {
   "name": "comment-overlay",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Reusable comment overlay renderer engine.",
   "publishConfig": {
     "access": "public"
