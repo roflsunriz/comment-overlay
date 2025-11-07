@@ -10,7 +10,7 @@ export default defineConfig({
       entry: resolve(__dirname, "src/index.ts"),
       name: "CommentOverlay",
       formats: ["es", "cjs"],
-      fileName: (format) => (format === "es" ? "comment-overlay.es" : "comment-overlay.cjs")
+      fileName: (format) => (format === "es" ? "comment-overlay.es.js" : "comment-overlay.cjs.js")
     },
     rollupOptions: {
       external: [],

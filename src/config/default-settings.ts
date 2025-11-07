@@ -37,4 +37,4 @@ export const cloneDefaultSettings = (): RendererSettings => ({
   ngRegexps: [...BASE_SETTINGS.ngRegexps],
 });
 
-export const COMMENT_OVERLAY_VERSION = "v2.2.0";
+export const COMMENT_OVERLAY_VERSION = "v2.4.1";

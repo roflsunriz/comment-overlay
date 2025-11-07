@@ -613,7 +613,7 @@ const Xe = 4e3, G = {
   ...G,
   ngWords: [...G.ngWords],
   ngRegexps: [...G.ngRegexps]
-}), lt = "v2.2.0", L = (l) => l * 1e3, Ge = (l) => !Number.isFinite(l) || l < 0 ? null : Math.round(l), ee = 4e3, he = 1800, Ue = 3, Ye = 0.25, qe = 32, Ke = 48, J = 120, Je = 4e3, j = 120, je = 800, Ze = 2, _ = 4e3, F = N + ee, Qe = 1e3, ce = 1, de = 12, ue = 24, T = 1e-3, I = 50, et = 0.05, tt = 10, it = (l) => Number.isFinite(l) ? l <= 0 ? 0 : l >= 1 ? 1 : l : 1, Z = (l) => Math.max(
+}), lt = "v2.4.1", L = (l) => l * 1e3, Ge = (l) => !Number.isFinite(l) || l < 0 ? null : Math.round(l), ee = 4e3, he = 1800, Ue = 3, Ye = 0.25, qe = 32, Ke = 48, J = 120, Je = 4e3, j = 120, je = 800, Ze = 2, _ = 4e3, F = N + ee, Qe = 1e3, ce = 1, de = 12, ue = 24, T = 1e-3, I = 50, et = 0.05, tt = 10, it = (l) => Number.isFinite(l) ? l <= 0 ? 0 : l >= 1 ? 1 : l : 1, Z = (l) => Math.max(
   tt,
   Math.floor(l * et)
 ), B = (l) => {
@@ -1812,4 +1812,4 @@ export {
   A as isDebugLoggingEnabled,
   rt as resetDebugCounters
 };
-//# sourceMappingURL=comment-overlay.es.map
+//# sourceMappingURL=comment-overlay.es.js.map

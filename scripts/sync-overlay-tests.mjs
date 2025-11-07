@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "..");
 
-const sourceModule = resolve(projectRoot, "dist/comment-overlay.es");
+const sourceModule = resolve(projectRoot, "dist/comment-overlay.es.js");
 const sourceMap = `${sourceModule}.map`;
 const targetModule = resolve(projectRoot, "overlay-tests/dist/comment-overlay.es.js");
 const targetMap = `${targetModule}.map`;
@@ -31,7 +31,7 @@ const main = async () => {
 
   const mainCopied = await copyIfPresent(sourceModule, targetModule);
   if (!mainCopied) {
-    throw new Error("dist/comment-overlay.es not found. Run `vite build` before syncing overlay tests.");
+    throw new Error("dist/comment-overlay.es.js not found. Run `vite build` before syncing overlay tests.");
   }
 
   await copyIfPresent(sourceMap, targetMap);
