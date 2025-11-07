@@ -1212,14 +1212,30 @@ export class CommentRenderer {
     position: "ue" | "shita",
     lane: number,
     displayHeight: number,
+    comment: Comment,
   ): number {
-    if (position === "ue") {
-      return lane * this.laneHeight;
-    }
     const effectiveHeight = Math.max(1, displayHeight);
-    const offsetFromBottom = (lane + 1) * this.laneHeight;
-    const y = effectiveHeight - offsetFromBottom;
-    return Math.max(0, y);
+    const commentHeight = Math.max(comment.height, comment.fontSize);
+    // 描画時のパディング（影やエフェクトのため）を考慮
+    const padding = Math.max(10, comment.fontSize * 0.5);
+
+    if (position === "ue") {
+      // 上コメント：レーンベースの位置を計算
+      const baseY = lane * this.laneHeight;
+      // 実際の描画は y - padding から始まるので、上端がマイナスにならないようクランプ
+      const minY = padding;
+      // 下端が画面からはみ出ないようクランプ（実際の下端は y + height + padding）
+      const maxY = Math.max(padding, effectiveHeight - commentHeight - padding);
+      return Math.max(minY, Math.min(baseY, maxY));
+    }
+
+    // 下コメント：下端を基準に配置
+    // lane 0 = 画面下端、lane 1 = laneHeight分上、というように配置
+    const targetBottomY = effectiveHeight - lane * this.laneHeight;
+    // 実際の描画下端は y + height + padding なので、これが targetBottomY になるように計算
+    const adjustedY = targetBottomY - commentHeight - padding;
+    // 上端が画面外に出ないようクランプ（描画開始位置は y - padding）
+    return Math.max(padding, adjustedY);
   }
 
   private getStaticReservedLaneSet(): Set<number> {
@@ -1443,7 +1459,7 @@ export class CommentRenderer {
     const staticPosition = comment.layout === "ue" ? "ue" : "shita";
     const laneIndex = this.assignStaticLane(staticPosition);
     comment.lane = laneIndex;
-    comment.y = this.resolveStaticCommentOffset(staticPosition, laneIndex, displayHeight);
+    comment.y = this.resolveStaticCommentOffset(staticPosition, laneIndex, displayHeight, comment);
     comment.x = comment.virtualStartX;
     comment.isActive = true;
     this.activeComments.add(comment);
