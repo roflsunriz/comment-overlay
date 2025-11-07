@@ -217,12 +217,14 @@ export class CommentRenderer {
   private duration = 0;
   private playbackRate = 1;
   private isPlaying = true;
+  private isStalled = false;
   private lastDrawTime = 0;
   private finalPhaseActive = false;
   private finalPhaseStartTime: number | null = null;
   private finalPhaseScheduleDirty = false;
   private playbackHasBegun = false;
   private skipDrawingForCurrentFrame = false;
+  private pendingInitialSync = false;
   private readonly finalPhaseVposOverrides = new Map<Comment, number>();
   private frameId: ReturnType<typeof setTimeout> | null = null;
   private videoFrameHandle: number | null = null;
@@ -328,6 +330,7 @@ export class CommentRenderer {
       this.currentTime = toMilliseconds(video.currentTime);
       this.playbackRate = video.playbackRate;
       this.isPlaying = !video.paused;
+      this.isStalled = false;
       this.lastDrawTime = this.timeSource.now();
       this.playbackHasBegun = this.isPlaying || this.currentTime > SEEK_DIRECTION_EPSILON_MS;
       this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
@@ -470,6 +473,8 @@ export class CommentRenderer {
     this.resetFinalPhaseState();
     this.playbackHasBegun = false;
     this.skipDrawingForCurrentFrame = false;
+    this.isStalled = false;
+    this.pendingInitialSync = false;
   }
 
   destroy(): void {
@@ -494,6 +499,45 @@ export class CommentRenderer {
     this.commentSequence = 0;
     this.playbackHasBegun = false;
     this.skipDrawingForCurrentFrame = false;
+    this.isStalled = false;
+    this.pendingInitialSync = false;
+  }
+
+  /**
+   * 前エポックのゴーストコメントを強制掃除し、次のフレームで絶対時間同期を行う
+   * 動画ロード直後の初期化やソース変更時に使用
+   */
+  hardReset(): void {
+    const canvas = this.canvas;
+    const ctx = this.ctx;
+
+    // アクティブコメントを全てクリア
+    this.activeComments.clear();
+    this.reservedLanes.clear();
+    this.topStaticLaneReservations.length = 0;
+    this.bottomStaticLaneReservations.length = 0;
+
+    // 全コメントを非アクティブ化
+    this.comments.forEach((comment) => {
+      comment.isActive = false;
+      comment.hasShown = false;
+      comment.lane = -1;
+      comment.clearActivation();
+    });
+
+    // キャンバスを全消去
+    if (canvas && ctx) {
+      const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+      const effectiveWidth =
+        this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+      const effectiveHeight =
+        this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+      ctx.clearRect(0, 0, effectiveWidth, effectiveHeight);
+    }
+
+    // 次のフレームで絶対時間同期を実行するフラグを立てる
+    this.pendingInitialSync = true;
+    this.resetFinalPhaseState();
   }
 
   private resetFinalPhaseState(): void {
@@ -1768,7 +1812,7 @@ export class CommentRenderer {
 
     const now = this.timeSource.now();
 
-    if (this.skipDrawingForCurrentFrame || this.shouldSuppressRendering()) {
+    if (this.skipDrawingForCurrentFrame || this.shouldSuppressRendering() || this.isStalled) {
       context.clearRect(0, 0, effectiveWidth, effectiveHeight);
       this.lastDrawTime = now;
       return;
@@ -1803,6 +1847,70 @@ export class CommentRenderer {
     this.lastDrawTime = now;
   }
 
+  /**
+   * 初回フレームで絶対時間同期を実行
+   * 相対進行（dt積分）で初期区間を駆け抜けないようにする
+   */
+  private performInitialSync(frameTimeMs?: number): void {
+    const video = this.videoElement;
+    const canvas = this.canvas;
+    const context = this.ctx;
+    if (!video || !canvas || !context) {
+      return;
+    }
+
+    // 絶対時間を取得（VFCのmediaTimeまたはvideo.currentTime）
+    const absoluteTime =
+      typeof frameTimeMs === "number" ? frameTimeMs : toMilliseconds(video.currentTime);
+    this.currentTime = absoluteTime;
+    this.lastDrawTime = this.timeSource.now();
+
+    // 既存のアクティブコメントは全てクリア済み（hardReset()で実施）
+    // 現在時刻に基づいてコメントを再配置（onSeek()と同様のロジック）
+    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+    const prepareOptions = this.buildPrepareOptions(effectiveWidth);
+
+    // 時間ウィンドウ内のコメントを取得
+    const windowComments = this.getCommentsInTimeWindow(this.currentTime, ACTIVE_WINDOW_MS);
+
+    windowComments.forEach((comment) => {
+      if (this.isNGComment(comment.text) || comment.isInvisible) {
+        comment.isActive = false;
+        this.activeComments.delete(comment);
+        comment.clearActivation();
+        return;
+      }
+
+      comment.syncWithSettings(this._settings, this.settingsVersion);
+      comment.isActive = false;
+      this.activeComments.delete(comment);
+      comment.lane = -1;
+      comment.clearActivation();
+
+      if (this.shouldActivateCommentAtTime(comment, this.currentTime)) {
+        this.activateComment(
+          comment,
+          context,
+          effectiveWidth,
+          effectiveHeight,
+          prepareOptions,
+          this.currentTime,
+        );
+        return;
+      }
+
+      const effectiveVpos = this.getEffectiveCommentVpos(comment);
+      if (effectiveVpos < this.currentTime - ACTIVE_WINDOW_MS) {
+        comment.hasShown = true;
+      } else {
+        comment.hasShown = false;
+      }
+    });
+  }
+
   private processFrame(frameTimeMs?: number): void {
     if (!this.videoElement) {
       return;
@@ -1810,6 +1918,13 @@ export class CommentRenderer {
     if (!this._settings.isCommentVisible) {
       return;
     }
+
+    // 初回フレームでは絶対時間同期を実行
+    if (this.pendingInitialSync) {
+      this.performInitialSync(frameTimeMs);
+      this.pendingInitialSync = false;
+    }
+
     this.updateComments(frameTimeMs);
     this.draw();
   }
@@ -2014,6 +2129,13 @@ export class CommentRenderer {
         this.playbackHasBegun = true;
         const now = this.timeSource.now();
         this.lastDrawTime = now;
+
+        // 再生開始時に前エポックのゴーストコメントを掃除
+        // 次のフレームで絶対時間同期を行う
+        if (!this.pendingInitialSync) {
+          this.hardReset();
+        }
+
         this.comments.forEach((comment) => {
           comment.lastUpdateTime = now;
           comment.isPaused = false;
@@ -2051,6 +2173,15 @@ export class CommentRenderer {
       const onEmptied = (): void => {
         this.handleVideoSourceChange();
       };
+      const onWaiting = (): void => {
+        this.handleVideoStalled();
+      };
+      const onCanPlay = (): void => {
+        this.handleVideoCanPlay();
+      };
+      const onPlaying = (): void => {
+        this.handleVideoCanPlay();
+      };
 
       videoElement.addEventListener("play", onPlay);
       videoElement.addEventListener("pause", onPause);
@@ -2060,6 +2191,9 @@ export class CommentRenderer {
       videoElement.addEventListener("loadedmetadata", onLoadedMetadata);
       videoElement.addEventListener("durationchange", onDurationChange);
       videoElement.addEventListener("emptied", onEmptied);
+      videoElement.addEventListener("waiting", onWaiting);
+      videoElement.addEventListener("canplay", onCanPlay);
+      videoElement.addEventListener("playing", onPlaying);
 
       this.addCleanup(() => videoElement.removeEventListener("play", onPlay));
       this.addCleanup(() => videoElement.removeEventListener("pause", onPause));
@@ -2069,6 +2203,9 @@ export class CommentRenderer {
       this.addCleanup(() => videoElement.removeEventListener("loadedmetadata", onLoadedMetadata));
       this.addCleanup(() => videoElement.removeEventListener("durationchange", onDurationChange));
       this.addCleanup(() => videoElement.removeEventListener("emptied", onEmptied));
+      this.addCleanup(() => videoElement.removeEventListener("waiting", onWaiting));
+      this.addCleanup(() => videoElement.removeEventListener("canplay", onCanPlay));
+      this.addCleanup(() => videoElement.removeEventListener("playing", onPlaying));
     } catch (error) {
       this.log.error("CommentRenderer.setupVideoEventListeners", error as Error);
       throw error;
@@ -2079,7 +2216,54 @@ export class CommentRenderer {
     this.handleVideoSourceChange(videoElement);
     this.resize();
     this.calculateLaneMetrics();
+    // メタデータロード時に絶対時間同期を準備
+    this.hardReset();
     this.onSeek();
+  }
+
+  private handleVideoStalled(): void {
+    const canvas = this.canvas;
+    const ctx = this.ctx;
+    if (!canvas || !ctx) {
+      return;
+    }
+
+    this.isStalled = true;
+
+    // キャンバスをクリア
+    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+    ctx.clearRect(0, 0, effectiveWidth, effectiveHeight);
+
+    // アクティブコメントの状態を保持しつつ、描画をクリア
+    // （ストール解除後に再描画されるよう、isActiveは維持）
+    this.comments.forEach((comment) => {
+      if (comment.isActive) {
+        comment.lastUpdateTime = this.timeSource.now();
+      }
+    });
+  }
+
+  private handleVideoCanPlay(): void {
+    if (!this.isStalled) {
+      return;
+    }
+
+    this.isStalled = false;
+
+    // 時刻を同期
+    if (this.videoElement) {
+      this.currentTime = toMilliseconds(this.videoElement.currentTime);
+      this.isPlaying = !this.videoElement.paused;
+    }
+
+    // lastDrawTimeを更新して補間計算を正常化
+    this.lastDrawTime = this.timeSource.now();
+
+    // 次のフレームで描画を再開
+    // （アニメーションループが動いているので自動的に再描画される）
   }
 
   private handleVideoSourceChange(videoElement?: HTMLVideoElement | null): void {
@@ -2102,6 +2286,7 @@ export class CommentRenderer {
     this.currentTime = toMilliseconds(videoElement.currentTime);
     this.playbackRate = videoElement.playbackRate;
     this.isPlaying = !videoElement.paused;
+    this.isStalled = false;
     this.playbackHasBegun = this.isPlaying || this.currentTime > SEEK_DIRECTION_EPSILON_MS;
     this.lastDrawTime = this.timeSource.now();
   }
@@ -2112,6 +2297,8 @@ export class CommentRenderer {
     const context = this.ctx;
     this.resetFinalPhaseState();
     this.skipDrawingForCurrentFrame = false;
+    this.isStalled = false;
+    this.pendingInitialSync = false;
     this.playbackHasBegun = this.isPlaying || this.currentTime > SEEK_DIRECTION_EPSILON_MS;
     if (canvas && context) {
       const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;

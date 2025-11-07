@@ -57,6 +57,7 @@ const containerEl = document.querySelector(".overlay-container");
 const toggleEl = document.querySelector("#toggle-visibility");
 const reloadButton = document.querySelector("#reload-comments");
 const fullscreenButton = document.querySelector("#fullscreen-button");
+const stallEmulatorButton = document.querySelector("#stall-emulator");
 const settingsStatusEl = document.querySelector("#settings-status");
 const directionSelect = document.querySelector("#scroll-direction");
 const ngWordsInput = document.querySelector("#ng-words-input");
@@ -125,6 +126,7 @@ const setup = async () => {
     !(toggleEl instanceof HTMLInputElement) ||
     !(reloadButton instanceof HTMLButtonElement) ||
     !(fullscreenButton instanceof HTMLButtonElement) ||
+    !(stallEmulatorButton instanceof HTMLButtonElement) ||
     !(directionSelect instanceof HTMLSelectElement) ||
     !(ngWordsInput instanceof HTMLTextAreaElement) ||
     !(ngRegexInput instanceof HTMLTextAreaElement)
@@ -427,6 +429,33 @@ const setup = async () => {
         reportStatus(`フルスクリーンへの移行に失敗しました: ${err.message}`);
       });
     }
+  });
+
+  /**
+   * ストールをエミュレートする関数
+   * waiting イベントを発火してコメントをクリアし、
+   * 2秒後に canplay イベントを発火して復帰させる
+   */
+  const emulateStall = () => {
+    if (!(videoEl instanceof HTMLVideoElement)) {
+      return;
+    }
+
+    // waiting イベントをdispatch
+    const waitingEvent = new Event("waiting", { bubbles: true, cancelable: false });
+    videoEl.dispatchEvent(waitingEvent);
+    reportStatus("ストール状態をエミュレート中... (コメントがクリアされます)");
+
+    // 2秒後に canplay イベントをdispatch
+    setTimeout(() => {
+      const canplayEvent = new Event("canplay", { bubbles: true, cancelable: false });
+      videoEl.dispatchEvent(canplayEvent);
+      reportStatus("ストール解除をエミュレートしました。(コメントが再表示されます)");
+    }, 2000);
+  };
+
+  stallEmulatorButton.addEventListener("click", () => {
+    emulateStall();
   });
 
   const videoSources = ["./video.mp4", "./video2.mp4"];

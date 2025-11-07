@@ -46,12 +46,14 @@ export declare class CommentRenderer {
     private duration;
     private playbackRate;
     private isPlaying;
+    private isStalled;
     private lastDrawTime;
     private finalPhaseActive;
     private finalPhaseStartTime;
     private finalPhaseScheduleDirty;
     private playbackHasBegun;
     private skipDrawingForCurrentFrame;
+    private pendingInitialSync;
     private readonly finalPhaseVposOverrides;
     private frameId;
     private videoFrameHandle;
@@ -76,6 +78,11 @@ export declare class CommentRenderer {
     clearComments(): void;
     resetState(): void;
     destroy(): void;
+    /**
+     * 前エポックのゴーストコメントを強制掃除し、次のフレームで絶対時間同期を行う
+     * 動画ロード直後の初期化やソース変更時に使用
+     */
+    hardReset(): void;
     private resetFinalPhaseState;
     private getEffectiveCommentVpos;
     private getFinalPhaseDisplayDuration;
@@ -131,6 +138,11 @@ export declare class CommentRenderer {
     private getBufferedEdges;
     private solveLeftRightEqualityTime;
     private draw;
+    /**
+     * 初回フレームで絶対時間同期を実行
+     * 相対進行（dt積分）で初期区間を駆け抜けないようにする
+     */
+    private performInitialSync;
     private processFrame;
     private readonly handleAnimationFrame;
     private readonly handleVideoFrame;
@@ -143,6 +155,8 @@ export declare class CommentRenderer {
     private onSeek;
     private setupVideoEventListeners;
     private handleVideoMetadataLoaded;
+    private handleVideoStalled;
+    private handleVideoCanPlay;
     private handleVideoSourceChange;
     private syncVideoState;
     private resetCommentActivity;
