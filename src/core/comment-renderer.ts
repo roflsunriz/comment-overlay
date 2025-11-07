@@ -57,6 +57,14 @@ interface LaneReservation {
   directionSign: -1 | 1;
 }
 
+interface StaticLaneReservation {
+  comment: Comment;
+  releaseTime: number;
+  yStart: number;
+  yEnd: number;
+  lane: number;
+}
+
 const toMilliseconds = (seconds: number): number => seconds * 1000;
 const sanitizeVposMs = (value: number): number | null => {
   if (!Number.isFinite(value)) {
@@ -87,6 +95,8 @@ const DEFAULT_LANE_COUNT = 12;
 const MIN_FONT_SIZE_PX = 24;
 const EDGE_EPSILON = 1e-3;
 const SEEK_DIRECTION_EPSILON_MS = 50;
+const STATIC_COMMENT_VERTICAL_PADDING_RATIO = 0.05;
+const STATIC_COMMENT_MIN_VERTICAL_PADDING_PX = 10;
 
 const clampOpacity = (value: number): number => {
   if (!Number.isFinite(value)) {
@@ -99,6 +109,13 @@ const clampOpacity = (value: number): number => {
     return 1;
   }
   return value;
+};
+
+const calculateStaticCommentVerticalPadding = (fontSize: number): number => {
+  return Math.max(
+    STATIC_COMMENT_MIN_VERTICAL_PADDING_PX,
+    Math.floor(fontSize * STATIC_COMMENT_VERTICAL_PADDING_RATIO),
+  );
 };
 
 const normalizeSettings = (settings: RendererSettings): RendererSettings => {
@@ -176,8 +193,8 @@ export class CommentRenderer {
   private readonly comments: Comment[] = [];
   private readonly activeComments = new Set<Comment>();
   private readonly reservedLanes = new Map<number, LaneReservation[]>();
-  private readonly topStaticLaneReservations = new Map<number, number>();
-  private readonly bottomStaticLaneReservations = new Map<number, number>();
+  private readonly topStaticLaneReservations: StaticLaneReservation[] = [];
+  private readonly bottomStaticLaneReservations: StaticLaneReservation[] = [];
   private readonly log: Logger;
   private readonly timeSource: TimeSource;
   private readonly animationFrameProvider: AnimationFrameProvider;
@@ -435,8 +452,8 @@ export class CommentRenderer {
     this.comments.length = 0;
     this.activeComments.clear();
     this.reservedLanes.clear();
-    this.topStaticLaneReservations.clear();
-    this.bottomStaticLaneReservations.clear();
+    this.topStaticLaneReservations.length = 0;
+    this.bottomStaticLaneReservations.length = 0;
     this.commentSequence = 0;
     if (this.ctx && this.canvas) {
       const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
@@ -640,8 +657,8 @@ export class CommentRenderer {
         this.displayHeight > 0 ? this.displayHeight : this.canvas.height / effectiveDpr;
       this.ctx.clearRect(0, 0, width, height);
       this.reservedLanes.clear();
-      this.topStaticLaneReservations.clear();
-      this.bottomStaticLaneReservations.clear();
+      this.topStaticLaneReservations.length = 0;
+      this.bottomStaticLaneReservations.length = 0;
     }
 
     if (previousUseContainer !== this._settings.useContainerResizeObserver && this.videoElement) {
@@ -880,8 +897,8 @@ export class CommentRenderer {
     } else {
       this.laneCount = Math.max(MIN_LANE_COUNT, availableLanes);
     }
-    this.topStaticLaneReservations.clear();
-    this.bottomStaticLaneReservations.clear();
+    this.topStaticLaneReservations.length = 0;
+    this.bottomStaticLaneReservations.length = 0;
   }
 
   private updateComments(frameTimeMs?: number): void {
@@ -923,8 +940,8 @@ export class CommentRenderer {
       });
       this.activeComments.clear();
       this.reservedLanes.clear();
-      this.topStaticLaneReservations.clear();
-      this.bottomStaticLaneReservations.clear();
+      this.topStaticLaneReservations.length = 0;
+      this.bottomStaticLaneReservations.length = 0;
     }
 
     if (!isNearEnd && this.finalPhaseActive) {
@@ -1121,16 +1138,19 @@ export class CommentRenderer {
   }
 
   private pruneStaticLaneReservations(currentTime: number): void {
-    for (const [lane, releaseTime] of this.topStaticLaneReservations.entries()) {
-      if (releaseTime <= currentTime) {
-        this.topStaticLaneReservations.delete(lane);
-      }
-    }
-    for (const [lane, releaseTime] of this.bottomStaticLaneReservations.entries()) {
-      if (releaseTime <= currentTime) {
-        this.bottomStaticLaneReservations.delete(lane);
-      }
-    }
+    // 期限切れの予約を削除（時間でフィルタリング）
+    const filterValid = (reservations: StaticLaneReservation[]): StaticLaneReservation[] =>
+      reservations.filter((reservation) => reservation.releaseTime > currentTime);
+
+    const topFiltered = filterValid(this.topStaticLaneReservations);
+    const bottomFiltered = filterValid(this.bottomStaticLaneReservations);
+
+    // 配列を置き換え
+    this.topStaticLaneReservations.length = 0;
+    this.topStaticLaneReservations.push(...topFiltered);
+
+    this.bottomStaticLaneReservations.length = 0;
+    this.bottomStaticLaneReservations.push(...bottomFiltered);
   }
 
   /**
@@ -1177,16 +1197,19 @@ export class CommentRenderer {
     return result;
   }
 
-  private getStaticLaneMap(position: "ue" | "shita"): Map<number, number> {
+  private getStaticReservations(position: "ue" | "shita"): StaticLaneReservation[] {
     return position === "ue" ? this.topStaticLaneReservations : this.bottomStaticLaneReservations;
   }
 
   private getStaticLaneDepth(position: "ue" | "shita"): number {
-    const laneMap = this.getStaticLaneMap(position);
+    const reservations = this.getStaticReservations(position);
+    if (reservations.length === 0) {
+      return 0;
+    }
     let maxIndex = -1;
-    for (const lane of laneMap.keys()) {
-      if (lane > maxIndex) {
-        maxIndex = lane;
+    for (const reservation of reservations) {
+      if (reservation.lane > maxIndex) {
+        maxIndex = reservation.lane;
       }
     }
     return Math.max(0, maxIndex + 1);
@@ -1217,7 +1240,7 @@ export class CommentRenderer {
     const effectiveHeight = Math.max(1, displayHeight);
     const commentHeight = Math.max(comment.height, comment.fontSize);
     // 描画時のパディング（影やエフェクトのため）を考慮
-    const padding = Math.max(10, comment.fontSize * 0.5);
+    const padding = calculateStaticCommentVerticalPadding(comment.fontSize);
 
     if (position === "ue") {
       // 上コメント：レーンベースの位置を計算
@@ -1240,11 +1263,11 @@ export class CommentRenderer {
 
   private getStaticReservedLaneSet(): Set<number> {
     const reserved = new Set<number>();
-    for (const lane of this.topStaticLaneReservations.keys()) {
-      reserved.add(lane);
+    for (const reservation of this.topStaticLaneReservations) {
+      reserved.add(reservation.lane);
     }
-    for (const lane of this.bottomStaticLaneReservations.keys()) {
-      reserved.add(this.getGlobalLaneIndexForBottom(lane));
+    for (const reservation of this.bottomStaticLaneReservations) {
+      reserved.add(this.getGlobalLaneIndexForBottom(reservation.lane));
     }
     return reserved;
   }
@@ -1457,7 +1480,7 @@ export class CommentRenderer {
     }
 
     const staticPosition = comment.layout === "ue" ? "ue" : "shita";
-    const laneIndex = this.assignStaticLane(staticPosition);
+    const laneIndex = this.assignStaticLane(staticPosition, comment, displayHeight, referenceTime);
     comment.lane = laneIndex;
     comment.y = this.resolveStaticCommentOffset(staticPosition, laneIndex, displayHeight, comment);
     comment.x = comment.virtualStartX;
@@ -1468,7 +1491,7 @@ export class CommentRenderer {
     comment.markActivated(referenceTime);
     comment.lastUpdateTime = this.timeSource.now();
     comment.staticExpiryTimeMs = displayEnd;
-    this.reserveStaticLane(staticPosition, laneIndex, displayEnd);
+    this.reserveStaticLane(staticPosition, comment, laneIndex, displayEnd);
     if (isDebugLoggingEnabled()) {
       debugLog("comment-activate-static", {
         preview: formatCommentPreview(comment.text),
@@ -1480,43 +1503,86 @@ export class CommentRenderer {
     }
   }
 
-  private assignStaticLane(position: "ue" | "shita"): number {
-    const laneMap = this.getStaticLaneMap(position);
+  private assignStaticLane(
+    position: "ue" | "shita",
+    comment: Comment,
+    displayHeight: number,
+    currentTime: number,
+  ): number {
+    const reservations = this.getStaticReservations(position);
     const limit = this.getStaticLaneLimit(position);
     const laneCount = limit >= 0 ? limit + 1 : 0;
     const laneIndices = Array.from({ length: laneCount }, (_, index) => index);
-    if (position === "shita") {
-      // 下コメントは下段から順に埋めるため、0から順に評価する
-    } else {
-      // 上コメントは上段から詰めるため、0から順に評価する
-    }
+
+    // 各候補レーンに対してY座標を計算し、重なりがないかチェック
     for (const lane of laneIndices) {
-      if (!laneMap.has(lane)) {
+      // このレーンに配置した場合のY座標範囲を計算
+      const yOffset = this.resolveStaticCommentOffset(position, lane, displayHeight, comment);
+      const commentHeight = Math.max(comment.height, comment.fontSize);
+      const padding = calculateStaticCommentVerticalPadding(comment.fontSize);
+      const yStart = yOffset - padding;
+      const yEnd = yOffset + commentHeight + padding;
+
+      // 既存の予約と重なりがないかチェック
+      const hasConflict = reservations.some((reservation) => {
+        // 時間的な重なりチェック（余裕を持たせる）
+        const timeOverlap = reservation.releaseTime > currentTime;
+        if (!timeOverlap) {
+          return false;
+        }
+
+        // Y座標の重なりチェック
+        const yOverlap = !(yEnd <= reservation.yStart || yStart >= reservation.yEnd);
+        return yOverlap;
+      });
+
+      if (!hasConflict) {
         return lane;
       }
     }
+
+    // 全レーンに衝突がある場合、最も早くリリースされるレーンを選択
     let fallbackLane = laneIndices[0] ?? 0;
     let earliestRelease = Number.POSITIVE_INFINITY;
-    for (const [lane, releaseTime] of laneMap.entries()) {
-      if (releaseTime < earliestRelease) {
-        earliestRelease = releaseTime;
-        fallbackLane = lane;
+    for (const reservation of reservations) {
+      if (reservation.releaseTime < earliestRelease) {
+        earliestRelease = reservation.releaseTime;
+        fallbackLane = reservation.lane;
       }
     }
     return fallbackLane;
   }
 
-  private reserveStaticLane(position: "ue" | "shita", lane: number, releaseTime: number): void {
-    const laneMap = this.getStaticLaneMap(position);
-    laneMap.set(lane, releaseTime);
+  private reserveStaticLane(
+    position: "ue" | "shita",
+    comment: Comment,
+    lane: number,
+    releaseTime: number,
+  ): void {
+    const reservations = this.getStaticReservations(position);
+    const commentHeight = Math.max(comment.height, comment.fontSize);
+    const padding = calculateStaticCommentVerticalPadding(comment.fontSize);
+    const yStart = comment.y - padding;
+    const yEnd = comment.y + commentHeight + padding;
+
+    reservations.push({
+      comment,
+      releaseTime,
+      yStart,
+      yEnd,
+      lane,
+    });
   }
 
   private releaseStaticLane(position: "ue" | "shita", lane: number): void {
     if (lane < 0) {
       return;
     }
-    const laneMap = this.getStaticLaneMap(position);
-    laneMap.delete(lane);
+    const reservations = this.getStaticReservations(position);
+    const index = reservations.findIndex((r) => r.lane === lane);
+    if (index >= 0) {
+      reservations.splice(index, 1);
+    }
   }
 
   private getLanePriorityOrder(currentTime: number): number[] {
@@ -1851,8 +1917,8 @@ export class CommentRenderer {
 
     this.activeComments.clear();
     this.reservedLanes.clear();
-    this.topStaticLaneReservations.clear();
-    this.bottomStaticLaneReservations.clear();
+    this.topStaticLaneReservations.length = 0;
+    this.bottomStaticLaneReservations.length = 0;
     const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
     const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
     const effectiveHeight =
@@ -2054,8 +2120,8 @@ export class CommentRenderer {
       context.clearRect(0, 0, width, height);
     }
     this.reservedLanes.clear();
-    this.topStaticLaneReservations.clear();
-    this.bottomStaticLaneReservations.clear();
+    this.topStaticLaneReservations.length = 0;
+    this.bottomStaticLaneReservations.length = 0;
     this.comments.forEach((comment) => {
       comment.isActive = false;
       comment.isPaused = !this.isPlaying;
@@ -2212,8 +2278,8 @@ export class CommentRenderer {
     // 内部状態を完全にクリア
     this.activeComments.clear();
     this.reservedLanes.clear();
-    this.topStaticLaneReservations.clear();
-    this.bottomStaticLaneReservations.clear();
+    this.topStaticLaneReservations.length = 0;
+    this.bottomStaticLaneReservations.length = 0;
 
     const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
     const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;

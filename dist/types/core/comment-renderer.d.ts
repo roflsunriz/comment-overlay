@@ -110,7 +110,7 @@ export declare class CommentRenderer {
      * 指定した時刻範囲内のコメントのみを返す
      */
     private getCommentsInTimeWindow;
-    private getStaticLaneMap;
+    private getStaticReservations;
     private getStaticLaneDepth;
     private getStaticLaneLimit;
     private getGlobalLaneIndexForBottom;
