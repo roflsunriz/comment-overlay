@@ -629,7 +629,7 @@ const Ge = 4e3, G = {
   ...G,
   ngWords: [...G.ngWords],
   ngRegexps: [...G.ngRegexps]
-}), ct = "v2.5.0", P = (o) => o * 1e3, Ye = (o) => !Number.isFinite(o) || o < 0 ? null : Math.round(o), ee = 4e3, he = 1800, qe = 3, Ke = 0.25, Je = 32, je = 48, J = 120, Ze = 4e3, j = 120, Qe = 800, et = 2, _ = 4e3, F = N + ee, tt = 1e3, ce = 1, de = 12, ue = 24, T = 1e-3, O = 50, it = 0.05, st = 10, nt = (o) => Number.isFinite(o) ? o <= 0 ? 0 : o >= 1 ? 1 : o : 1, Z = (o) => Math.max(
+}), ct = "v2.5.1", P = (o) => o * 1e3, Ye = (o) => !Number.isFinite(o) || o < 0 ? null : Math.round(o), ee = 4e3, he = 1800, qe = 3, Ke = 0.25, Je = 32, je = 48, J = 120, Ze = 4e3, j = 120, Qe = 800, et = 2, _ = 4e3, F = N + ee, tt = 1e3, ce = 1, de = 12, ue = 24, T = 1e-3, O = 50, it = 0.05, st = 10, nt = (o) => Number.isFinite(o) ? o <= 0 ? 0 : o >= 1 ? 1 : o : 1, Z = (o) => Math.max(
   st,
   Math.floor(o * it)
 ), X = (o) => {
