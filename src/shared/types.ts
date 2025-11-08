@@ -85,17 +85,6 @@ export interface VideoMetadata {
   channel?: { name?: string } | null;
 }
 
-// ゴースト検出情報
-export interface GhostCommentInfo {
-  readonly comment: {
-    readonly text: string;
-    readonly vposMs: number;
-    readonly epochId: number;
-  };
-  readonly reason: "epoch-mismatch" | "stale-activation" | "orphaned";
-  readonly detectedAt: number;
-}
-
 // エポック変更情報
 export interface EpochChangeInfo {
   readonly previousEpochId: number;
@@ -120,8 +109,6 @@ export interface RendererStateSnapshot {
 
 // イベントフック定義
 export interface CommentRendererEventHooks {
-  /** ゴーストコメントが検出されたときのコールバック */
-  onGhostCommentDetected?: (ghosts: GhostCommentInfo[]) => void;
   /** エポックが変更されたときのコールバック */
   onEpochChange?: (info: EpochChangeInfo) => void;
   /** 状態スナップショットが更新されたときのコールバック（デバッグ用） */

@@ -55,15 +55,6 @@ export interface VideoMetadata {
         name?: string;
     } | null;
 }
-export interface GhostCommentInfo {
-    readonly comment: {
-        readonly text: string;
-        readonly vposMs: number;
-        readonly epochId: number;
-    };
-    readonly reason: "epoch-mismatch" | "stale-activation" | "orphaned";
-    readonly detectedAt: number;
-}
 export interface EpochChangeInfo {
     readonly previousEpochId: number;
     readonly newEpochId: number;
@@ -83,8 +74,6 @@ export interface RendererStateSnapshot {
     readonly isStalled: boolean;
 }
 export interface CommentRendererEventHooks {
-    /** ゴーストコメントが検出されたときのコールバック */
-    onGhostCommentDetected?: (ghosts: GhostCommentInfo[]) => void;
     /** エポックが変更されたときのコールバック */
     onEpochChange?: (info: EpochChangeInfo) => void;
     /** 状態スナップショットが更新されたときのコールバック（デバッグ用） */

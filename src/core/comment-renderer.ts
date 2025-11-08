@@ -2,7 +2,6 @@ import { cloneDefaultSettings } from "../config/default-settings";
 import type {
   RendererSettings,
   CommentRendererEventHooks,
-  GhostCommentInfo,
   EpochChangeInfo,
   RendererStateSnapshot,
 } from "../shared/types";
@@ -20,7 +19,6 @@ import {
   debugLog,
   formatCommentPreview,
   isDebugLoggingEnabled,
-  visualizeGhostComments,
   dumpRendererState,
   logEpochChange,
 } from "../shared/debug";
@@ -33,7 +31,6 @@ export interface CommentRendererConfig {
   createCanvasElement?: () => HTMLCanvasElement;
   debug?: DebugLoggingOptions;
   eventHooks?: CommentRendererEventHooks;
-  enableAutoGhostDetection?: boolean;
 }
 
 export interface CommentRendererInitializeOptions {
@@ -246,9 +243,11 @@ export class CommentRenderer {
   private commentSequence = 0;
   private epochId = 0;
   private readonly eventHooks: CommentRendererEventHooks;
-  private readonly enableAutoGhostDetection: boolean;
   private lastSnapshotEmitTime = 0;
   private readonly snapshotEmitThrottleMs = 1000;
+  private lastPlayResumeTime = 0;
+  private readonly playResumeSeekIgnoreDurationMs = 500;
+  private lastVideoSource: string | null = null;
 
   constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
   constructor(config?: CommentRendererConfig);
@@ -280,7 +279,6 @@ export class CommentRenderer {
     };
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
     this.eventHooks = config.eventHooks ?? {};
-    this.enableAutoGhostDetection = config.enableAutoGhostDetection ?? true;
 
     this.rebuildNgMatchers();
 
@@ -344,6 +342,7 @@ export class CommentRenderer {
 
       this.videoElement = video;
       this.containerElement = container;
+      this.lastVideoSource = this.getCurrentVideoSource();
       this.duration = Number.isFinite(video.duration) ? toMilliseconds(video.duration) : 0;
       this.currentTime = toMilliseconds(video.currentTime);
       this.playbackRate = video.playbackRate;
@@ -530,12 +529,6 @@ export class CommentRenderer {
     const canvas = this.canvas;
     const ctx = this.ctx;
 
-    // ゴースト検出を実行
-    const ghosts = this.detectGhostComments();
-    if (ghosts.length > 0) {
-      this.removeGhostComments(ghosts);
-    }
-
     // エポックをインクリメント
     this.incrementEpoch("manual-reset");
 
@@ -606,96 +599,6 @@ export class CommentRenderer {
     this.comments.forEach((comment) => {
       comment.epochId = this.epochId;
     });
-  }
-
-  /**
-   * ゴーストコメントを検出する
-   * - epochIdが現在と異なるアクティブコメント
-   * - activationTimeMsが非常に古い（ACTIVE_WINDOW_MSの2倍以上前）コメント
-   * - isActiveだがactiveCommentsに含まれていないコメント
-   */
-  private detectGhostComments(): GhostCommentInfo[] {
-    if (!this.enableAutoGhostDetection) {
-      return [];
-    }
-
-    const ghosts: GhostCommentInfo[] = [];
-    const now = this.timeSource.now();
-    const staleThreshold = ACTIVE_WINDOW_MS * 2;
-
-    for (const comment of this.comments) {
-      if (!comment.isActive) {
-        continue;
-      }
-
-      let reason: "epoch-mismatch" | "stale-activation" | "orphaned" | null = null;
-
-      // エポックミスマッチ
-      if (comment.epochId !== this.epochId) {
-        reason = "epoch-mismatch";
-      }
-      // 古すぎるアクティベーション
-      else if (
-        comment.activationTimeMs !== null &&
-        now - comment.activationTimeMs > staleThreshold
-      ) {
-        reason = "stale-activation";
-      }
-      // activeCommentsに含まれていない孤立コメント
-      else if (!this.activeComments.has(comment)) {
-        reason = "orphaned";
-      }
-
-      if (reason !== null) {
-        ghosts.push({
-          comment: {
-            text: comment.text,
-            vposMs: comment.vposMs,
-            epochId: comment.epochId,
-          },
-          reason,
-          detectedAt: now,
-        });
-      }
-    }
-
-    return ghosts;
-  }
-
-  /**
-   * ゴーストコメントを削除する
-   */
-  private removeGhostComments(ghosts: GhostCommentInfo[]): void {
-    if (ghosts.length === 0) {
-      return;
-    }
-
-    const ghostSet = new Set(ghosts.map((g) => g.comment.text));
-
-    for (const comment of this.comments) {
-      if (ghostSet.has(comment.text) && comment.vposMs === ghosts[0]?.comment.vposMs) {
-        comment.isActive = false;
-        this.activeComments.delete(comment);
-        comment.clearActivation();
-      }
-    }
-
-    visualizeGhostComments(
-      ghosts.map((g) => ({
-        text: g.comment.text,
-        vposMs: g.comment.vposMs,
-        epochId: g.comment.epochId,
-        reason: g.reason,
-      })),
-    );
-
-    if (this.eventHooks.onGhostCommentDetected) {
-      try {
-        this.eventHooks.onGhostCommentDetected(ghosts);
-      } catch (error) {
-        this.log.error("CommentRenderer.removeGhostComments.callback", error as Error);
-      }
-    }
   }
 
   /**
@@ -1139,12 +1042,6 @@ export class CommentRenderer {
       return;
     }
 
-    // ゴースト検出を実行（フレームごと）
-    const ghosts = this.detectGhostComments();
-    if (ghosts.length > 0) {
-      this.removeGhostComments(ghosts);
-    }
-
     const referenceTime =
       typeof frameTimeMs === "number" ? frameTimeMs : toMilliseconds(video.currentTime);
     this.currentTime = referenceTime;
@@ -1279,16 +1176,19 @@ export class CommentRenderer {
       }
     }
 
-    for (const comment of this.comments) {
-      if (
-        comment.isActive &&
-        comment.isScrolling &&
-        ((comment.scrollDirection === "rtl" && comment.x <= comment.exitThreshold) ||
-          (comment.scrollDirection === "ltr" && comment.x >= comment.exitThreshold))
-      ) {
-        comment.isActive = false;
-        this.activeComments.delete(comment);
-        comment.clearActivation();
+    // 一時停止中はコメントの出口判定をスキップ（位置が変わらないため）
+    if (this.isPlaying) {
+      for (const comment of this.comments) {
+        if (
+          comment.isActive &&
+          comment.isScrolling &&
+          ((comment.scrollDirection === "rtl" && comment.x <= comment.exitThreshold) ||
+            (comment.scrollDirection === "ltr" && comment.x >= comment.exitThreshold))
+        ) {
+          comment.isActive = false;
+          this.activeComments.delete(comment);
+          comment.clearActivation();
+        }
       }
     }
   }
@@ -2218,10 +2118,42 @@ export class CommentRenderer {
     }
 
     const nextTime = toMilliseconds(video.currentTime);
+    const timeDelta = Math.abs(nextTime - this.currentTime);
+    const now = this.timeSource.now();
+
+    // 一時停止から再開直後（500ms以内）のシークイベントは無視
+    // ブラウザによっては再開時にseekイベントが発火し、全コメントが再配置されるのを防ぐ
+    const isRecentPlayResume = now - this.lastPlayResumeTime < this.playResumeSeekIgnoreDurationMs;
+    if (isRecentPlayResume) {
+      // 時刻だけ更新して早期リターン
+      this.currentTime = nextTime;
+      if (this._settings.isCommentVisible) {
+        this.lastDrawTime = now;
+        this.draw();
+      }
+      return;
+    }
+
+    // 微小な時間差（一時停止→再生時のノイズ）の場合はレーンクリアをスキップ
+    // これにより一時停止から再開してもコメントが上下に動かなくなる
+    const isSignificantSeek = timeDelta > SEEK_DIRECTION_EPSILON_MS;
+
     this.currentTime = nextTime;
     this.resetFinalPhaseState();
     this.updatePlaybackProgressState();
 
+    // 有意なシークの場合のみ、レーンと予約をクリアしてコメント再配置
+    if (!isSignificantSeek) {
+      // 微小なシーク（一時停止→再生時のノイズ等）の場合は何もせず早期リターン
+      // これにより既存のコメント位置とレーン割り当てが保持される
+      if (this._settings.isCommentVisible) {
+        this.lastDrawTime = this.timeSource.now();
+        this.draw();
+      }
+      return;
+    }
+
+    // 以下、有意なシークの場合の処理
     this.activeComments.clear();
     this.reservedLanes.clear();
     this.topStaticLaneReservations.length = 0;
@@ -2321,12 +2253,10 @@ export class CommentRenderer {
         this.playbackHasBegun = true;
         const now = this.timeSource.now();
         this.lastDrawTime = now;
+        this.lastPlayResumeTime = now;
 
-        // 再生開始時に前エポックのゴーストコメントを掃除
-        // 次のフレームで絶対時間同期を行う
-        if (!this.pendingInitialSync) {
-          this.hardReset();
-        }
+        // 一時停止からの再開時はhardReset()を呼ばない
+        // (メタデータロード時やソース変更時は別途hardReset()が呼ばれる)
 
         this.comments.forEach((comment) => {
           comment.lastUpdateTime = now;
@@ -2405,6 +2335,7 @@ export class CommentRenderer {
   }
 
   private handleVideoMetadataLoaded(videoElement: HTMLVideoElement): void {
+    this.lastVideoSource = this.getCurrentVideoSource();
     this.incrementEpoch("metadata-loaded");
     this.handleVideoSourceChange(videoElement);
     this.resize();
@@ -2463,11 +2394,23 @@ export class CommentRenderer {
   private handleVideoSourceChange(videoElement?: HTMLVideoElement | null): void {
     const target = videoElement ?? this.videoElement;
     if (!target) {
+      this.lastVideoSource = null;
       this.isPlaying = false;
       this.resetFinalPhaseState();
       this.resetCommentActivity();
       return;
     }
+
+    // 実際にビデオソースが変わったかチェック
+    const currentSource = this.getCurrentVideoSource();
+    const sourceChanged = currentSource !== this.lastVideoSource;
+
+    // ソースが変わっていない場合は、emptiedイベントの誤発火なのでスキップ
+    if (!sourceChanged) {
+      return;
+    }
+
+    this.lastVideoSource = currentSource;
     this.incrementEpoch("source-change");
     this.syncVideoState(target);
     this.resetFinalPhaseState();

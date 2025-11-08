@@ -72,34 +72,6 @@ export const formatCommentPreview = (text: string, maxLength = 32): string => {
   return `${text.slice(0, maxLength)}…`;
 };
 
-// ゴーストコメント可視化
-export const visualizeGhostComments = (
-  ghosts: Array<{
-    text: string;
-    vposMs: number;
-    epochId: number;
-    reason: string;
-  }>,
-): void => {
-  if (!state.enabled) {
-    return;
-  }
-  if (ghosts.length === 0) {
-    return;
-  }
-  console.group(`[CommentOverlay][ghost-detection] Detected ${ghosts.length} ghost comment(s)`);
-  ghosts.forEach((ghost, index) => {
-    console.log(
-      `#${index + 1}:`,
-      `"${formatCommentPreview(ghost.text)}"`,
-      `vpos=${ghost.vposMs}ms`,
-      `epoch=${ghost.epochId}`,
-      `reason=${ghost.reason}`,
-    );
-  });
-  console.groupEnd();
-};
-
 // 内部状態ダンプ
 export const dumpRendererState = (
   label: string,

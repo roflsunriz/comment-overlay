@@ -83,13 +83,8 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 | `createCanvasElement` | `() => HTMLCanvasElement` | カスタムキャンバス要素ファクトリー |
 | `debug` | `DebugLoggingOptions` | デバッグログの設定 |
 | `eventHooks` | `CommentRendererEventHooks` | イベントコールバック（後述） |
-| `enableAutoGhostDetection` | `boolean` | 自動ゴースト検出の有効/無効（デフォルト: `true`） |
 
-## イベントフックとゴースト検出 (v2.5.0+)
-
-`comment-overlay` は、動画ソース変更などで発生する前エポックの古いコメント（ゴーストコメント）を自動検出・削除する機能を提供します。
-
-### イベントフックの設定
+## イベントフック (v2.5.0+)
 
 `CommentRendererConfig` の `eventHooks` プロパティで、以下のイベントにコールバックを登録できます。
 
@@ -98,18 +93,11 @@ import {
   CommentRenderer,
   cloneDefaultSettings,
   type CommentRendererEventHooks,
-  type GhostCommentInfo,
   type EpochChangeInfo,
   type RendererStateSnapshot,
 } from "comment-overlay";
 
 const eventHooks: CommentRendererEventHooks = {
-  onGhostCommentDetected: (ghosts: GhostCommentInfo[]) => {
-    console.log(`ゴーストコメント検出: ${ghosts.length}件`);
-    ghosts.forEach((ghost) => {
-      console.log(`- "${ghost.comment.text}" (vpos: ${ghost.comment.vposMs}ms, reason: ${ghost.reason})`);
-    });
-  },
   onEpochChange: (info: EpochChangeInfo) => {
     console.log(`エポック変更: ${info.previousEpochId} → ${info.newEpochId} (${info.reason})`);
   },
@@ -120,24 +108,8 @@ const eventHooks: CommentRendererEventHooks = {
 
 const renderer = new CommentRenderer(cloneDefaultSettings(), {
   eventHooks,
-  enableAutoGhostDetection: true, // デフォルトでtrue
 });
 ```
-
-### ゴースト検出の仕組み
-
-ライブラリは各コメントに `epochId` を付与し、以下の条件でゴーストコメントを検出します。
-
-1. **`epoch-mismatch`**: コメントの `epochId` が現在のレンダラーの `epochId` と一致しない
-   - 動画ソース変更後、前のソースのコメントが残っている場合に発生
-
-2. **`stale-activation`**: アクティベーション時刻が非常に古い（`ACTIVE_WINDOW_MS` の2倍以上前）
-   - 長時間アクティブなまま残っている異常なコメントを検出
-
-3. **`orphaned`**: `isActive` フラグが `true` だが `activeComments` セットに含まれていない
-   - 内部状態の不整合を検出
-
-検出されたゴーストコメントは自動的に削除され、`onGhostCommentDetected` コールバックが呼ばれます。
 
 ### エポック変更のタイミング
 
@@ -148,18 +120,6 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 - **`manual-reset`**: `hardReset()` メソッドが手動で呼ばれたとき
 
 エポック変更時には `onEpochChange` コールバックが呼ばれ、全ての既存コメントの `epochId` が新しい値に更新されます。
-
-### 自動ゴースト検出の無効化
-
-パフォーマンス上の理由で自動ゴースト検出を無効化したい場合は、`enableAutoGhostDetection: false` を設定してください。
-
-```ts
-const renderer = new CommentRenderer(settings, {
-  enableAutoGhostDetection: false,
-});
-```
-
-無効化した場合でも、`hardReset()` を手動で呼ぶことでゴーストコメントをクリアできます。
 
 ## コメントコマンド
 
@@ -226,23 +186,12 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 
 ```ts
 import {
-  visualizeGhostComments,
   dumpRendererState,
   logEpochChange,
   formatCommentPreview,
   isDebugLoggingEnabled,
   resetDebugCounters,
 } from "comment-overlay";
-
-// ゴーストコメントの可視化
-visualizeGhostComments([
-  {
-    text: "古いコメント",
-    vposMs: 1000,
-    epochId: 0,
-    reason: "epoch-mismatch",
-  },
-]);
 
 // レンダラー状態のダンプ
 dumpRendererState("after-seek", {

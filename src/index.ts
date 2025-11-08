@@ -21,7 +21,6 @@ export type {
   RendererSettings,
   VideoMetadata,
   CommentRendererEventHooks,
-  GhostCommentInfo,
   EpochChangeInfo,
   RendererStateSnapshot,
 } from "./shared/types";
@@ -31,7 +30,6 @@ export {
   debugLog,
   isDebugLoggingEnabled,
   resetDebugCounters,
-  visualizeGhostComments,
   dumpRendererState,
   logEpochChange,
 } from "./shared/debug";

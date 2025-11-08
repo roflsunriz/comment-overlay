@@ -93,24 +93,20 @@ video.addEventListener("ended", () => {
 - `ngRegexps`: コメント本文に対して評価される正規表現文字列の配列です。空配列を渡すと無効になります。
 - `scrollDirection`: `'rtl'` (右→左) または `'ltr'` (左→右) を指定して、横流れコメントの方向を切り替えられます。
 
-### 自動ゴースト検出とイベントフック (v2.4.2+)
+### イベントフック (v2.4.2+)
 
-ライブラリは、前エポック（動画ソース変更前など）の古いコメント（ゴーストコメント）を自動検出・削除する機能を提供します。
+ライブラリは、エポック変更や内部状態の変化をイベントフック経由で通知できます。
 
 ```ts
 import {
   CommentRenderer,
   cloneDefaultSettings,
   type CommentRendererEventHooks,
-  type GhostCommentInfo,
   type EpochChangeInfo,
   type RendererStateSnapshot,
 } from "comment-overlay";
 
 const eventHooks: CommentRendererEventHooks = {
-  onGhostCommentDetected: (ghosts: GhostCommentInfo[]) => {
-    console.log(`ゴーストコメント検出: ${ghosts.length}件`, ghosts);
-  },
   onEpochChange: (info: EpochChangeInfo) => {
     console.log(`エポック変更: ${info.previousEpochId} → ${info.newEpochId} (${info.reason})`);
   },
@@ -122,24 +118,18 @@ const eventHooks: CommentRendererEventHooks = {
 const renderer = new CommentRenderer(cloneDefaultSettings(), {
   loggerNamespace: "MyOverlay",
   eventHooks,
-  enableAutoGhostDetection: true, // デフォルトでtrue
   debug: {
     enabled: true, // デバッグログを有効化
   },
 });
 ```
 
-**ゴースト検出の条件:**
-- `epoch-mismatch`: コメントのエポックIDが現在のレンダラーのエポックIDと一致しない
-- `stale-activation`: アクティベーション時刻が非常に古い（ACTIVE_WINDOW_MSの2倍以上前）
-- `orphaned`: isActiveフラグがtrueだがactiveCommentsに含まれていない
-
 **エポック変更のタイミング:**
 - `source-change`: 動画ソースが変更されたとき
 - `metadata-loaded`: 動画のメタデータがロードされたとき
 - `manual-reset`: `hardReset()`が手動で呼ばれたとき
 
-デバッグログを有効にすると、ゴーストコメントの検出や内部状態の変化がコンソールに出力されます。
+デバッグログを有効にすると、内部状態の変化がコンソールに出力されます。
 
 ### サンプルを試す
 
