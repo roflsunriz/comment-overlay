@@ -17,12 +17,22 @@ export {
   DEFAULT_RENDERER_SETTINGS,
   COMMENT_OVERLAY_VERSION,
 } from "./config/default-settings";
-export type { RendererSettings, VideoMetadata } from "./shared/types";
+export type {
+  RendererSettings,
+  VideoMetadata,
+  CommentRendererEventHooks,
+  GhostCommentInfo,
+  EpochChangeInfo,
+  RendererStateSnapshot,
+} from "./shared/types";
 export { createLogger, type LogLevel, type Logger } from "./shared/logger";
 export {
   configureDebugLogging,
   debugLog,
   isDebugLoggingEnabled,
   resetDebugCounters,
+  visualizeGhostComments,
+  dumpRendererState,
+  logEpochChange,
 } from "./shared/debug";
 export type { DebugLoggingOptions } from "./shared/debug";

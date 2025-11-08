@@ -84,3 +84,46 @@ export interface VideoMetadata {
   owner?: { nickname?: string; name?: string } | null;
   channel?: { name?: string } | null;
 }
+
+// ゴースト検出情報
+export interface GhostCommentInfo {
+  readonly comment: {
+    readonly text: string;
+    readonly vposMs: number;
+    readonly epochId: number;
+  };
+  readonly reason: "epoch-mismatch" | "stale-activation" | "orphaned";
+  readonly detectedAt: number;
+}
+
+// エポック変更情報
+export interface EpochChangeInfo {
+  readonly previousEpochId: number;
+  readonly newEpochId: number;
+  readonly reason: "source-change" | "metadata-loaded" | "manual-reset";
+  readonly timestamp: number;
+}
+
+// 内部状態スナップショット（デバッグ用）
+export interface RendererStateSnapshot {
+  readonly currentTime: number;
+  readonly duration: number;
+  readonly isPlaying: boolean;
+  readonly epochId: number;
+  readonly totalComments: number;
+  readonly activeComments: number;
+  readonly reservedLanes: number;
+  readonly finalPhaseActive: boolean;
+  readonly playbackHasBegun: boolean;
+  readonly isStalled: boolean;
+}
+
+// イベントフック定義
+export interface CommentRendererEventHooks {
+  /** ゴーストコメントが検出されたときのコールバック */
+  onGhostCommentDetected?: (ghosts: GhostCommentInfo[]) => void;
+  /** エポックが変更されたときのコールバック */
+  onEpochChange?: (info: EpochChangeInfo) => void;
+  /** 状態スナップショットが更新されたときのコールバック（デバッグ用） */
+  onStateSnapshot?: (snapshot: RendererStateSnapshot) => void;
+}

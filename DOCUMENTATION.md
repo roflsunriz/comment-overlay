@@ -71,6 +71,96 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 
 配列を共有しないためにも `cloneDefaultSettings()` の戻り値を編集するか、自前でディープコピーしてください。
 
+### CommentRendererConfig オプション
+
+`CommentRenderer` のコンストラクタの第2引数には `CommentRendererConfig` を渡せます。
+
+| プロパティ | 型 | 説明 |
+| --- | --- | --- |
+| `loggerNamespace` | `string` | ロガーの名前空間 |
+| `timeSource` | `TimeSource` | カスタム時間ソース（テスト用など） |
+| `animationFrameProvider` | `AnimationFrameProvider` | カスタムアニメーションフレームプロバイダー |
+| `createCanvasElement` | `() => HTMLCanvasElement` | カスタムキャンバス要素ファクトリー |
+| `debug` | `DebugLoggingOptions` | デバッグログの設定 |
+| `eventHooks` | `CommentRendererEventHooks` | イベントコールバック（後述） |
+| `enableAutoGhostDetection` | `boolean` | 自動ゴースト検出の有効/無効（デフォルト: `true`） |
+
+## イベントフックとゴースト検出 (v2.5.0+)
+
+`comment-overlay` は、動画ソース変更などで発生する前エポックの古いコメント（ゴーストコメント）を自動検出・削除する機能を提供します。
+
+### イベントフックの設定
+
+`CommentRendererConfig` の `eventHooks` プロパティで、以下のイベントにコールバックを登録できます。
+
+```ts
+import {
+  CommentRenderer,
+  cloneDefaultSettings,
+  type CommentRendererEventHooks,
+  type GhostCommentInfo,
+  type EpochChangeInfo,
+  type RendererStateSnapshot,
+} from "comment-overlay";
+
+const eventHooks: CommentRendererEventHooks = {
+  onGhostCommentDetected: (ghosts: GhostCommentInfo[]) => {
+    console.log(`ゴーストコメント検出: ${ghosts.length}件`);
+    ghosts.forEach((ghost) => {
+      console.log(`- "${ghost.comment.text}" (vpos: ${ghost.comment.vposMs}ms, reason: ${ghost.reason})`);
+    });
+  },
+  onEpochChange: (info: EpochChangeInfo) => {
+    console.log(`エポック変更: ${info.previousEpochId} → ${info.newEpochId} (${info.reason})`);
+  },
+  onStateSnapshot: (snapshot: RendererStateSnapshot) => {
+    console.log("状態スナップショット:", snapshot);
+  },
+};
+
+const renderer = new CommentRenderer(cloneDefaultSettings(), {
+  eventHooks,
+  enableAutoGhostDetection: true, // デフォルトでtrue
+});
+```
+
+### ゴースト検出の仕組み
+
+ライブラリは各コメントに `epochId` を付与し、以下の条件でゴーストコメントを検出します。
+
+1. **`epoch-mismatch`**: コメントの `epochId` が現在のレンダラーの `epochId` と一致しない
+   - 動画ソース変更後、前のソースのコメントが残っている場合に発生
+
+2. **`stale-activation`**: アクティベーション時刻が非常に古い（`ACTIVE_WINDOW_MS` の2倍以上前）
+   - 長時間アクティブなまま残っている異常なコメントを検出
+
+3. **`orphaned`**: `isActive` フラグが `true` だが `activeComments` セットに含まれていない
+   - 内部状態の不整合を検出
+
+検出されたゴーストコメントは自動的に削除され、`onGhostCommentDetected` コールバックが呼ばれます。
+
+### エポック変更のタイミング
+
+エポックIDは以下のタイミングで自動的にインクリメントされます。
+
+- **`source-change`**: 動画ソース（`src` 属性や `<source>` 要素）が変更されたとき
+- **`metadata-loaded`**: 動画のメタデータ（`loadedmetadata` イベント）がロードされたとき
+- **`manual-reset`**: `hardReset()` メソッドが手動で呼ばれたとき
+
+エポック変更時には `onEpochChange` コールバックが呼ばれ、全ての既存コメントの `epochId` が新しい値に更新されます。
+
+### 自動ゴースト検出の無効化
+
+パフォーマンス上の理由で自動ゴースト検出を無効化したい場合は、`enableAutoGhostDetection: false` を設定してください。
+
+```ts
+const renderer = new CommentRenderer(settings, {
+  enableAutoGhostDetection: false,
+});
+```
+
+無効化した場合でも、`hardReset()` を手動で呼ぶことでゴーストコメントをクリアできます。
+
 ## コメントコマンド
 
 コメントの第三引数 `commands` には文字列配列を渡し、以下を組み合わせて表示を調整します。
@@ -90,6 +180,8 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
   `CommentRendererInitializeOptions` を渡し、ビデオ要素と描画コンテナを紐付けます。`options.animationFrameProvider` を指定すればカスタムループにも対応できます。
 - `destroy()`  
   内部タイマーや `ResizeObserver` を破棄し、DOM との紐付けを解除します。SPA などでは画面遷移時に呼び出してください。
+- `hardReset()` (v2.5.0+)  
+  前エポックのゴーストコメントを強制掃除し、次のフレームで絶対時間同期を実行します。動画ロード直後の初期化やソース変更時に自動で呼ばれますが、手動で呼ぶことも可能です。エポックIDがインクリメントされ、`onEpochChange` イベントが発火します。
 
 ## ロガー
 
@@ -102,9 +194,109 @@ const logger = createLogger("MyOverlay", { level: "debug" satisfies LogLevel });
 logger.info("Renderer started");
 ```
 
+## デバッグ機能 (v2.5.0+)
+
+`comment-overlay` は開発・デバッグ時に有用な機能を提供します。
+
+### デバッグログの有効化
+
+`CommentRendererConfig` の `debug` オプションでデバッグログを有効化できます。
+
+```ts
+import { CommentRenderer, cloneDefaultSettings } from "comment-overlay";
+
+const renderer = new CommentRenderer(cloneDefaultSettings(), {
+  debug: {
+    enabled: true,
+    maxLogsPerCategory: 10, // カテゴリごとの最大ログ数（デフォルト: 5）
+  },
+});
+```
+
+デバッグログが有効な場合、以下の情報がコンソールに出力されます。
+
+- コメントの追加・スキップ・評価
+- ゴーストコメントの検出
+- エポック変更
+- 内部状態のスナップショット
+
+### デバッグユーティリティ関数
+
+ライブラリは以下のデバッグ用ユーティリティ関数をエクスポートしています。
+
+```ts
+import {
+  visualizeGhostComments,
+  dumpRendererState,
+  logEpochChange,
+  formatCommentPreview,
+  isDebugLoggingEnabled,
+  resetDebugCounters,
+} from "comment-overlay";
+
+// ゴーストコメントの可視化
+visualizeGhostComments([
+  {
+    text: "古いコメント",
+    vposMs: 1000,
+    epochId: 0,
+    reason: "epoch-mismatch",
+  },
+]);
+
+// レンダラー状態のダンプ
+dumpRendererState("after-seek", {
+  currentTime: 5000,
+  duration: 60000,
+  isPlaying: true,
+  epochId: 1,
+  totalComments: 100,
+  activeComments: 5,
+  reservedLanes: 3,
+  finalPhaseActive: false,
+  playbackHasBegun: true,
+  isStalled: false,
+});
+
+// エポック変更のログ
+logEpochChange(0, 1, "source-change");
+
+// コメントテキストのプレビュー生成
+const preview = formatCommentPreview("とても長いコメントテキスト...", 20);
+// => "とても長いコメントテキスト…"
+
+// デバッグログが有効か確認
+if (isDebugLoggingEnabled()) {
+  console.log("デバッグモードが有効です");
+}
+
+// デバッグカウンターのリセット
+resetDebugCounters();
+```
+
+### 状態スナップショットの取得
+
+イベントフックの `onStateSnapshot` を使用することで、レンダラーの内部状態を定期的に監視できます。
+
+```ts
+const renderer = new CommentRenderer(settings, {
+  eventHooks: {
+    onStateSnapshot: (snapshot) => {
+      // 状態の変化を記録
+      console.table({
+        "現在時刻": `${snapshot.currentTime.toFixed(2)}ms`,
+        "総コメント数": snapshot.totalComments,
+        "アクティブコメント数": snapshot.activeComments,
+        "エポックID": snapshot.epochId,
+      });
+    },
+  },
+});
+```
+
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v1.1.0`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v2.5.0`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";

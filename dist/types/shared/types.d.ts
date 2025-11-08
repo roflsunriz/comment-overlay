@@ -55,4 +55,39 @@ export interface VideoMetadata {
         name?: string;
     } | null;
 }
+export interface GhostCommentInfo {
+    readonly comment: {
+        readonly text: string;
+        readonly vposMs: number;
+        readonly epochId: number;
+    };
+    readonly reason: "epoch-mismatch" | "stale-activation" | "orphaned";
+    readonly detectedAt: number;
+}
+export interface EpochChangeInfo {
+    readonly previousEpochId: number;
+    readonly newEpochId: number;
+    readonly reason: "source-change" | "metadata-loaded" | "manual-reset";
+    readonly timestamp: number;
+}
+export interface RendererStateSnapshot {
+    readonly currentTime: number;
+    readonly duration: number;
+    readonly isPlaying: boolean;
+    readonly epochId: number;
+    readonly totalComments: number;
+    readonly activeComments: number;
+    readonly reservedLanes: number;
+    readonly finalPhaseActive: boolean;
+    readonly playbackHasBegun: boolean;
+    readonly isStalled: boolean;
+}
+export interface CommentRendererEventHooks {
+    /** ゴーストコメントが検出されたときのコールバック */
+    onGhostCommentDetected?: (ghosts: GhostCommentInfo[]) => void;
+    /** エポックが変更されたときのコールバック */
+    onEpochChange?: (info: EpochChangeInfo) => void;
+    /** 状態スナップショットが更新されたときのコールバック（デバッグ用） */
+    onStateSnapshot?: (snapshot: RendererStateSnapshot) => void;
+}
 //# sourceMappingURL=types.d.ts.map

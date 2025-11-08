@@ -1,4 +1,4 @@
-import type { RendererSettings } from "../shared/types";
+import type { RendererSettings, CommentRendererEventHooks } from "../shared/types";
 import { Comment, type TimeSource } from "./comment";
 import type { DebugLoggingOptions } from "../shared/debug";
 export interface CommentRendererConfig {
@@ -7,6 +7,8 @@ export interface CommentRendererConfig {
     animationFrameProvider?: AnimationFrameProvider;
     createCanvasElement?: () => HTMLCanvasElement;
     debug?: DebugLoggingOptions;
+    eventHooks?: CommentRendererEventHooks;
+    enableAutoGhostDetection?: boolean;
 }
 export interface CommentRendererInitializeOptions {
     video: HTMLVideoElement;
@@ -62,6 +64,11 @@ export declare class CommentRenderer {
     private readonly isResizeObserverAvailable;
     private readonly cleanupTasks;
     private commentSequence;
+    private epochId;
+    private readonly eventHooks;
+    private readonly enableAutoGhostDetection;
+    private lastSnapshotEmitTime;
+    private readonly snapshotEmitThrottleMs;
     constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
     constructor(config?: CommentRendererConfig);
     get settings(): RendererSettings;
@@ -84,6 +91,25 @@ export declare class CommentRenderer {
      */
     hardReset(): void;
     private resetFinalPhaseState;
+    /**
+     * エポックIDを更新し、イベントを発火する
+     */
+    private incrementEpoch;
+    /**
+     * ゴーストコメントを検出する
+     * - epochIdが現在と異なるアクティブコメント
+     * - activationTimeMsが非常に古い（ACTIVE_WINDOW_MSの2倍以上前）コメント
+     * - isActiveだがactiveCommentsに含まれていないコメント
+     */
+    private detectGhostComments;
+    /**
+     * ゴーストコメントを削除する
+     */
+    private removeGhostComments;
+    /**
+     * 状態スナップショットを生成してイベントを発火する
+     */
+    private emitStateSnapshot;
     private getEffectiveCommentVpos;
     private getFinalPhaseDisplayDuration;
     private resolveFinalPhaseVpos;

@@ -61,6 +61,7 @@ export declare class Comment {
     lineHeightMultiplier: number;
     lineHeightPx: number;
     lines: string[];
+    epochId: number;
     private directionSign;
     private readonly timeSource;
     private lastSyncedSettingsVersion;

@@ -1,5 +1,11 @@
 import { cloneDefaultSettings } from "../config/default-settings";
-import type { RendererSettings } from "../shared/types";
+import type {
+  RendererSettings,
+  CommentRendererEventHooks,
+  GhostCommentInfo,
+  EpochChangeInfo,
+  RendererStateSnapshot,
+} from "../shared/types";
 import {
   Comment,
   type CommentDependencies,
@@ -14,6 +20,9 @@ import {
   debugLog,
   formatCommentPreview,
   isDebugLoggingEnabled,
+  visualizeGhostComments,
+  dumpRendererState,
+  logEpochChange,
 } from "../shared/debug";
 import type { DebugLoggingOptions } from "../shared/debug";
 
@@ -23,6 +32,8 @@ export interface CommentRendererConfig {
   animationFrameProvider?: AnimationFrameProvider;
   createCanvasElement?: () => HTMLCanvasElement;
   debug?: DebugLoggingOptions;
+  eventHooks?: CommentRendererEventHooks;
+  enableAutoGhostDetection?: boolean;
 }
 
 export interface CommentRendererInitializeOptions {
@@ -233,6 +244,11 @@ export class CommentRenderer {
   private readonly isResizeObserverAvailable = typeof ResizeObserver !== "undefined";
   private readonly cleanupTasks: Array<() => void> = [];
   private commentSequence = 0;
+  private epochId = 0;
+  private readonly eventHooks: CommentRendererEventHooks;
+  private readonly enableAutoGhostDetection: boolean;
+  private lastSnapshotEmitTime = 0;
+  private readonly snapshotEmitThrottleMs = 1000;
 
   constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
   constructor(config?: CommentRendererConfig);
@@ -263,6 +279,8 @@ export class CommentRenderer {
       settingsVersion: this.settingsVersion,
     };
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
+    this.eventHooks = config.eventHooks ?? {};
+    this.enableAutoGhostDetection = config.enableAutoGhostDetection ?? true;
 
     this.rebuildNgMatchers();
 
@@ -416,6 +434,7 @@ export class CommentRenderer {
         this.commentDependencies,
       );
       comment.creationIndex = this.commentSequence++;
+      comment.epochId = this.epochId;
       addedComments.push(comment);
       debugLog("comment-added", {
         preview,
@@ -511,6 +530,15 @@ export class CommentRenderer {
     const canvas = this.canvas;
     const ctx = this.ctx;
 
+    // ゴースト検出を実行
+    const ghosts = this.detectGhostComments();
+    if (ghosts.length > 0) {
+      this.removeGhostComments(ghosts);
+    }
+
+    // エポックをインクリメント
+    this.incrementEpoch("manual-reset");
+
     // アクティブコメントを全てクリア
     this.activeComments.clear();
     this.reservedLanes.clear();
@@ -523,6 +551,7 @@ export class CommentRenderer {
       comment.hasShown = false;
       comment.lane = -1;
       comment.clearActivation();
+      comment.epochId = this.epochId;
     });
 
     // キャンバスを全消去
@@ -538,6 +567,9 @@ export class CommentRenderer {
     // 次のフレームで絶対時間同期を実行するフラグを立てる
     this.pendingInitialSync = true;
     this.resetFinalPhaseState();
+
+    // 状態スナップショットを発行
+    this.emitStateSnapshot("hardReset");
   }
 
   private resetFinalPhaseState(): void {
@@ -545,6 +577,160 @@ export class CommentRenderer {
     this.finalPhaseStartTime = null;
     this.finalPhaseScheduleDirty = false;
     this.finalPhaseVposOverrides.clear();
+  }
+
+  /**
+   * エポックIDを更新し、イベントを発火する
+   */
+  private incrementEpoch(reason: "source-change" | "metadata-loaded" | "manual-reset"): void {
+    const previousEpochId = this.epochId;
+    this.epochId += 1;
+
+    logEpochChange(previousEpochId, this.epochId, reason);
+
+    if (this.eventHooks.onEpochChange) {
+      const info: EpochChangeInfo = {
+        previousEpochId,
+        newEpochId: this.epochId,
+        reason,
+        timestamp: this.timeSource.now(),
+      };
+      try {
+        this.eventHooks.onEpochChange(info);
+      } catch (error) {
+        this.log.error("CommentRenderer.incrementEpoch.callback", error as Error, { info });
+      }
+    }
+
+    // 全コメントに新しいepochIdを設定
+    this.comments.forEach((comment) => {
+      comment.epochId = this.epochId;
+    });
+  }
+
+  /**
+   * ゴーストコメントを検出する
+   * - epochIdが現在と異なるアクティブコメント
+   * - activationTimeMsが非常に古い（ACTIVE_WINDOW_MSの2倍以上前）コメント
+   * - isActiveだがactiveCommentsに含まれていないコメント
+   */
+  private detectGhostComments(): GhostCommentInfo[] {
+    if (!this.enableAutoGhostDetection) {
+      return [];
+    }
+
+    const ghosts: GhostCommentInfo[] = [];
+    const now = this.timeSource.now();
+    const staleThreshold = ACTIVE_WINDOW_MS * 2;
+
+    for (const comment of this.comments) {
+      if (!comment.isActive) {
+        continue;
+      }
+
+      let reason: "epoch-mismatch" | "stale-activation" | "orphaned" | null = null;
+
+      // エポックミスマッチ
+      if (comment.epochId !== this.epochId) {
+        reason = "epoch-mismatch";
+      }
+      // 古すぎるアクティベーション
+      else if (
+        comment.activationTimeMs !== null &&
+        now - comment.activationTimeMs > staleThreshold
+      ) {
+        reason = "stale-activation";
+      }
+      // activeCommentsに含まれていない孤立コメント
+      else if (!this.activeComments.has(comment)) {
+        reason = "orphaned";
+      }
+
+      if (reason !== null) {
+        ghosts.push({
+          comment: {
+            text: comment.text,
+            vposMs: comment.vposMs,
+            epochId: comment.epochId,
+          },
+          reason,
+          detectedAt: now,
+        });
+      }
+    }
+
+    return ghosts;
+  }
+
+  /**
+   * ゴーストコメントを削除する
+   */
+  private removeGhostComments(ghosts: GhostCommentInfo[]): void {
+    if (ghosts.length === 0) {
+      return;
+    }
+
+    const ghostSet = new Set(ghosts.map((g) => g.comment.text));
+
+    for (const comment of this.comments) {
+      if (ghostSet.has(comment.text) && comment.vposMs === ghosts[0]?.comment.vposMs) {
+        comment.isActive = false;
+        this.activeComments.delete(comment);
+        comment.clearActivation();
+      }
+    }
+
+    visualizeGhostComments(
+      ghosts.map((g) => ({
+        text: g.comment.text,
+        vposMs: g.comment.vposMs,
+        epochId: g.comment.epochId,
+        reason: g.reason,
+      })),
+    );
+
+    if (this.eventHooks.onGhostCommentDetected) {
+      try {
+        this.eventHooks.onGhostCommentDetected(ghosts);
+      } catch (error) {
+        this.log.error("CommentRenderer.removeGhostComments.callback", error as Error);
+      }
+    }
+  }
+
+  /**
+   * 状態スナップショットを生成してイベントを発火する
+   */
+  private emitStateSnapshot(label: string): void {
+    const now = this.timeSource.now();
+    if (now - this.lastSnapshotEmitTime < this.snapshotEmitThrottleMs) {
+      return;
+    }
+
+    const snapshot: RendererStateSnapshot = {
+      currentTime: this.currentTime,
+      duration: this.duration,
+      isPlaying: this.isPlaying,
+      epochId: this.epochId,
+      totalComments: this.comments.length,
+      activeComments: this.activeComments.size,
+      reservedLanes: this.reservedLanes.size,
+      finalPhaseActive: this.finalPhaseActive,
+      playbackHasBegun: this.playbackHasBegun,
+      isStalled: this.isStalled,
+    };
+
+    dumpRendererState(label, snapshot);
+
+    if (this.eventHooks.onStateSnapshot) {
+      try {
+        this.eventHooks.onStateSnapshot(snapshot);
+      } catch (error) {
+        this.log.error("CommentRenderer.emitStateSnapshot.callback", error as Error);
+      }
+    }
+
+    this.lastSnapshotEmitTime = now;
   }
 
   private getEffectiveCommentVpos(comment: Comment): number {
@@ -951,6 +1137,12 @@ export class CommentRenderer {
     const context = this.ctx;
     if (!video || !canvas || !context) {
       return;
+    }
+
+    // ゴースト検出を実行（フレームごと）
+    const ghosts = this.detectGhostComments();
+    if (ghosts.length > 0) {
+      this.removeGhostComments(ghosts);
     }
 
     const referenceTime =
@@ -2213,12 +2405,14 @@ export class CommentRenderer {
   }
 
   private handleVideoMetadataLoaded(videoElement: HTMLVideoElement): void {
+    this.incrementEpoch("metadata-loaded");
     this.handleVideoSourceChange(videoElement);
     this.resize();
     this.calculateLaneMetrics();
     // メタデータロード時に絶対時間同期を準備
     this.hardReset();
     this.onSeek();
+    this.emitStateSnapshot("metadata-loaded");
   }
 
   private handleVideoStalled(): void {
@@ -2274,9 +2468,11 @@ export class CommentRenderer {
       this.resetCommentActivity();
       return;
     }
+    this.incrementEpoch("source-change");
     this.syncVideoState(target);
     this.resetFinalPhaseState();
     this.resetCommentActivity();
+    this.emitStateSnapshot("source-change");
   }
 
   private syncVideoState(videoElement: HTMLVideoElement): void {

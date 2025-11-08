@@ -176,6 +176,7 @@ export class Comment {
   lineHeightMultiplier = 1;
   lineHeightPx = 0;
   lines: string[] = [];
+  epochId = 0;
   private directionSign: -1 | 1 = -1;
   private readonly timeSource: TimeSource;
   private lastSyncedSettingsVersion = -1;
