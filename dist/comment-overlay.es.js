@@ -639,7 +639,7 @@ const Ue = 4e3, X = {
   ...X,
   ngWords: [...X.ngWords],
   ngRegexps: [...X.ngRegexps]
-}), dt = "v2.4.1", P = (o) => o * 1e3, qe = (o) => !Number.isFinite(o) || o < 0 ? null : Math.round(o), ee = 4e3, he = 1800, Ke = 3, Je = 0.25, je = 32, Ze = 48, J = 120, Qe = 4e3, j = 120, et = 800, tt = 2, _ = 4e3, L = N + ee, it = 1e3, ce = 1, de = 12, ue = 24, T = 1e-3, H = 50, st = 0.05, nt = 10, at = (o) => Number.isFinite(o) ? o <= 0 ? 0 : o >= 1 ? 1 : o : 1, Z = (o) => Math.max(
+}), dt = "v2.5.0", P = (o) => o * 1e3, qe = (o) => !Number.isFinite(o) || o < 0 ? null : Math.round(o), ee = 4e3, he = 1800, Ke = 3, Je = 0.25, je = 32, Ze = 48, J = 120, Qe = 4e3, j = 120, et = 800, tt = 2, _ = 4e3, L = N + ee, it = 1e3, ce = 1, de = 12, ue = 24, T = 1e-3, H = 50, st = 0.05, nt = 10, at = (o) => Number.isFinite(o) ? o <= 0 ? 0 : o >= 1 ? 1 : o : 1, Z = (o) => Math.max(
   nt,
   Math.floor(o * st)
 ), B = (o) => {
