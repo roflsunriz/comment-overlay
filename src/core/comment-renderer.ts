@@ -100,90 +100,95 @@ export class CommentRenderer {
   public readonly playResumeSeekIgnoreDurationMs = 500;
   public lastVideoSource: string | null = null;
 
-  public initialize!: (options: HTMLVideoElement | CommentRendererInitializeOptions) => void;
-  public destroy!: () => void;
-  public destroyCanvasOnly!: () => void;
-  public resolveContainer!: (
+  declare public initialize: (options: HTMLVideoElement | CommentRendererInitializeOptions) => void;
+  declare public destroy: () => void;
+  declare public destroyCanvasOnly: () => void;
+  declare public resolveContainer: (
     explicit: HTMLElement | null | undefined,
     video: HTMLVideoElement,
   ) => HTMLElement;
-  public ensureContainerPositioning!: (container: HTMLElement) => void;
-  public resize!: (width?: number, height?: number) => void;
-  public resolveDevicePixelRatio!: () => number;
-  public calculateLaneMetrics!: () => void;
-  public setupResizeHandling!: (videoElement: HTMLVideoElement) => void;
-  public cleanupResizeHandling!: () => void;
-  public setupVideoEventListeners!: (videoElement: HTMLVideoElement) => void;
-  public handleVideoMetadataLoaded!: (videoElement: HTMLVideoElement) => void;
-  public handleVideoStalled!: () => void;
-  public handleVideoCanPlay!: () => void;
-  public handleVideoSourceChange!: (videoElement?: HTMLVideoElement | null) => void;
-  public syncVideoState!: (videoElement: HTMLVideoElement) => void;
-  public resetCommentActivity!: () => void;
-  public setupVideoChangeDetection!: (video: HTMLVideoElement, container: HTMLElement) => void;
-  public extractVideoElement!: (node: Node) => HTMLVideoElement | null;
-  public setupVisibilityHandling!: () => void;
-  public handleVisibilityRestore!: () => void;
-  public setupFullscreenHandling!: () => void;
-  public resolveResizeObserverTarget!: (videoElement: HTMLVideoElement) => Element;
-  public handleFullscreenChange!: () => Promise<void>;
-  public resolveFullscreenContainer!: (videoElement: HTMLVideoElement) => HTMLElement | null;
-  public resolveActiveOverlayContainer!: (
+  declare public ensureContainerPositioning: (container: HTMLElement) => void;
+  declare public resize: (width?: number, height?: number) => void;
+  declare public resolveDevicePixelRatio: () => number;
+  declare public calculateLaneMetrics: () => void;
+  declare public setupResizeHandling: (videoElement: HTMLVideoElement) => void;
+  declare public cleanupResizeHandling: () => void;
+  declare public setupVideoEventListeners: (videoElement: HTMLVideoElement) => void;
+  declare public handleVideoMetadataLoaded: (videoElement: HTMLVideoElement) => void;
+  declare public handleVideoStalled: () => void;
+  declare public handleVideoCanPlay: () => void;
+  declare public handleVideoSourceChange: (videoElement?: HTMLVideoElement | null) => void;
+  declare public syncVideoState: (videoElement: HTMLVideoElement) => void;
+  declare public resetCommentActivity: () => void;
+  declare public setupVideoChangeDetection: (
+    video: HTMLVideoElement,
+    container: HTMLElement,
+  ) => void;
+  declare public extractVideoElement: (node: Node) => HTMLVideoElement | null;
+  declare public setupVisibilityHandling: () => void;
+  declare public handleVisibilityRestore: () => void;
+  declare public setupFullscreenHandling: () => void;
+  declare public resolveResizeObserverTarget: (videoElement: HTMLVideoElement) => Element;
+  declare public handleFullscreenChange: () => Promise<void>;
+  declare public resolveFullscreenContainer: (videoElement: HTMLVideoElement) => HTMLElement | null;
+  declare public resolveActiveOverlayContainer: (
     videoElement: HTMLVideoElement,
     baseContainer: HTMLElement | null,
     fullscreenElement: Element | null,
   ) => HTMLElement | null;
-  public getFullscreenElement!: () => Element | null;
-  public addCleanup!: (task: () => void) => void;
-  public runCleanupTasks!: () => void;
+  declare public getFullscreenElement: () => Element | null;
+  declare public addCleanup: (task: () => void) => void;
+  declare public runCleanupTasks: () => void;
   public rebuildNgMatchers(): void {
     rebuildNgMatchersImpl.call(this);
   }
-  public isNGComment!: (text: string) => boolean;
-  public addComments!: (
+  declare public isNGComment: (text: string) => boolean;
+  declare public addComments: (
     entries: ReadonlyArray<{ text: string; vposMs: number; commands?: string[] }>,
   ) => Comment[];
-  public addComment!: (text: string, vposMs: number, commands?: string[]) => Comment | null;
-  public clearComments!: () => void;
-  public resetState!: () => void;
-  public hardReset!: () => void;
-  public resetFinalPhaseState!: () => void;
-  public incrementEpoch!: (reason: "source-change" | "metadata-loaded" | "manual-reset") => void;
-  public emitStateSnapshot!: (label: string) => void;
-  public getEffectiveCommentVpos!: (comment: Comment) => number;
-  public getFinalPhaseDisplayDuration!: (comment: Comment) => number;
-  public resolveFinalPhaseVpos!: (comment: Comment) => number;
-  public recomputeFinalPhaseTimeline!: () => void;
-  public shouldSuppressRendering!: () => boolean;
-  public updatePlaybackProgressState!: () => void;
-  public updateComments!: (frameTimeMs?: number) => void;
-  public buildPrepareOptions!: (visibleWidth: number) => CommentPrepareOptions;
-  public findAvailableLane!: (comment: Comment) => number;
-  public findFirstValidReservationIndex!: (
+  declare public addComment: (text: string, vposMs: number, commands?: string[]) => Comment | null;
+  declare public clearComments: () => void;
+  declare public resetState: () => void;
+  declare public hardReset: () => void;
+  declare public resetFinalPhaseState: () => void;
+  declare public incrementEpoch: (
+    reason: "source-change" | "metadata-loaded" | "manual-reset",
+  ) => void;
+  declare public emitStateSnapshot: (label: string) => void;
+  declare public getEffectiveCommentVpos: (comment: Comment) => number;
+  declare public getFinalPhaseDisplayDuration: (comment: Comment) => number;
+  declare public resolveFinalPhaseVpos: (comment: Comment) => number;
+  declare public recomputeFinalPhaseTimeline: () => void;
+  declare public shouldSuppressRendering: () => boolean;
+  declare public updatePlaybackProgressState: () => void;
+  declare public updateComments: (frameTimeMs?: number) => void;
+  declare public buildPrepareOptions: (visibleWidth: number) => CommentPrepareOptions;
+  declare public findAvailableLane: (comment: Comment) => number;
+  declare public findFirstValidReservationIndex: (
     reservations: LaneReservation[],
     cutoffTime: number,
   ) => number;
-  public pruneLaneReservations!: (currentTime: number) => void;
-  public pruneStaticLaneReservations!: (currentTime: number) => void;
-  public findCommentIndexAtOrAfter!: (targetVposMs: number) => number;
-  public getCommentsInTimeWindow!: (centerTimeMs: number, windowMs: number) => Comment[];
-  public getStaticReservations!: (position: "ue" | "shita") => StaticLaneReservation[];
-  public getStaticLaneDepth!: (position: "ue" | "shita") => number;
-  public getStaticLaneLimit!: (position: "ue" | "shita") => number;
-  public getGlobalLaneIndexForBottom!: (localIndex: number) => number;
-  public resolveStaticCommentOffset!: (
+  declare public pruneLaneReservations: (currentTime: number) => void;
+  declare public pruneStaticLaneReservations: (currentTime: number) => void;
+  declare public findCommentIndexAtOrAfter: (targetVposMs: number) => number;
+  declare public getCommentsInTimeWindow: (centerTimeMs: number, windowMs: number) => Comment[];
+  declare public getStaticReservations: (position: "ue" | "shita") => StaticLaneReservation[];
+  declare public getStaticLaneDepth: (position: "ue" | "shita") => number;
+  declare public getStaticLaneLimit: (position: "ue" | "shita") => number;
+  declare public getGlobalLaneIndexForBottom: (localIndex: number) => number;
+  declare public resolveStaticCommentOffset: (
     position: "ue" | "shita",
     lane: number,
     displayHeight: number,
     comment: Comment,
   ) => number;
-  public getStaticReservedLaneSet!: () => Set<number>;
-  public shouldActivateCommentAtTime!: (
+  declare public getStaticReservedLaneSet: () => Set<number>;
+  declare public shouldActivateCommentAtTime: (
     comment: Comment,
     timeMs: number,
     preview?: string,
   ) => boolean;
-  public activateComment!: (
+  declare public activateComment: (
     comment: Comment,
     context: CanvasRenderingContext2D,
     displayWidth: number,
@@ -191,53 +196,60 @@ export class CommentRenderer {
     options: CommentPrepareOptions,
     referenceTime: number,
   ) => void;
-  public assignStaticLane!: (
+  declare public assignStaticLane: (
     position: "ue" | "shita",
     comment: Comment,
     displayHeight: number,
     currentTime: number,
   ) => number;
-  public reserveStaticLane!: (
+  declare public reserveStaticLane: (
     position: "ue" | "shita",
     comment: Comment,
     lane: number,
     releaseTime: number,
   ) => void;
-  public releaseStaticLane!: (position: "ue" | "shita", lane: number) => void;
-  public getLanePriorityOrder!: (currentTime: number) => number[];
-  public getLaneNextAvailableTime!: (lane: number, currentTime: number) => number;
-  public createLaneReservation!: (comment: Comment, referenceTime: number) => LaneReservation;
-  public isLaneAvailable!: (
+  declare public releaseStaticLane: (position: "ue" | "shita", lane: number) => void;
+  declare public getLanePriorityOrder: (currentTime: number) => number[];
+  declare public getLaneNextAvailableTime: (lane: number, currentTime: number) => number;
+  declare public createLaneReservation: (
+    comment: Comment,
+    referenceTime: number,
+  ) => LaneReservation;
+  declare public isLaneAvailable: (
     lane: number,
     candidate: LaneReservation,
     currentTime: number,
   ) => boolean;
-  public storeLaneReservation!: (lane: number, reservation: LaneReservation) => void;
-  public areReservationsConflicting!: (a: LaneReservation, b: LaneReservation) => boolean;
-  public computeForwardGap!: (from: LaneReservation, to: LaneReservation, time: number) => number;
-  public getBufferedEdges!: (
+  declare public storeLaneReservation: (lane: number, reservation: LaneReservation) => void;
+  declare public areReservationsConflicting: (a: LaneReservation, b: LaneReservation) => boolean;
+  declare public computeForwardGap: (
+    from: LaneReservation,
+    to: LaneReservation,
+    time: number,
+  ) => number;
+  declare public getBufferedEdges: (
     reservation: LaneReservation,
     time: number,
   ) => { left: number; right: number };
-  public solveLeftRightEqualityTime!: (
+  declare public solveLeftRightEqualityTime: (
     left: LaneReservation,
     right: LaneReservation,
   ) => number | null;
-  public draw!: () => void;
-  public performInitialSync!: (frameTimeMs?: number) => void;
-  public processFrame!: (frameTimeMs?: number) => void;
-  public handleAnimationFrame!: () => void;
-  public handleVideoFrame!: (
+  declare public draw: () => void;
+  declare public performInitialSync: (frameTimeMs?: number) => void;
+  declare public processFrame: (frameTimeMs?: number) => void;
+  declare public handleAnimationFrame: () => void;
+  declare public handleVideoFrame: (
     now: DOMHighResTimeStamp,
     metadata: VideoFrameCallbackMetadataLike,
   ) => void;
-  public shouldUseVideoFrameCallback!: () => boolean;
-  public scheduleNextFrame!: () => void;
-  public cancelAnimationFrameRequest!: () => void;
-  public cancelVideoFrameCallback!: () => void;
-  public startAnimation!: () => void;
-  public stopAnimation!: () => void;
-  public onSeek!: () => void;
+  declare public shouldUseVideoFrameCallback: () => boolean;
+  declare public scheduleNextFrame: () => void;
+  declare public cancelAnimationFrameRequest: () => void;
+  declare public cancelVideoFrameCallback: () => void;
+  declare public startAnimation: () => void;
+  declare public stopAnimation: () => void;
+  declare public onSeek: () => void;
 
   constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
   constructor(config?: CommentRendererConfig);

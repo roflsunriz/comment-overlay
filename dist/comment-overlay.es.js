@@ -2,7 +2,7 @@ const we = {
   small: 0.8,
   medium: 1,
   big: 1.4
-}, Le = {
+}, Ie = {
   defont: '"MS PGothic","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro","Yu Gothic UI","Yu Gothic","Meiryo","Segoe UI","Osaka","Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","IPAPGothic","TakaoPGothic","Roboto","Helvetica Neue","Helvetica","Arial","sans-serif"',
   gothic: '"Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","Yu Gothic","Yu Gothic Medium","Meiryo","MS PGothic","Hiragino Kaku Gothic ProN","Segoe UI","Helvetica","Arial","sans-serif"',
   mincho: '"MS PMincho","MS Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","Noto Serif CJK JP","Noto Serif JP","Source Han Serif JP","Times New Roman","serif"'
@@ -27,16 +27,16 @@ const we = {
   blue2: "#39F",
   purple2: "#63C",
   black2: "#666"
-}, ee = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, Ie = /^[,.:;]+/, Pe = /[,.:;]+$/, Fe = (e) => {
+}, ee = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, Pe = /^[,.:;]+/, Ee = /[,.:;]+$/, Le = (e) => {
   const t = e.trim();
-  return t ? ee.test(t) ? t : t.replace(Ie, "").replace(Pe, "") : "";
-}, Ee = (e) => ee.test(e) ? e.toUpperCase() : null, fe = (e) => {
+  return t ? ee.test(t) ? t : t.replace(Pe, "").replace(Ee, "") : "";
+}, Fe = (e) => ee.test(e) ? e.toUpperCase() : null, fe = (e) => {
   const t = e.trim();
   if (!t)
     return null;
   const i = t.toLowerCase().endsWith("px") ? t.slice(0, -2) : t, s = Number.parseFloat(i);
   return Number.isFinite(s) ? s : null;
-}, Re = (e) => {
+}, Ae = (e) => {
   const t = e.trim();
   if (!t)
     return null;
@@ -45,14 +45,14 @@ const we = {
     return Number.isFinite(i) ? i / 100 : null;
   }
   return fe(t);
-}, Ae = (e) => Number.isFinite(e) ? Math.min(100, Math.max(-100, e)) : 0, De = (e) => !Number.isFinite(e) || e === 0 ? 1 : Math.min(5, Math.max(0.25, e)), Ve = (e) => e === "naka" || e === "ue" || e === "shita", Oe = (e) => e === "small" || e === "medium" || e === "big", ke = (e) => e === "defont" || e === "gothic" || e === "mincho", He = (e) => e in de, Ne = (e, t) => {
+}, Re = (e) => Number.isFinite(e) ? Math.min(100, Math.max(-100, e)) : 0, De = (e) => !Number.isFinite(e) || e === 0 ? 1 : Math.min(5, Math.max(0.25, e)), Ve = (e) => e === "naka" || e === "ue" || e === "shita", Oe = (e) => e === "small" || e === "medium" || e === "big", ke = (e) => e === "defont" || e === "gothic" || e === "mincho", He = (e) => e in de, Ne = (e, t) => {
   let i = "naka", s = "medium", n = "defont", a = null, r = 1, l = null, c = !1, d = 0, u = 1;
   for (const g of e) {
-    const p = Fe(typeof g == "string" ? g : "");
+    const p = Le(typeof g == "string" ? g : "");
     if (!p)
       continue;
     if (ee.test(p)) {
-      const S = Ee(p);
+      const S = Fe(p);
       if (S) {
         a = S;
         continue;
@@ -87,14 +87,14 @@ const we = {
       const S = p.indexOf(":");
       if (S >= 0) {
         const b = fe(p.slice(S + 1));
-        b !== null && (d = Ae(b));
+        b !== null && (d = Re(b));
       }
       continue;
     }
     if (v.startsWith("lh:") || v.startsWith("lineheight:")) {
       const S = p.indexOf(":");
       if (S >= 0) {
-        const b = Re(p.slice(S + 1));
+        const b = Ae(p.slice(S + 1));
         b !== null && (u = De(b));
       }
       continue;
@@ -106,7 +106,7 @@ const we = {
     size: s,
     sizeScale: we[s],
     font: n,
-    fontFamily: Le[n],
+    fontFamily: Ie[n],
     resolvedColor: f,
     colorOverride: a,
     opacityMultiplier: o,
@@ -115,14 +115,14 @@ const we = {
     letterSpacing: d,
     lineHeight: u
   };
-}, _e = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i, X = (e) => e.length === 1 ? e.repeat(2) : e, A = (e) => Number.parseInt(e, 16), P = (e) => !Number.isFinite(e) || e <= 0 ? 0 : e >= 1 ? 1 : e, pe = (e, t) => {
+}, _e = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i, X = (e) => e.length === 1 ? e.repeat(2) : e, R = (e) => Number.parseInt(e, 16), E = (e) => !Number.isFinite(e) || e <= 0 ? 0 : e >= 1 ? 1 : e, pe = (e, t) => {
   const i = _e.exec(e);
   if (!i)
     return e;
   const s = i[1];
   let n, a, r, l = 1;
-  s.length === 3 || s.length === 4 ? (n = A(X(s[0])), a = A(X(s[1])), r = A(X(s[2])), s.length === 4 && (l = A(X(s[3])) / 255)) : (n = A(s.slice(0, 2)), a = A(s.slice(2, 4)), r = A(s.slice(4, 6)), s.length === 8 && (l = A(s.slice(6, 8)) / 255));
-  const c = P(l * P(t));
+  s.length === 3 || s.length === 4 ? (n = R(X(s[0])), a = R(X(s[1])), r = R(X(s[2])), s.length === 4 && (l = R(X(s[3])) / 255)) : (n = R(s.slice(0, 2)), a = R(s.slice(2, 4)), r = R(s.slice(4, 6)), s.length === 8 && (l = R(s.slice(6, 8)) / 255));
+  const c = E(l * E(t));
   return `rgba(${n}, ${a}, ${r}, ${c})`;
 }, ze = () => ({
   now: () => typeof performance < "u" && typeof performance.now == "function" ? performance.now() : Date.now()
@@ -204,29 +204,29 @@ const we = {
     e.fontSize = l, t.font = `${e.fontSize}px ${e.fontFamily}`, e.lines = Xe(e.text), j(e, t);
     const c = !e.isScrolling && (e.layout === "ue" || e.layout === "shita");
     if (c) {
-      const I = Math.max(1, a - ae * 2);
-      if (e.width > I) {
-        const R = Math.max(
+      const P = Math.max(1, a - ae * 2);
+      if (e.width > P) {
+        const A = Math.max(
           We,
           Math.min(e.fontSize, Math.floor(r * 0.6))
-        ), J = I / Math.max(e.width, 1), _ = Math.max(
-          R,
+        ), J = P / Math.max(e.width, 1), _ = Math.max(
+          A,
           Math.floor(e.fontSize * Math.min(J, 1))
         );
         _ < e.fontSize && (e.fontSize = _, t.font = `${e.fontSize}px ${e.fontFamily}`, j(e, t));
         let se = 0;
-        for (; e.width > I && e.fontSize > R && se < 5; ) {
-          const Te = I / Math.max(e.width, 1), ne = Math.max(
-            R,
+        for (; e.width > P && e.fontSize > A && se < 5; ) {
+          const Te = P / Math.max(e.width, 1), ne = Math.max(
+            A,
             Math.floor(e.fontSize * Math.max(Te, 0.7))
           );
-          ne >= e.fontSize ? e.fontSize = Math.max(R, e.fontSize - 1) : e.fontSize = ne, t.font = `${e.fontSize}px ${e.fontFamily}`, j(e, t), se += 1;
+          ne >= e.fontSize ? e.fontSize = Math.max(A, e.fontSize - 1) : e.fontSize = ne, t.font = `${e.fontSize}px ${e.fontFamily}`, j(e, t), se += 1;
         }
       }
     }
     if (!e.isScrolling) {
       e.bufferWidth = 0;
-      const I = c ? ae : 0, R = Math.max((a - e.width) / 2, I), J = Math.max(I, a - e.width - I), _ = Math.min(R, Math.max(J, I));
+      const P = c ? ae : 0, A = Math.max((a - e.width) / 2, P), J = Math.max(P, a - e.width - P), _ = Math.min(A, Math.max(J, P));
       e.virtualStartX = _, e.x = _, e.baseSpeed = 0, e.speed = 0, e.speedPixelsPerMs = 0, e.visibleDurationMs = V, e.preCollisionDurationMs = V, e.totalDurationMs = V, e.reservationWidth = e.width, e.staticExpiryTimeMs = e.vposMs + V, e.lastUpdateTime = e.getTimeSource().now(), e.isPaused = !1;
       return;
     }
@@ -238,12 +238,12 @@ const we = {
     const S = a > 0 ? e.width / a : 0, b = n.maxVisibleDurationMs === n.minVisibleDurationMs;
     let y = n.maxVisibleDurationMs;
     if (!b && S > 1) {
-      const I = Math.min(S, n.maxWidthRatio), R = n.maxVisibleDurationMs / Math.max(I, 1);
-      y = Math.max(n.minVisibleDurationMs, Math.floor(R));
+      const P = Math.min(S, n.maxWidthRatio), A = n.maxVisibleDurationMs / Math.max(P, 1);
+      y = Math.max(n.minVisibleDurationMs, Math.floor(A));
     }
-    const w = a + e.width + e.bufferWidth + o, C = Math.max(y, 1), L = w / C, H = L * 1e3 / 60;
-    e.baseSpeed = H, e.speed = e.baseSpeed, e.speedPixelsPerMs = L;
-    const N = Math.abs(g - h), K = f === "rtl" ? Math.max(0, v - p) : Math.max(0, p - v), B = Math.max(L, Number.EPSILON);
+    const w = a + e.width + e.bufferWidth + o, C = Math.max(y, 1), I = w / C, H = I * 1e3 / 60;
+    e.baseSpeed = H, e.speed = e.baseSpeed, e.speedPixelsPerMs = I;
+    const N = Math.abs(g - h), K = f === "rtl" ? Math.max(0, v - p) : Math.max(0, p - v), B = Math.max(I, Number.EPSILON);
     e.visibleDurationMs = y, e.preCollisionDurationMs = Math.max(0, Math.ceil(K / B)), e.totalDurationMs = Math.max(
       e.preCollisionDurationMs,
       Math.ceil(N / B)
@@ -258,7 +258,7 @@ const we = {
       hasContext: !!t
     }), a;
   }
-}, Q = 5, E = {
+}, Q = 5, F = {
   enabled: !1,
   maxLogsPerCategory: Q
 }, z = /* @__PURE__ */ new Map(), Ue = (e) => {
@@ -267,16 +267,16 @@ const we = {
   const t = Math.max(1, Math.floor(e));
   return Math.min(1e4, t);
 }, Ye = (e) => {
-  E.enabled = !!e.enabled, E.maxLogsPerCategory = Ue(e.maxLogsPerCategory), E.enabled || z.clear();
+  F.enabled = !!e.enabled, F.maxLogsPerCategory = Ue(e.maxLogsPerCategory), F.enabled || z.clear();
 }, ps = () => {
   z.clear();
-}, k = () => E.enabled, qe = (e) => {
+}, k = () => F.enabled, qe = (e) => {
   const t = z.get(e) ?? 0;
-  return t >= E.maxLogsPerCategory ? (t === E.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), z.set(e, t + 1)), !1) : (z.set(e, t + 1), !0);
+  return t >= F.maxLogsPerCategory ? (t === F.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), z.set(e, t + 1)), !1) : (z.set(e, t + 1), !0);
 }, M = (e, ...t) => {
-  E.enabled && qe(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
+  F.enabled && qe(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
 }, $ = (e, t = 32) => e.length <= t ? e : `${e.slice(0, t)}…`, Ke = (e, t) => {
-  E.enabled && (console.group(`[CommentOverlay][state-dump] ${e}`), console.table({
+  F.enabled && (console.group(`[CommentOverlay][state-dump] ${e}`), console.table({
     "Current Time": `${t.currentTime.toFixed(2)}ms`,
     Duration: `${t.duration.toFixed(2)}ms`,
     "Is Playing": t.isPlaying,
@@ -289,7 +289,7 @@ const we = {
     "Is Stalled": t.isStalled
   }), console.groupEnd());
 }, Je = (e, t, i) => {
-  E.enabled && M("epoch-change", `Epoch changed: ${e} → ${t} (reason: ${i})`);
+  F.enabled && M("epoch-change", `Epoch changed: ${e} → ${t} (reason: ${i})`);
 }, m = {
   hits: 0,
   misses: 0,
@@ -367,19 +367,19 @@ const we = {
   if (!c)
     return null;
   c.save(), c.font = `${e.fontSize}px ${e.fontFamily}`;
-  const d = P(e.opacity), u = n, o = e.lines.length > 0 ? e.lines : [e.text], f = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, h = n + e.fontSize, g = Se(e, c, t, "cache", u), p = me(e.fontSize), v = () => {
-    const y = P(d * 0.6);
+  const d = E(e.opacity), u = n, o = e.lines.length > 0 ? e.lines : [e.text], f = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, h = n + e.fontSize, g = Se(e, c, t, "cache", u), p = me(e.fontSize), v = () => {
+    const y = E(d * 0.6);
     c.save(), c.fillStyle = `rgba(0, 0, 0, ${y})`;
     for (const [w, C] of p)
-      o.forEach((L, H) => {
+      o.forEach((I, H) => {
         const N = h + H * f + C;
-        g(L, N, "outline", w);
+        g(I, N, "outline", w);
       });
     c.restore();
   }, S = (y) => {
     c.save(), c.fillStyle = y, o.forEach((w, C) => {
-      const L = h + C * f;
-      g(w, L, "fill");
+      const I = h + C * f;
+      g(w, I, "fill");
     }), c.restore();
   };
   if (v(), e.renderStyle === "classic") {
@@ -406,9 +406,9 @@ const we = {
         alpha: 0.42,
         rgb: "255, 255, 255"
       }
-    ].forEach((L) => {
-      const H = P(L.alpha * d);
-      c.save(), c.shadowColor = `rgba(${L.rgb}, ${H})`, c.shadowBlur = w * L.blurMultiplier, c.shadowOffsetX = y * L.offsetXMultiplier, c.shadowOffsetY = y * L.offsetYMultiplier, c.fillStyle = "rgba(0, 0, 0, 0)", o.forEach((N, K) => {
+    ].forEach((I) => {
+      const H = E(I.alpha * d);
+      c.save(), c.shadowColor = `rgba(${I.rgb}, ${H})`, c.shadowBlur = w * I.blurMultiplier, c.shadowOffsetX = y * I.offsetXMultiplier, c.shadowOffsetY = y * I.offsetYMultiplier, c.fillStyle = "rgba(0, 0, 0, 0)", o.forEach((N, K) => {
         const B = h + K * f;
         g(N, B, "fill");
       }), c.restore();
@@ -418,8 +418,8 @@ const we = {
   return S(b), c.restore(), l;
 }, et = (e, t, i) => {
   m.fallbacks++, t.save(), t.font = `${e.fontSize}px ${e.fontFamily}`;
-  const s = P(e.opacity), n = i ?? e.x, a = e.lines.length > 0 ? e.lines : [e.text], r = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, l = e.y + e.fontSize, c = Se(e, t, t, "fallback", n), d = me(e.fontSize), u = () => {
-    const h = P(s * 0.6);
+  const s = E(e.opacity), n = i ?? e.x, a = e.lines.length > 0 ? e.lines : [e.text], r = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, l = e.y + e.fontSize, c = Se(e, t, t, "fallback", n), d = me(e.fontSize), u = () => {
+    const h = E(s * 0.6);
     t.save(), t.fillStyle = `rgba(0, 0, 0, ${h})`;
     for (const [g, p] of d)
       a.forEach((v, S) => {
@@ -458,7 +458,7 @@ const we = {
         rgb: "255, 255, 255"
       }
     ].forEach((v) => {
-      const S = P(v.alpha * s);
+      const S = E(v.alpha * s);
       t.save(), t.shadowColor = `rgba(${v.rgb}, ${S})`, t.shadowBlur = g * v.blurMultiplier, t.shadowOffsetX = h * v.offsetXMultiplier, t.shadowOffsetY = h * v.offsetYMultiplier, t.fillStyle = "rgba(0, 0, 0, 0)", a.forEach((b, y) => {
         const w = l + y * r;
         c(b, w, "fill");
@@ -595,9 +595,9 @@ class nt {
   }
   getEffectiveOpacity(t) {
     if (typeof this.opacityOverride == "number")
-      return P(this.opacityOverride);
+      return E(this.opacityOverride);
     const i = t * this.opacityMultiplier;
-    return Number.isFinite(i) ? P(i) : 0;
+    return Number.isFinite(i) ? E(i) : 0;
   }
   markActivated(t) {
     this.activationTimeMs = t;
@@ -652,7 +652,7 @@ const at = 4e3, U = {
   ...U,
   ngWords: [...U.ngWords],
   ngRegexps: [...U.ngRegexps]
-}), gs = "v2.5.1", F = (e) => e * 1e3, ot = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), ie = 4e3, he = 1800, lt = 3, ct = 0.25, ht = 32, ut = 48, q = 120, dt = 4e3, Z = 120, ft = 800, pt = 2, W = 4e3, O = V + ie, vt = 1e3, ue = 1, ye = 12, Ce = 24, T = 1e-3, D = 50, gt = 0.05, mt = 10, St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Me = (e) => Math.max(
+}), gs = "v2.5.1", L = (e) => e * 1e3, ot = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), ie = 4e3, he = 1800, lt = 3, ct = 0.25, ht = 32, ut = 48, q = 120, dt = 4e3, Z = 120, ft = 800, pt = 2, W = 4e3, O = V + ie, vt = 1e3, ue = 1, ye = 12, Ce = 24, T = 1e-3, D = 50, gt = 0.05, mt = 10, St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Me = (e) => Math.max(
   mt,
   Math.floor(e * gt)
 ), G = (e) => {
@@ -750,11 +750,11 @@ const at = 4e3, U = {
       return this.log.warn("CommentRenderer.invalidNgRegexp", n, { entry: s }), null;
     }
   }).filter((s) => !!s);
-}, Lt = function(e) {
+}, It = function(e) {
   return typeof e != "string" || e.length === 0 ? !1 : this.normalizedNgWords.some((t) => t.length > 0 && e.includes(t)) ? !0 : this.compiledNgRegexps.some((t) => t.test(e));
-}, It = (e) => {
-  e.prototype.addComments = bt, e.prototype.addComment = xt, e.prototype.clearComments = Tt, e.prototype.resetState = wt, e.prototype.rebuildNgMatchers = be, e.prototype.isNGComment = Lt;
-}, Pt = function() {
+}, Pt = (e) => {
+  e.prototype.addComments = bt, e.prototype.addComment = xt, e.prototype.clearComments = Tt, e.prototype.resetState = wt, e.prototype.rebuildNgMatchers = be, e.prototype.isNGComment = It;
+}, Et = function() {
   const e = this.canvas, t = this.ctx;
   if (this.incrementEpoch("manual-reset"), this.activeComments.clear(), this.reservedLanes.clear(), this.topStaticLaneReservations.length = 0, this.bottomStaticLaneReservations.length = 0, this.comments.forEach((i) => {
     i.isActive = !1, i.hasShown = !1, i.lane = -1, i.clearActivation(), i.epochId = this.epochId;
@@ -763,9 +763,9 @@ const at = 4e3, U = {
     t.clearRect(0, 0, s, n);
   }
   this.pendingInitialSync = !0, this.resetFinalPhaseState(), this.emitStateSnapshot("hardReset");
-}, Ft = function() {
+}, Lt = function() {
   this.finalPhaseActive = !1, this.finalPhaseStartTime = null, this.finalPhaseScheduleDirty = !1, this.finalPhaseVposOverrides.clear();
-}, Et = function(e) {
+}, Ft = function(e) {
   const t = this.epochId;
   if (this.epochId += 1, Je(t, this.epochId, e), this.eventHooks.onEpochChange) {
     const i = {
@@ -783,7 +783,7 @@ const at = 4e3, U = {
   this.comments.forEach((i) => {
     i.epochId = this.epochId;
   });
-}, Rt = function(e) {
+}, At = function(e) {
   const t = this.timeSource.now();
   if (t - this.lastSnapshotEmitTime < this.snapshotEmitThrottleMs)
     return;
@@ -806,7 +806,7 @@ const at = 4e3, U = {
       this.log.error("CommentRenderer.emitStateSnapshot.callback", s);
     }
   this.lastSnapshotEmitTime = t;
-}, At = function(e) {
+}, Rt = function(e) {
   return this.finalPhaseActive && this.finalPhaseScheduleDirty && this.recomputeFinalPhaseTimeline(), this.finalPhaseVposOverrides.get(e) ?? e.vposMs;
 }, Dt = function(e) {
   if (!e.isScrolling)
@@ -847,7 +847,7 @@ const at = 4e3, U = {
     c = h + p;
   }), this.finalPhaseScheduleDirty = !1;
 }, kt = (e) => {
-  e.prototype.hardReset = Pt, e.prototype.resetFinalPhaseState = Ft, e.prototype.incrementEpoch = Et, e.prototype.emitStateSnapshot = Rt, e.prototype.getEffectiveCommentVpos = At, e.prototype.getFinalPhaseDisplayDuration = Dt, e.prototype.resolveFinalPhaseVpos = Vt, e.prototype.recomputeFinalPhaseTimeline = Ot;
+  e.prototype.hardReset = Et, e.prototype.resetFinalPhaseState = Lt, e.prototype.incrementEpoch = Ft, e.prototype.emitStateSnapshot = At, e.prototype.getEffectiveCommentVpos = Rt, e.prototype.getFinalPhaseDisplayDuration = Dt, e.prototype.resolveFinalPhaseVpos = Vt, e.prototype.recomputeFinalPhaseTimeline = Ot;
 }, Ht = function() {
   return !this.playbackHasBegun && !this.isPlaying && this.currentTime <= D;
 }, Nt = function() {
@@ -858,7 +858,7 @@ const at = 4e3, U = {
   const t = this.videoElement, i = this.canvas, s = this.ctx;
   if (!t || !i || !s)
     return;
-  const n = typeof e == "number" ? e : F(t.currentTime);
+  const n = typeof e == "number" ? e : L(t.currentTime);
   if (this.currentTime = n, this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.updatePlaybackProgressState(), this.skipDrawingForCurrentFrame = this.shouldSuppressRendering(), this.skipDrawingForCurrentFrame)
     return;
   const a = this.canvasDpr > 0 ? this.canvasDpr : 1, r = this.displayWidth > 0 ? this.displayWidth : i.width / a, l = this.displayHeight > 0 ? this.displayHeight : i.height / a, c = this.buildPrepareOptions(r), d = this.duration > 0 && this.duration - this.currentTime <= dt;
@@ -1221,7 +1221,7 @@ const at = 4e3, U = {
   const t = this.videoElement, i = this.canvas, s = this.ctx;
   if (!t || !i || !s)
     return;
-  const n = typeof e == "number" ? e : F(t.currentTime);
+  const n = typeof e == "number" ? e : L(t.currentTime);
   this.currentTime = n, this.lastDrawTime = this.timeSource.now();
   const a = this.canvasDpr > 0 ? this.canvasDpr : 1, r = this.displayWidth > 0 ? this.displayWidth : i.width / a, l = this.displayHeight > 0 ? this.displayHeight : i.height / a, c = this.buildPrepareOptions(r);
   this.getCommentsInTimeWindow(this.currentTime, O).forEach((u) => {
@@ -1258,7 +1258,7 @@ const at = 4e3, U = {
     return !1;
   const e = this.videoElement;
   return !!e && typeof e.requestVideoFrameCallback == "function" && typeof e.cancelVideoFrameCallback == "function";
-}, Li = function() {
+}, Ii = function() {
   const e = this.videoElement;
   if (e) {
     if (this.shouldUseVideoFrameCallback()) {
@@ -1269,22 +1269,22 @@ const at = 4e3, U = {
     }
     this.cancelVideoFrameCallback(), this.frameId = this.animationFrameProvider.request(this.handleAnimationFrame);
   }
-}, Ii = function() {
-  this.frameId !== null && (this.animationFrameProvider.cancel(this.frameId), this.frameId = null);
 }, Pi = function() {
+  this.frameId !== null && (this.animationFrameProvider.cancel(this.frameId), this.frameId = null);
+}, Ei = function() {
   if (this.videoFrameHandle === null)
     return;
   const e = this.videoElement;
   e && typeof e.cancelVideoFrameCallback == "function" && e.cancelVideoFrameCallback(this.videoFrameHandle), this.videoFrameHandle = null;
-}, Fi = function() {
+}, Li = function() {
   this.stopAnimation(), this.scheduleNextFrame();
-}, Ei = function() {
+}, Fi = function() {
   this.cancelAnimationFrameRequest(), this.cancelVideoFrameCallback();
-}, Ri = function() {
+}, Ai = function() {
   const e = this.canvas, t = this.ctx, i = this.videoElement;
   if (!e || !t || !i)
     return;
-  const s = F(i.currentTime), n = Math.abs(s - this.currentTime), a = this.timeSource.now();
+  const s = L(i.currentTime), n = Math.abs(s - this.currentTime), a = this.timeSource.now();
   if (a - this.lastPlayResumeTime < this.playResumeSeekIgnoreDurationMs) {
     this.currentTime = s, this._settings.isCommentVisible && (this.lastDrawTime = a, this.draw());
     return;
@@ -1337,8 +1337,8 @@ const at = 4e3, U = {
     }
     this.getEffectiveCommentVpos(h) < this.currentTime - O ? h.hasShown = !0 : h.hasShown = !1;
   }), this._settings.isCommentVisible && (this.lastDrawTime = this.timeSource.now(), this.draw());
-}, Ai = (e) => {
-  e.prototype.processFrame = bi, e.prototype.handleAnimationFrame = xi, e.prototype.handleVideoFrame = Ti, e.prototype.shouldUseVideoFrameCallback = wi, e.prototype.scheduleNextFrame = Li, e.prototype.cancelAnimationFrameRequest = Ii, e.prototype.cancelVideoFrameCallback = Pi, e.prototype.startAnimation = Fi, e.prototype.stopAnimation = Ei, e.prototype.onSeek = Ri;
+}, Ri = (e) => {
+  e.prototype.processFrame = bi, e.prototype.handleAnimationFrame = xi, e.prototype.handleVideoFrame = Ti, e.prototype.shouldUseVideoFrameCallback = wi, e.prototype.scheduleNextFrame = Ii, e.prototype.cancelAnimationFrameRequest = Pi, e.prototype.cancelVideoFrameCallback = Ei, e.prototype.startAnimation = Li, e.prototype.stopAnimation = Fi, e.prototype.onSeek = Ai;
 }, Di = function(e, t) {
   if (e)
     return e;
@@ -1359,7 +1359,7 @@ const at = 4e3, U = {
   try {
     this.destroyCanvasOnly();
     const t = e instanceof HTMLVideoElement ? e : e.video, i = e instanceof HTMLVideoElement ? e.parentElement : e.container ?? e.video.parentElement, s = this.resolveContainer(i ?? null, t);
-    this.videoElement = t, this.containerElement = s, this.lastVideoSource = this.getCurrentVideoSource(), this.duration = Number.isFinite(t.duration) ? F(t.duration) : 0, this.currentTime = F(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.isStalled = !1, this.lastDrawTime = this.timeSource.now(), this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
+    this.videoElement = t, this.containerElement = s, this.lastVideoSource = this.getCurrentVideoSource(), this.duration = Number.isFinite(t.duration) ? L(t.duration) : 0, this.currentTime = L(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.isStalled = !1, this.lastDrawTime = this.timeSource.now(), this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
     const n = this.createCanvasElement(), a = n.getContext("2d");
     if (!a)
       throw new Error("Failed to acquire 2D canvas context");
@@ -1402,7 +1402,7 @@ const at = 4e3, U = {
     }, r = () => {
       this.handleVideoMetadataLoaded(e);
     }, l = () => {
-      this.duration = Number.isFinite(e.duration) ? F(e.duration) : 0;
+      this.duration = Number.isFinite(e.duration) ? L(e.duration) : 0;
     }, c = () => {
       this.handleVideoSourceChange();
     }, d = () => {
@@ -1428,7 +1428,7 @@ const at = 4e3, U = {
     a.isActive && (a.lastUpdateTime = this.timeSource.now());
   });
 }, $i = function() {
-  this.isStalled && (this.isStalled = !1, this.videoElement && (this.currentTime = F(this.videoElement.currentTime), this.isPlaying = !this.videoElement.paused), this.lastDrawTime = this.timeSource.now());
+  this.isStalled && (this.isStalled = !1, this.videoElement && (this.currentTime = L(this.videoElement.currentTime), this.isPlaying = !this.videoElement.paused), this.lastDrawTime = this.timeSource.now());
 }, Bi = function(e) {
   const t = e ?? this.videoElement;
   if (!t) {
@@ -1438,7 +1438,7 @@ const at = 4e3, U = {
   const i = this.getCurrentVideoSource();
   i !== this.lastVideoSource && (this.lastVideoSource = i, this.incrementEpoch("source-change"), this.syncVideoState(t), this.resetFinalPhaseState(), this.resetCommentActivity(), this.emitStateSnapshot("source-change"));
 }, Xi = function(e) {
-  this.duration = Number.isFinite(e.duration) ? F(e.duration) : 0, this.currentTime = F(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.isStalled = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.lastDrawTime = this.timeSource.now();
+  this.duration = Number.isFinite(e.duration) ? L(e.duration) : 0, this.currentTime = L(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.isStalled = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.lastDrawTime = this.timeSource.now();
 }, Gi = function() {
   const e = this.timeSource.now(), t = this.canvas, i = this.ctx;
   if (this.resetFinalPhaseState(), this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, t && i) {
@@ -1536,7 +1536,7 @@ const at = 4e3, U = {
   document.addEventListener("visibilitychange", e), this.addCleanup(() => document.removeEventListener("visibilitychange", e)), document.visibilityState !== "visible" && this.stopAnimation();
 }, Ji = function() {
   const e = this.canvas, t = this.ctx, i = this.videoElement;
-  !e || !t || !i || (this.currentTime = F(i.currentTime), this.lastDrawTime = this.timeSource.now(), this.isPlaying = !i.paused, this.isStalled = !1, this.pendingInitialSync = !0, this.resetFinalPhaseState(), this.updatePlaybackProgressState(), this.draw());
+  !e || !t || !i || (this.currentTime = L(i.currentTime), this.lastDrawTime = this.timeSource.now(), this.isPlaying = !i.paused, this.isStalled = !1, this.pendingInitialSync = !0, this.resetFinalPhaseState(), this.updatePlaybackProgressState(), this.draw());
 }, ji = (e) => {
   e.prototype.setupVisibilityHandling = Ki, e.prototype.handleVisibilityRestore = Ji;
 }, Zi = function(e, t) {
@@ -1702,93 +1702,9 @@ class x {
   lastPlayResumeTime = 0;
   playResumeSeekIgnoreDurationMs = 500;
   lastVideoSource = null;
-  initialize;
-  destroy;
-  destroyCanvasOnly;
-  resolveContainer;
-  ensureContainerPositioning;
-  resize;
-  resolveDevicePixelRatio;
-  calculateLaneMetrics;
-  setupResizeHandling;
-  cleanupResizeHandling;
-  setupVideoEventListeners;
-  handleVideoMetadataLoaded;
-  handleVideoStalled;
-  handleVideoCanPlay;
-  handleVideoSourceChange;
-  syncVideoState;
-  resetCommentActivity;
-  setupVideoChangeDetection;
-  extractVideoElement;
-  setupVisibilityHandling;
-  handleVisibilityRestore;
-  setupFullscreenHandling;
-  resolveResizeObserverTarget;
-  handleFullscreenChange;
-  resolveFullscreenContainer;
-  resolveActiveOverlayContainer;
-  getFullscreenElement;
-  addCleanup;
-  runCleanupTasks;
   rebuildNgMatchers() {
     be.call(this);
   }
-  isNGComment;
-  addComments;
-  addComment;
-  clearComments;
-  resetState;
-  hardReset;
-  resetFinalPhaseState;
-  incrementEpoch;
-  emitStateSnapshot;
-  getEffectiveCommentVpos;
-  getFinalPhaseDisplayDuration;
-  resolveFinalPhaseVpos;
-  recomputeFinalPhaseTimeline;
-  shouldSuppressRendering;
-  updatePlaybackProgressState;
-  updateComments;
-  buildPrepareOptions;
-  findAvailableLane;
-  findFirstValidReservationIndex;
-  pruneLaneReservations;
-  pruneStaticLaneReservations;
-  findCommentIndexAtOrAfter;
-  getCommentsInTimeWindow;
-  getStaticReservations;
-  getStaticLaneDepth;
-  getStaticLaneLimit;
-  getGlobalLaneIndexForBottom;
-  resolveStaticCommentOffset;
-  getStaticReservedLaneSet;
-  shouldActivateCommentAtTime;
-  activateComment;
-  assignStaticLane;
-  reserveStaticLane;
-  releaseStaticLane;
-  getLanePriorityOrder;
-  getLaneNextAvailableTime;
-  createLaneReservation;
-  isLaneAvailable;
-  storeLaneReservation;
-  areReservationsConflicting;
-  computeForwardGap;
-  getBufferedEdges;
-  solveLeftRightEqualityTime;
-  draw;
-  performInitialSync;
-  processFrame;
-  handleAnimationFrame;
-  handleVideoFrame;
-  shouldUseVideoFrameCallback;
-  scheduleNextFrame;
-  cancelAnimationFrameRequest;
-  cancelVideoFrameCallback;
-  startAnimation;
-  stopAnimation;
-  onSeek;
   constructor(t = null, i = void 0) {
     let s, n;
     if (Mt(t))
@@ -1827,7 +1743,7 @@ class x {
     return [...this.comments];
   }
 }
-It(x);
+Pt(x);
 kt(x);
 _t(x);
 Bt(x);
@@ -1836,7 +1752,7 @@ ii(x);
 li(x);
 Si(x);
 Mi(x);
-Ai(x);
+Ri(x);
 Ni(x);
 qi(x);
 ji(x);
