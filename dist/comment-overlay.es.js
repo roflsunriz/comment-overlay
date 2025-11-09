@@ -27,10 +27,10 @@ const we = {
   blue2: "#39F",
   purple2: "#63C",
   black2: "#666"
-}, ee = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, Pe = /^[,.:;]+/, Ee = /[,.:;]+$/, Le = (e) => {
+}, ee = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, Pe = /^[,.:;]+/, Ee = /[,.:;]+$/, Fe = (e) => {
   const t = e.trim();
   return t ? ee.test(t) ? t : t.replace(Pe, "").replace(Ee, "") : "";
-}, Fe = (e) => ee.test(e) ? e.toUpperCase() : null, fe = (e) => {
+}, Le = (e) => ee.test(e) ? e.toUpperCase() : null, fe = (e) => {
   const t = e.trim();
   if (!t)
     return null;
@@ -48,11 +48,11 @@ const we = {
 }, Re = (e) => Number.isFinite(e) ? Math.min(100, Math.max(-100, e)) : 0, De = (e) => !Number.isFinite(e) || e === 0 ? 1 : Math.min(5, Math.max(0.25, e)), Ve = (e) => e === "naka" || e === "ue" || e === "shita", Oe = (e) => e === "small" || e === "medium" || e === "big", ke = (e) => e === "defont" || e === "gothic" || e === "mincho", He = (e) => e in de, Ne = (e, t) => {
   let i = "naka", s = "medium", n = "defont", a = null, r = 1, l = null, c = !1, d = 0, u = 1;
   for (const g of e) {
-    const p = Le(typeof g == "string" ? g : "");
+    const p = Fe(typeof g == "string" ? g : "");
     if (!p)
       continue;
     if (ee.test(p)) {
-      const S = Fe(p);
+      const S = Le(p);
       if (S) {
         a = S;
         continue;
@@ -258,7 +258,7 @@ const we = {
       hasContext: !!t
     }), a;
   }
-}, Q = 5, F = {
+}, Q = 5, L = {
   enabled: !1,
   maxLogsPerCategory: Q
 }, z = /* @__PURE__ */ new Map(), Ue = (e) => {
@@ -267,16 +267,16 @@ const we = {
   const t = Math.max(1, Math.floor(e));
   return Math.min(1e4, t);
 }, Ye = (e) => {
-  F.enabled = !!e.enabled, F.maxLogsPerCategory = Ue(e.maxLogsPerCategory), F.enabled || z.clear();
+  L.enabled = !!e.enabled, L.maxLogsPerCategory = Ue(e.maxLogsPerCategory), L.enabled || z.clear();
 }, ps = () => {
   z.clear();
-}, k = () => F.enabled, qe = (e) => {
+}, k = () => L.enabled, qe = (e) => {
   const t = z.get(e) ?? 0;
-  return t >= F.maxLogsPerCategory ? (t === F.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), z.set(e, t + 1)), !1) : (z.set(e, t + 1), !0);
+  return t >= L.maxLogsPerCategory ? (t === L.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), z.set(e, t + 1)), !1) : (z.set(e, t + 1), !0);
 }, M = (e, ...t) => {
-  F.enabled && qe(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
+  L.enabled && qe(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
 }, $ = (e, t = 32) => e.length <= t ? e : `${e.slice(0, t)}…`, Ke = (e, t) => {
-  F.enabled && (console.group(`[CommentOverlay][state-dump] ${e}`), console.table({
+  L.enabled && (console.group(`[CommentOverlay][state-dump] ${e}`), console.table({
     "Current Time": `${t.currentTime.toFixed(2)}ms`,
     Duration: `${t.duration.toFixed(2)}ms`,
     "Is Playing": t.isPlaying,
@@ -289,7 +289,7 @@ const we = {
     "Is Stalled": t.isStalled
   }), console.groupEnd());
 }, Je = (e, t, i) => {
-  F.enabled && M("epoch-change", `Epoch changed: ${e} → ${t} (reason: ${i})`);
+  L.enabled && M("epoch-change", `Epoch changed: ${e} → ${t} (reason: ${i})`);
 }, m = {
   hits: 0,
   misses: 0,
@@ -652,7 +652,7 @@ const at = 4e3, U = {
   ...U,
   ngWords: [...U.ngWords],
   ngRegexps: [...U.ngRegexps]
-}), gs = "v2.5.1", L = (e) => e * 1e3, ot = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), ie = 4e3, he = 1800, lt = 3, ct = 0.25, ht = 32, ut = 48, q = 120, dt = 4e3, Z = 120, ft = 800, pt = 2, W = 4e3, O = V + ie, vt = 1e3, ue = 1, ye = 12, Ce = 24, T = 1e-3, D = 50, gt = 0.05, mt = 10, St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Me = (e) => Math.max(
+}), gs = "v2.5.1", F = (e) => e * 1e3, ot = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), ie = 4e3, he = 1800, lt = 3, ct = 0.25, ht = 32, ut = 48, q = 120, dt = 4e3, Z = 120, ft = 800, pt = 2, W = 4e3, O = V + ie, vt = 1e3, ue = 1, ye = 12, Ce = 24, T = 1e-3, D = 50, gt = 0.05, mt = 10, St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Me = (e) => Math.max(
   mt,
   Math.floor(e * gt)
 ), G = (e) => {
@@ -763,9 +763,9 @@ const at = 4e3, U = {
     t.clearRect(0, 0, s, n);
   }
   this.pendingInitialSync = !0, this.resetFinalPhaseState(), this.emitStateSnapshot("hardReset");
-}, Lt = function() {
+}, Ft = function() {
   this.finalPhaseActive = !1, this.finalPhaseStartTime = null, this.finalPhaseScheduleDirty = !1, this.finalPhaseVposOverrides.clear();
-}, Ft = function(e) {
+}, Lt = function(e) {
   const t = this.epochId;
   if (this.epochId += 1, Je(t, this.epochId, e), this.eventHooks.onEpochChange) {
     const i = {
@@ -847,7 +847,7 @@ const at = 4e3, U = {
     c = h + p;
   }), this.finalPhaseScheduleDirty = !1;
 }, kt = (e) => {
-  e.prototype.hardReset = Et, e.prototype.resetFinalPhaseState = Lt, e.prototype.incrementEpoch = Ft, e.prototype.emitStateSnapshot = At, e.prototype.getEffectiveCommentVpos = Rt, e.prototype.getFinalPhaseDisplayDuration = Dt, e.prototype.resolveFinalPhaseVpos = Vt, e.prototype.recomputeFinalPhaseTimeline = Ot;
+  e.prototype.hardReset = Et, e.prototype.resetFinalPhaseState = Ft, e.prototype.incrementEpoch = Lt, e.prototype.emitStateSnapshot = At, e.prototype.getEffectiveCommentVpos = Rt, e.prototype.getFinalPhaseDisplayDuration = Dt, e.prototype.resolveFinalPhaseVpos = Vt, e.prototype.recomputeFinalPhaseTimeline = Ot;
 }, Ht = function() {
   return !this.playbackHasBegun && !this.isPlaying && this.currentTime <= D;
 }, Nt = function() {
@@ -858,7 +858,7 @@ const at = 4e3, U = {
   const t = this.videoElement, i = this.canvas, s = this.ctx;
   if (!t || !i || !s)
     return;
-  const n = typeof e == "number" ? e : L(t.currentTime);
+  const n = typeof e == "number" ? e : F(t.currentTime);
   if (this.currentTime = n, this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.updatePlaybackProgressState(), this.skipDrawingForCurrentFrame = this.shouldSuppressRendering(), this.skipDrawingForCurrentFrame)
     return;
   const a = this.canvasDpr > 0 ? this.canvasDpr : 1, r = this.displayWidth > 0 ? this.displayWidth : i.width / a, l = this.displayHeight > 0 ? this.displayHeight : i.height / a, c = this.buildPrepareOptions(r), d = this.duration > 0 && this.duration - this.currentTime <= dt;
@@ -1221,7 +1221,7 @@ const at = 4e3, U = {
   const t = this.videoElement, i = this.canvas, s = this.ctx;
   if (!t || !i || !s)
     return;
-  const n = typeof e == "number" ? e : L(t.currentTime);
+  const n = typeof e == "number" ? e : F(t.currentTime);
   this.currentTime = n, this.lastDrawTime = this.timeSource.now();
   const a = this.canvasDpr > 0 ? this.canvasDpr : 1, r = this.displayWidth > 0 ? this.displayWidth : i.width / a, l = this.displayHeight > 0 ? this.displayHeight : i.height / a, c = this.buildPrepareOptions(r);
   this.getCommentsInTimeWindow(this.currentTime, O).forEach((u) => {
@@ -1276,15 +1276,15 @@ const at = 4e3, U = {
     return;
   const e = this.videoElement;
   e && typeof e.cancelVideoFrameCallback == "function" && e.cancelVideoFrameCallback(this.videoFrameHandle), this.videoFrameHandle = null;
-}, Li = function() {
-  this.stopAnimation(), this.scheduleNextFrame();
 }, Fi = function() {
+  this.stopAnimation(), this.scheduleNextFrame();
+}, Li = function() {
   this.cancelAnimationFrameRequest(), this.cancelVideoFrameCallback();
 }, Ai = function() {
   const e = this.canvas, t = this.ctx, i = this.videoElement;
   if (!e || !t || !i)
     return;
-  const s = L(i.currentTime), n = Math.abs(s - this.currentTime), a = this.timeSource.now();
+  const s = F(i.currentTime), n = Math.abs(s - this.currentTime), a = this.timeSource.now();
   if (a - this.lastPlayResumeTime < this.playResumeSeekIgnoreDurationMs) {
     this.currentTime = s, this._settings.isCommentVisible && (this.lastDrawTime = a, this.draw());
     return;
@@ -1338,7 +1338,7 @@ const at = 4e3, U = {
     this.getEffectiveCommentVpos(h) < this.currentTime - O ? h.hasShown = !0 : h.hasShown = !1;
   }), this._settings.isCommentVisible && (this.lastDrawTime = this.timeSource.now(), this.draw());
 }, Ri = (e) => {
-  e.prototype.processFrame = bi, e.prototype.handleAnimationFrame = xi, e.prototype.handleVideoFrame = Ti, e.prototype.shouldUseVideoFrameCallback = wi, e.prototype.scheduleNextFrame = Ii, e.prototype.cancelAnimationFrameRequest = Pi, e.prototype.cancelVideoFrameCallback = Ei, e.prototype.startAnimation = Li, e.prototype.stopAnimation = Fi, e.prototype.onSeek = Ai;
+  e.prototype.processFrame = bi, e.prototype.handleAnimationFrame = xi, e.prototype.handleVideoFrame = Ti, e.prototype.shouldUseVideoFrameCallback = wi, e.prototype.scheduleNextFrame = Ii, e.prototype.cancelAnimationFrameRequest = Pi, e.prototype.cancelVideoFrameCallback = Ei, e.prototype.startAnimation = Fi, e.prototype.stopAnimation = Li, e.prototype.onSeek = Ai;
 }, Di = function(e, t) {
   if (e)
     return e;
@@ -1359,7 +1359,7 @@ const at = 4e3, U = {
   try {
     this.destroyCanvasOnly();
     const t = e instanceof HTMLVideoElement ? e : e.video, i = e instanceof HTMLVideoElement ? e.parentElement : e.container ?? e.video.parentElement, s = this.resolveContainer(i ?? null, t);
-    this.videoElement = t, this.containerElement = s, this.lastVideoSource = this.getCurrentVideoSource(), this.duration = Number.isFinite(t.duration) ? L(t.duration) : 0, this.currentTime = L(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.isStalled = !1, this.lastDrawTime = this.timeSource.now(), this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
+    this.videoElement = t, this.containerElement = s, this.lastVideoSource = this.getCurrentVideoSource(), this.duration = Number.isFinite(t.duration) ? F(t.duration) : 0, this.currentTime = F(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.isStalled = !1, this.lastDrawTime = this.timeSource.now(), this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
     const n = this.createCanvasElement(), a = n.getContext("2d");
     if (!a)
       throw new Error("Failed to acquire 2D canvas context");
@@ -1402,7 +1402,7 @@ const at = 4e3, U = {
     }, r = () => {
       this.handleVideoMetadataLoaded(e);
     }, l = () => {
-      this.duration = Number.isFinite(e.duration) ? L(e.duration) : 0;
+      this.duration = Number.isFinite(e.duration) ? F(e.duration) : 0;
     }, c = () => {
       this.handleVideoSourceChange();
     }, d = () => {
@@ -1428,7 +1428,7 @@ const at = 4e3, U = {
     a.isActive && (a.lastUpdateTime = this.timeSource.now());
   });
 }, $i = function() {
-  this.isStalled && (this.isStalled = !1, this.videoElement && (this.currentTime = L(this.videoElement.currentTime), this.isPlaying = !this.videoElement.paused), this.lastDrawTime = this.timeSource.now());
+  this.isStalled && (this.isStalled = !1, this.videoElement && (this.currentTime = F(this.videoElement.currentTime), this.isPlaying = !this.videoElement.paused), this.lastDrawTime = this.timeSource.now());
 }, Bi = function(e) {
   const t = e ?? this.videoElement;
   if (!t) {
@@ -1438,7 +1438,7 @@ const at = 4e3, U = {
   const i = this.getCurrentVideoSource();
   i !== this.lastVideoSource && (this.lastVideoSource = i, this.incrementEpoch("source-change"), this.syncVideoState(t), this.resetFinalPhaseState(), this.resetCommentActivity(), this.emitStateSnapshot("source-change"));
 }, Xi = function(e) {
-  this.duration = Number.isFinite(e.duration) ? L(e.duration) : 0, this.currentTime = L(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.isStalled = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.lastDrawTime = this.timeSource.now();
+  this.duration = Number.isFinite(e.duration) ? F(e.duration) : 0, this.currentTime = F(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.isStalled = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.lastDrawTime = this.timeSource.now();
 }, Gi = function() {
   const e = this.timeSource.now(), t = this.canvas, i = this.ctx;
   if (this.resetFinalPhaseState(), this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, t && i) {
@@ -1536,7 +1536,7 @@ const at = 4e3, U = {
   document.addEventListener("visibilitychange", e), this.addCleanup(() => document.removeEventListener("visibilitychange", e)), document.visibilityState !== "visible" && this.stopAnimation();
 }, Ji = function() {
   const e = this.canvas, t = this.ctx, i = this.videoElement;
-  !e || !t || !i || (this.currentTime = L(i.currentTime), this.lastDrawTime = this.timeSource.now(), this.isPlaying = !i.paused, this.isStalled = !1, this.pendingInitialSync = !0, this.resetFinalPhaseState(), this.updatePlaybackProgressState(), this.draw());
+  !e || !t || !i || (this.currentTime = F(i.currentTime), this.lastDrawTime = this.timeSource.now(), this.isPlaying = !i.paused, this.isStalled = !1, this.pendingInitialSync = !0, this.resetFinalPhaseState(), this.updatePlaybackProgressState(), this.draw());
 }, ji = (e) => {
   e.prototype.setupVisibilityHandling = Ki, e.prototype.handleVisibilityRestore = Ji;
 }, Zi = function(e, t) {
@@ -1716,7 +1716,7 @@ class x {
     this._settings = G(s), this.timeSource = n.timeSource ?? ve(), this.animationFrameProvider = n.animationFrameProvider ?? yt(this.timeSource), this.createCanvasElement = n.createCanvasElement ?? Ct(), this.commentDependencies = {
       timeSource: this.timeSource,
       settingsVersion: this.settingsVersion
-    }, this.log = ge(n.loggerNamespace ?? "CommentRenderer"), this.eventHooks = n.eventHooks ?? {}, this.rebuildNgMatchers(), n.debug && Ye(n.debug);
+    }, this.log = ge(n.loggerNamespace ?? "CommentRenderer"), this.eventHooks = n.eventHooks ?? {}, this.handleAnimationFrame = this.handleAnimationFrame.bind(this), this.handleVideoFrame = this.handleVideoFrame.bind(this), this.rebuildNgMatchers(), n.debug && Ye(n.debug);
   }
   get settings() {
     return this._settings;

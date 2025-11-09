@@ -282,6 +282,9 @@ export class CommentRenderer {
     this.log = createLogger(config.loggerNamespace ?? "CommentRenderer");
     this.eventHooks = config.eventHooks ?? {};
 
+    this.handleAnimationFrame = this.handleAnimationFrame.bind(this);
+    this.handleVideoFrame = this.handleVideoFrame.bind(this);
+
     this.rebuildNgMatchers();
 
     if (config.debug) {
