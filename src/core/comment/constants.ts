@@ -1,0 +1,3 @@
+export const STATIC_VISIBLE_DURATION_MS = 4_000;
+export const STATIC_COMMENT_SIDE_MARGIN_PX = 8;
+export const MIN_STATIC_FONT_SIZE_PX = 12;

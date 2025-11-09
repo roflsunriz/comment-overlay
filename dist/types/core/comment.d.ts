@@ -1,23 +1,9 @@
 import type { CommentLayoutCommand, RenderStyle, RendererSettings, ScrollDirection } from "../shared/types";
-export declare const STATIC_VISIBLE_DURATION_MS = 4000;
-export interface TimeSource {
-    now(): number;
-}
-export declare const createDefaultTimeSource: () => TimeSource;
-export interface CommentDependencies {
-    timeSource?: TimeSource;
-    settingsVersion?: number;
-}
-export interface CommentPrepareOptions {
-    visibleWidth: number;
-    virtualExtension: number;
-    maxVisibleDurationMs: number;
-    minVisibleDurationMs: number;
-    maxWidthRatio: number;
-    bufferRatio: number;
-    baseBufferPx: number;
-    entryBufferPx: number;
-}
+import { type TimeSource } from "./comment/time-source";
+import type { CommentDependencies, CommentPrepareOptions } from "./comment/types";
+export { STATIC_VISIBLE_DURATION_MS } from "./comment/constants";
+export { createDefaultTimeSource, type TimeSource } from "./comment/time-source";
+export type { CommentDependencies, CommentPrepareOptions } from "./comment/types";
 export declare class Comment {
     readonly text: string;
     readonly vposMs: number;
@@ -69,13 +55,8 @@ export declare class Comment {
     private textureCacheKey;
     constructor(text: string, vposMs: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
     prepare(ctx: CanvasRenderingContext2D, visibleWidth: number, canvasHeight: number, options: CommentPrepareOptions): void;
-    update(playbackRate?: number, isPaused?: boolean): void;
-    private generateTextureCacheKey;
-    private static cacheStats;
-    private static reportCacheStats;
-    private isOffscreenCanvasSupported;
-    private createTextureCanvas;
     draw(ctx: CanvasRenderingContext2D, interpolatedX?: number | null): void;
+    update(playbackRate?: number, isPaused?: boolean): void;
     syncWithSettings(settings: RendererSettings, settingsVersion?: number): void;
     getEffectiveColor(defaultColor: string): string;
     getEffectiveOpacity(defaultOpacity: number): number;
@@ -83,9 +64,12 @@ export declare class Comment {
     clearActivation(): void;
     hasStaticExpired(currentTimeMs: number): boolean;
     getDirectionSign(): -1 | 1;
+    getTimeSource(): TimeSource;
+    getTextureCacheKey(): string;
+    setTextureCacheKey(value: string): void;
+    getCachedTexture(): OffscreenCanvas | null;
+    setCachedTexture(texture: OffscreenCanvas | null): void;
+    resetTextureCache(): void;
     private applyScrollDirection;
-    private createSegmentDrawer;
-    private getOutlineOffsets;
-    private updateTextMetrics;
 }
 //# sourceMappingURL=comment.d.ts.map

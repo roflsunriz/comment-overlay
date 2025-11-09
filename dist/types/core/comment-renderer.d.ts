@@ -1,194 +1,159 @@
 import type { RendererSettings, CommentRendererEventHooks } from "../shared/types";
-import { Comment, type TimeSource } from "./comment";
-import type { DebugLoggingOptions } from "../shared/debug";
-export interface CommentRendererConfig {
-    loggerNamespace?: string;
-    timeSource?: TimeSource;
-    animationFrameProvider?: AnimationFrameProvider;
-    createCanvasElement?: () => HTMLCanvasElement;
-    debug?: DebugLoggingOptions;
-    eventHooks?: CommentRendererEventHooks;
-}
-export interface CommentRendererInitializeOptions {
-    video: HTMLVideoElement;
-    container?: HTMLElement | null;
-}
-export interface AnimationFrameProvider {
-    request(callback: FrameRequestCallback): ReturnType<typeof setTimeout>;
-    cancel(handle: ReturnType<typeof setTimeout>): void;
-}
-export declare const createDefaultAnimationFrameProvider: (timeSource: TimeSource) => AnimationFrameProvider;
+import { Comment, type CommentDependencies, type CommentPrepareOptions, type TimeSource } from "./comment";
+import { type Logger } from "../shared/logger";
+export { createDefaultAnimationFrameProvider } from "./comment-renderer/settings";
+import type { AnimationFrameProvider, CommentRendererConfig, CommentRendererInitializeOptions, LaneReservation, StaticLaneReservation, VideoFrameCallbackMetadataLike } from "./comment-renderer/types";
+export type { CommentRendererConfig, CommentRendererInitializeOptions, AnimationFrameProvider };
 export declare class CommentRenderer {
-    private _settings;
-    private readonly comments;
-    private readonly activeComments;
-    private readonly reservedLanes;
-    private readonly topStaticLaneReservations;
-    private readonly bottomStaticLaneReservations;
-    private readonly log;
-    private readonly timeSource;
-    private readonly animationFrameProvider;
-    private readonly createCanvasElement;
-    private readonly commentDependencies;
-    private settingsVersion;
-    private normalizedNgWords;
-    private compiledNgRegexps;
-    private canvas;
-    private ctx;
-    private videoElement;
-    private containerElement;
-    private fullscreenActive;
-    private laneCount;
-    private laneHeight;
-    private displayWidth;
-    private displayHeight;
-    private canvasDpr;
-    private currentTime;
-    private duration;
-    private playbackRate;
-    private isPlaying;
-    private isStalled;
-    private lastDrawTime;
-    private finalPhaseActive;
-    private finalPhaseStartTime;
-    private finalPhaseScheduleDirty;
-    private playbackHasBegun;
-    private skipDrawingForCurrentFrame;
-    private pendingInitialSync;
-    private readonly finalPhaseVposOverrides;
-    private frameId;
-    private videoFrameHandle;
-    private resizeObserver;
-    private resizeObserverTarget;
-    private readonly isResizeObserverAvailable;
-    private readonly cleanupTasks;
-    private commentSequence;
-    private epochId;
-    private readonly eventHooks;
-    private lastSnapshotEmitTime;
-    private readonly snapshotEmitThrottleMs;
-    private lastPlayResumeTime;
-    private readonly playResumeSeekIgnoreDurationMs;
-    private lastVideoSource;
+    _settings: RendererSettings;
+    readonly comments: Comment[];
+    readonly activeComments: Set<Comment>;
+    readonly reservedLanes: Map<number, LaneReservation[]>;
+    readonly topStaticLaneReservations: StaticLaneReservation[];
+    readonly bottomStaticLaneReservations: StaticLaneReservation[];
+    readonly log: Logger;
+    readonly timeSource: TimeSource;
+    readonly animationFrameProvider: AnimationFrameProvider;
+    readonly createCanvasElement: () => HTMLCanvasElement;
+    readonly commentDependencies: CommentDependencies;
+    settingsVersion: number;
+    normalizedNgWords: string[];
+    compiledNgRegexps: RegExp[];
+    canvas: HTMLCanvasElement | null;
+    ctx: CanvasRenderingContext2D | null;
+    videoElement: HTMLVideoElement | null;
+    containerElement: HTMLElement | null;
+    fullscreenActive: boolean;
+    laneCount: number;
+    laneHeight: number;
+    displayWidth: number;
+    displayHeight: number;
+    canvasDpr: number;
+    currentTime: number;
+    duration: number;
+    playbackRate: number;
+    isPlaying: boolean;
+    isStalled: boolean;
+    lastDrawTime: number;
+    finalPhaseActive: boolean;
+    finalPhaseStartTime: number | null;
+    finalPhaseScheduleDirty: boolean;
+    playbackHasBegun: boolean;
+    skipDrawingForCurrentFrame: boolean;
+    pendingInitialSync: boolean;
+    readonly finalPhaseVposOverrides: Map<Comment, number>;
+    frameId: ReturnType<typeof setTimeout> | null;
+    videoFrameHandle: number | null;
+    resizeObserver: ResizeObserver | null;
+    resizeObserverTarget: Element | null;
+    readonly isResizeObserverAvailable: boolean;
+    readonly cleanupTasks: Array<() => void>;
+    commentSequence: number;
+    epochId: number;
+    readonly eventHooks: CommentRendererEventHooks;
+    lastSnapshotEmitTime: number;
+    readonly snapshotEmitThrottleMs = 1000;
+    lastPlayResumeTime: number;
+    readonly playResumeSeekIgnoreDurationMs = 500;
+    lastVideoSource: string | null;
+    initialize: (options: HTMLVideoElement | CommentRendererInitializeOptions) => void;
+    destroy: () => void;
+    destroyCanvasOnly: () => void;
+    resolveContainer: (explicit: HTMLElement | null | undefined, video: HTMLVideoElement) => HTMLElement;
+    ensureContainerPositioning: (container: HTMLElement) => void;
+    resize: (width?: number, height?: number) => void;
+    resolveDevicePixelRatio: () => number;
+    calculateLaneMetrics: () => void;
+    setupResizeHandling: (videoElement: HTMLVideoElement) => void;
+    cleanupResizeHandling: () => void;
+    setupVideoEventListeners: (videoElement: HTMLVideoElement) => void;
+    handleVideoMetadataLoaded: (videoElement: HTMLVideoElement) => void;
+    handleVideoStalled: () => void;
+    handleVideoCanPlay: () => void;
+    handleVideoSourceChange: (videoElement?: HTMLVideoElement | null) => void;
+    syncVideoState: (videoElement: HTMLVideoElement) => void;
+    resetCommentActivity: () => void;
+    setupVideoChangeDetection: (video: HTMLVideoElement, container: HTMLElement) => void;
+    extractVideoElement: (node: Node) => HTMLVideoElement | null;
+    setupVisibilityHandling: () => void;
+    handleVisibilityRestore: () => void;
+    setupFullscreenHandling: () => void;
+    resolveResizeObserverTarget: (videoElement: HTMLVideoElement) => Element;
+    handleFullscreenChange: () => Promise<void>;
+    resolveFullscreenContainer: (videoElement: HTMLVideoElement) => HTMLElement | null;
+    resolveActiveOverlayContainer: (videoElement: HTMLVideoElement, baseContainer: HTMLElement | null, fullscreenElement: Element | null) => HTMLElement | null;
+    getFullscreenElement: () => Element | null;
+    addCleanup: (task: () => void) => void;
+    runCleanupTasks: () => void;
+    rebuildNgMatchers: () => void;
+    isNGComment: (text: string) => boolean;
+    addComments: (entries: ReadonlyArray<{
+        text: string;
+        vposMs: number;
+        commands?: string[];
+    }>) => Comment[];
+    addComment: (text: string, vposMs: number, commands?: string[]) => Comment | null;
+    clearComments: () => void;
+    resetState: () => void;
+    hardReset: () => void;
+    resetFinalPhaseState: () => void;
+    incrementEpoch: (reason: "source-change" | "metadata-loaded" | "manual-reset") => void;
+    emitStateSnapshot: (label: string) => void;
+    getEffectiveCommentVpos: (comment: Comment) => number;
+    getFinalPhaseDisplayDuration: (comment: Comment) => number;
+    resolveFinalPhaseVpos: (comment: Comment) => number;
+    recomputeFinalPhaseTimeline: () => void;
+    shouldSuppressRendering: () => boolean;
+    updatePlaybackProgressState: () => void;
+    updateComments: (frameTimeMs?: number) => void;
+    buildPrepareOptions: (visibleWidth: number) => CommentPrepareOptions;
+    findAvailableLane: (comment: Comment) => number;
+    findFirstValidReservationIndex: (reservations: LaneReservation[], cutoffTime: number) => number;
+    pruneLaneReservations: (currentTime: number) => void;
+    pruneStaticLaneReservations: (currentTime: number) => void;
+    findCommentIndexAtOrAfter: (targetVposMs: number) => number;
+    getCommentsInTimeWindow: (centerTimeMs: number, windowMs: number) => Comment[];
+    getStaticReservations: (position: "ue" | "shita") => StaticLaneReservation[];
+    getStaticLaneDepth: (position: "ue" | "shita") => number;
+    getStaticLaneLimit: (position: "ue" | "shita") => number;
+    getGlobalLaneIndexForBottom: (localIndex: number) => number;
+    resolveStaticCommentOffset: (position: "ue" | "shita", lane: number, displayHeight: number, comment: Comment) => number;
+    getStaticReservedLaneSet: () => Set<number>;
+    shouldActivateCommentAtTime: (comment: Comment, timeMs: number, preview?: string) => boolean;
+    activateComment: (comment: Comment, context: CanvasRenderingContext2D, displayWidth: number, displayHeight: number, options: CommentPrepareOptions, referenceTime: number) => void;
+    assignStaticLane: (position: "ue" | "shita", comment: Comment, displayHeight: number, currentTime: number) => number;
+    reserveStaticLane: (position: "ue" | "shita", comment: Comment, lane: number, releaseTime: number) => void;
+    releaseStaticLane: (position: "ue" | "shita", lane: number) => void;
+    getLanePriorityOrder: (currentTime: number) => number[];
+    getLaneNextAvailableTime: (lane: number, currentTime: number) => number;
+    createLaneReservation: (comment: Comment, referenceTime: number) => LaneReservation;
+    isLaneAvailable: (lane: number, candidate: LaneReservation, currentTime: number) => boolean;
+    storeLaneReservation: (lane: number, reservation: LaneReservation) => void;
+    areReservationsConflicting: (a: LaneReservation, b: LaneReservation) => boolean;
+    computeForwardGap: (from: LaneReservation, to: LaneReservation, time: number) => number;
+    getBufferedEdges: (reservation: LaneReservation, time: number) => {
+        left: number;
+        right: number;
+    };
+    solveLeftRightEqualityTime: (left: LaneReservation, right: LaneReservation) => number | null;
+    draw: () => void;
+    performInitialSync: (frameTimeMs?: number) => void;
+    processFrame: (frameTimeMs?: number) => void;
+    handleAnimationFrame: () => void;
+    handleVideoFrame: (now: DOMHighResTimeStamp, metadata: VideoFrameCallbackMetadataLike) => void;
+    shouldUseVideoFrameCallback: () => boolean;
+    scheduleNextFrame: () => void;
+    cancelAnimationFrameRequest: () => void;
+    cancelVideoFrameCallback: () => void;
+    startAnimation: () => void;
+    stopAnimation: () => void;
+    onSeek: () => void;
     constructor(settings: RendererSettings | null, config?: CommentRendererConfig);
     constructor(config?: CommentRendererConfig);
     get settings(): RendererSettings;
     set settings(value: RendererSettings);
-    private resolveContainer;
-    private ensureContainerPositioning;
-    initialize(options: HTMLVideoElement | CommentRendererInitializeOptions): void;
-    addComments(entries: ReadonlyArray<{
-        text: string;
-        vposMs: number;
-        commands?: string[];
-    }>): Comment[];
-    addComment(text: string, vposMs: number, commands?: string[]): Comment | null;
-    clearComments(): void;
-    resetState(): void;
-    destroy(): void;
-    /**
-     * 前エポックのゴーストコメントを強制掃除し、次のフレームで絶対時間同期を行う
-     * 動画ロード直後の初期化やソース変更時に使用
-     */
-    hardReset(): void;
-    private resetFinalPhaseState;
-    /**
-     * エポックIDを更新し、イベントを発火する
-     */
-    private incrementEpoch;
-    /**
-     * 状態スナップショットを生成してイベントを発火する
-     */
-    private emitStateSnapshot;
-    private getEffectiveCommentVpos;
-    private getFinalPhaseDisplayDuration;
-    private resolveFinalPhaseVpos;
-    private recomputeFinalPhaseTimeline;
-    private shouldSuppressRendering;
-    private updatePlaybackProgressState;
-    updateSettings(newSettings: RendererSettings): void;
     getVideoElement(): HTMLVideoElement | null;
     getCurrentVideoSource(): string | null;
     getCommentsSnapshot(): Comment[];
-    private rebuildNgMatchers;
-    isNGComment(text: string): boolean;
-    resize(width?: number, height?: number): void;
-    private resolveDevicePixelRatio;
-    private destroyCanvasOnly;
-    private calculateLaneMetrics;
-    private updateComments;
-    private buildPrepareOptions;
-    private findAvailableLane;
-    /**
-     * 二分探索で、指定した時刻より後に終了する最初の予約のインデックスを返す
-     */
-    private findFirstValidReservationIndex;
-    private pruneLaneReservations;
-    private pruneStaticLaneReservations;
-    /**
-     * 二分探索で、指定した時刻以上の最初のコメントのインデックスを返す
-     */
-    private findCommentIndexAtOrAfter;
-    /**
-     * 指定した時刻範囲内のコメントのみを返す
-     */
-    private getCommentsInTimeWindow;
-    private getStaticReservations;
-    private getStaticLaneDepth;
-    private getStaticLaneLimit;
-    private getGlobalLaneIndexForBottom;
-    private resolveStaticCommentOffset;
-    private getStaticReservedLaneSet;
-    private shouldActivateCommentAtTime;
-    private activateComment;
-    private assignStaticLane;
-    private reserveStaticLane;
-    private releaseStaticLane;
-    private getLanePriorityOrder;
-    private getLaneNextAvailableTime;
-    private createLaneReservation;
-    private isLaneAvailable;
-    private storeLaneReservation;
-    private areReservationsConflicting;
-    private computeForwardGap;
-    private getBufferedEdges;
-    private solveLeftRightEqualityTime;
-    private draw;
-    /**
-     * 初回フレームで絶対時間同期を実行
-     * 相対進行（dt積分）で初期区間を駆け抜けないようにする
-     */
-    private performInitialSync;
-    private processFrame;
-    private readonly handleAnimationFrame;
-    private readonly handleVideoFrame;
-    private shouldUseVideoFrameCallback;
-    private scheduleNextFrame;
-    private cancelAnimationFrameRequest;
-    private cancelVideoFrameCallback;
-    private startAnimation;
-    private stopAnimation;
-    private onSeek;
-    private setupVideoEventListeners;
-    private handleVideoMetadataLoaded;
-    private handleVideoStalled;
-    private handleVideoCanPlay;
-    private handleVideoSourceChange;
-    private syncVideoState;
-    private resetCommentActivity;
-    private setupVideoChangeDetection;
-    private extractVideoElement;
-    private setupVisibilityHandling;
-    private handleVisibilityRestore;
-    private setupResizeHandling;
-    private cleanupResizeHandling;
-    private setupFullscreenHandling;
-    private resolveResizeObserverTarget;
-    private handleFullscreenChange;
-    private resolveFullscreenContainer;
-    private resolveActiveOverlayContainer;
-    private getFullscreenElement;
-    private addCleanup;
-    private runCleanupTasks;
 }
 //# sourceMappingURL=comment-renderer.d.ts.map

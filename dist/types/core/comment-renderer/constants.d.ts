@@ -1,0 +1,24 @@
+export declare const toMilliseconds: (seconds: number) => number;
+export declare const sanitizeVposMs: (value: number) => number | null;
+export declare const MAX_VISIBLE_DURATION_MS = 4000;
+export declare const MIN_VISIBLE_DURATION_MS = 1800;
+export declare const MAX_COMMENT_WIDTH_RATIO = 3;
+export declare const COLLISION_BUFFER_RATIO = 0.25;
+export declare const BASE_COLLISION_BUFFER_PX = 32;
+export declare const ENTRY_BUFFER_PX = 48;
+export declare const RESERVATION_TIME_MARGIN_MS = 120;
+export declare const FINAL_PHASE_THRESHOLD_MS = 4000;
+export declare const FINAL_PHASE_MIN_GAP_MS = 120;
+export declare const FINAL_PHASE_MAX_GAP_MS = 800;
+export declare const FINAL_PHASE_ORDER_EPSILON_MS = 2;
+export declare const FINAL_PHASE_MIN_WINDOW_MS = 4000;
+export declare const ACTIVE_WINDOW_MS: number;
+export declare const VIRTUAL_CANVAS_EXTENSION_PX = 1000;
+export declare const MIN_LANE_COUNT = 1;
+export declare const DEFAULT_LANE_COUNT = 12;
+export declare const MIN_FONT_SIZE_PX = 24;
+export declare const EDGE_EPSILON = 0.001;
+export declare const SEEK_DIRECTION_EPSILON_MS = 50;
+export declare const STATIC_COMMENT_VERTICAL_PADDING_RATIO = 0.05;
+export declare const STATIC_COMMENT_MIN_VERTICAL_PADDING_PX = 10;
+//# sourceMappingURL=constants.d.ts.map
