@@ -180,6 +180,7 @@ const activateCommentImpl = function (
     comment.visibleDurationMs = STATIC_VISIBLE_DURATION_MS;
     const displayEnd = referenceTime + comment.visibleDurationMs;
     this.activeComments.add(comment);
+    comment.isActive = true;
     comment.hasShown = true;
     comment.isPaused = !this.isPlaying;
     comment.markActivated(referenceTime);
