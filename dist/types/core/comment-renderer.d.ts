@@ -85,7 +85,7 @@ export declare class CommentRenderer {
     getFullscreenElement: () => Element | null;
     addCleanup: (task: () => void) => void;
     runCleanupTasks: () => void;
-    rebuildNgMatchers: () => void;
+    rebuildNgMatchers(): void;
     isNGComment: (text: string) => boolean;
     addComments: (entries: ReadonlyArray<{
         text: string;

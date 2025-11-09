@@ -25,7 +25,10 @@ import type {
   VideoFrameCallbackMetadataLike,
 } from "./comment-renderer/types";
 import { DEFAULT_LANE_COUNT } from "./comment-renderer/constants";
-import { registerCommentCollectionMethods } from "./comment-renderer/methods/comments";
+import {
+  rebuildNgMatchersImpl,
+  registerCommentCollectionMethods,
+} from "./comment-renderer/methods/comments";
 import { registerFinalPhaseMethods } from "./comment-renderer/methods/final-phase";
 import { registerPlaybackHelpers } from "./comment-renderer/methods/playback";
 import { registerActivationMethods } from "./comment-renderer/methods/activation";
@@ -133,7 +136,9 @@ export class CommentRenderer {
   public getFullscreenElement!: () => Element | null;
   public addCleanup!: (task: () => void) => void;
   public runCleanupTasks!: () => void;
-  public rebuildNgMatchers!: () => void;
+  public rebuildNgMatchers(): void {
+    rebuildNgMatchersImpl.call(this);
+  }
   public isNGComment!: (text: string) => boolean;
   public addComments!: (
     entries: ReadonlyArray<{ text: string; vposMs: number; commands?: string[] }>,

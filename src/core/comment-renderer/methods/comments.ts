@@ -114,7 +114,7 @@ const resetStateImpl = function (this: CommentRenderer): void {
   this.pendingInitialSync = false;
 };
 
-const rebuildNgMatchersImpl = function (this: CommentRenderer): void {
+export const rebuildNgMatchersImpl = function (this: CommentRenderer): void {
   const settings = this._settings;
   const ngWords = Array.isArray(settings.ngWords) ? settings.ngWords : [];
   this.normalizedNgWords = ngWords.filter((word): word is string => typeof word === "string");

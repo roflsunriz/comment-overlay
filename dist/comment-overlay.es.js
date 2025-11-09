@@ -1,8 +1,8 @@
-const Te = {
+const we = {
   small: 0.8,
   medium: 1,
   big: 1.4
-}, we = {
+}, Le = {
   defont: '"MS PGothic","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro","Yu Gothic UI","Yu Gothic","Meiryo","Segoe UI","Osaka","Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","IPAPGothic","TakaoPGothic","Roboto","Helvetica Neue","Helvetica","Arial","sans-serif"',
   gothic: '"Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","Yu Gothic","Yu Gothic Medium","Meiryo","MS PGothic","Hiragino Kaku Gothic ProN","Segoe UI","Helvetica","Arial","sans-serif"',
   mincho: '"MS PMincho","MS Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","Noto Serif CJK JP","Noto Serif JP","Source Han Serif JP","Times New Roman","serif"'
@@ -27,16 +27,16 @@ const Te = {
   blue2: "#39F",
   purple2: "#63C",
   black2: "#666"
-}, ee = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, Le = /^[,.:;]+/, Ie = /[,.:;]+$/, Pe = (e) => {
+}, ee = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i, Ie = /^[,.:;]+/, Pe = /[,.:;]+$/, Fe = (e) => {
   const t = e.trim();
-  return t ? ee.test(t) ? t : t.replace(Le, "").replace(Ie, "") : "";
-}, Fe = (e) => ee.test(e) ? e.toUpperCase() : null, fe = (e) => {
+  return t ? ee.test(t) ? t : t.replace(Ie, "").replace(Pe, "") : "";
+}, Ee = (e) => ee.test(e) ? e.toUpperCase() : null, fe = (e) => {
   const t = e.trim();
   if (!t)
     return null;
   const i = t.toLowerCase().endsWith("px") ? t.slice(0, -2) : t, s = Number.parseFloat(i);
   return Number.isFinite(s) ? s : null;
-}, Ee = (e) => {
+}, Re = (e) => {
   const t = e.trim();
   if (!t)
     return null;
@@ -45,33 +45,33 @@ const Te = {
     return Number.isFinite(i) ? i / 100 : null;
   }
   return fe(t);
-}, Re = (e) => Number.isFinite(e) ? Math.min(100, Math.max(-100, e)) : 0, Ae = (e) => !Number.isFinite(e) || e === 0 ? 1 : Math.min(5, Math.max(0.25, e)), De = (e) => e === "naka" || e === "ue" || e === "shita", Ve = (e) => e === "small" || e === "medium" || e === "big", Oe = (e) => e === "defont" || e === "gothic" || e === "mincho", ke = (e) => e in de, He = (e, t) => {
+}, Ae = (e) => Number.isFinite(e) ? Math.min(100, Math.max(-100, e)) : 0, De = (e) => !Number.isFinite(e) || e === 0 ? 1 : Math.min(5, Math.max(0.25, e)), Ve = (e) => e === "naka" || e === "ue" || e === "shita", Oe = (e) => e === "small" || e === "medium" || e === "big", ke = (e) => e === "defont" || e === "gothic" || e === "mincho", He = (e) => e in de, Ne = (e, t) => {
   let i = "naka", s = "medium", n = "defont", a = null, r = 1, l = null, c = !1, d = 0, u = 1;
   for (const g of e) {
-    const p = Pe(typeof g == "string" ? g : "");
+    const p = Fe(typeof g == "string" ? g : "");
     if (!p)
       continue;
     if (ee.test(p)) {
-      const S = Fe(p);
+      const S = Ee(p);
       if (S) {
         a = S;
         continue;
       }
     }
     const v = p.toLowerCase();
-    if (De(v)) {
+    if (Ve(v)) {
       i = v;
       continue;
     }
-    if (Ve(v)) {
+    if (Oe(v)) {
       s = v;
       continue;
     }
-    if (Oe(v)) {
+    if (ke(v)) {
       n = v;
       continue;
     }
-    if (ke(v)) {
+    if (He(v)) {
       a = de[v].toUpperCase();
       continue;
     }
@@ -87,15 +87,15 @@ const Te = {
       const S = p.indexOf(":");
       if (S >= 0) {
         const b = fe(p.slice(S + 1));
-        b !== null && (d = Re(b));
+        b !== null && (d = Ae(b));
       }
       continue;
     }
     if (v.startsWith("lh:") || v.startsWith("lineheight:")) {
       const S = p.indexOf(":");
       if (S >= 0) {
-        const b = Ee(p.slice(S + 1));
-        b !== null && (u = Ae(b));
+        const b = Re(p.slice(S + 1));
+        b !== null && (u = De(b));
       }
       continue;
     }
@@ -104,9 +104,9 @@ const Te = {
   return {
     layout: i,
     size: s,
-    sizeScale: Te[s],
+    sizeScale: we[s],
     font: n,
-    fontFamily: we[n],
+    fontFamily: Le[n],
     resolvedColor: f,
     colorOverride: a,
     opacityMultiplier: o,
@@ -115,8 +115,8 @@ const Te = {
     letterSpacing: d,
     lineHeight: u
   };
-}, Ne = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i, X = (e) => e.length === 1 ? e.repeat(2) : e, A = (e) => Number.parseInt(e, 16), P = (e) => !Number.isFinite(e) || e <= 0 ? 0 : e >= 1 ? 1 : e, pe = (e, t) => {
-  const i = Ne.exec(e);
+}, _e = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i, X = (e) => e.length === 1 ? e.repeat(2) : e, A = (e) => Number.parseInt(e, 16), P = (e) => !Number.isFinite(e) || e <= 0 ? 0 : e >= 1 ? 1 : e, pe = (e, t) => {
+  const i = _e.exec(e);
   if (!i)
     return e;
   const s = i[1];
@@ -124,14 +124,14 @@ const Te = {
   s.length === 3 || s.length === 4 ? (n = A(X(s[0])), a = A(X(s[1])), r = A(X(s[2])), s.length === 4 && (l = A(X(s[3])) / 255)) : (n = A(s.slice(0, 2)), a = A(s.slice(2, 4)), r = A(s.slice(4, 6)), s.length === 8 && (l = A(s.slice(6, 8)) / 255));
   const c = P(l * P(t));
   return `rgba(${n}, ${a}, ${r}, ${c})`;
-}, _e = () => ({
+}, ze = () => ({
   now: () => typeof performance < "u" && typeof performance.now == "function" ? performance.now() : Date.now()
-}), ve = () => _e(), V = 4e3, ae = 8, ze = 12, re = {
+}), ve = () => ze(), V = 4e3, ae = 8, We = 12, re = {
   debug: 0,
   info: 1,
   warn: 2,
   error: 3
-}, We = (e, t, i) => {
+}, $e = (e, t, i) => {
   const n = [`[${t}]`, ...i];
   switch (e) {
     case "debug":
@@ -150,7 +150,7 @@ const Te = {
       console.log(...n);
   }
 }, ge = (e, t = {}) => {
-  const { level: i = "info", emitter: s = We } = t, n = re[i], a = (r, l) => {
+  const { level: i = "info", emitter: s = $e } = t, n = re[i], a = (r, l) => {
     re[r] < n || s(r, e, l);
   };
   return {
@@ -159,18 +159,18 @@ const Te = {
     warn: (...r) => a("warn", r),
     error: (...r) => a("error", r)
   };
-}, te = ge("CommentEngine:Comment"), oe = /* @__PURE__ */ new WeakMap(), $e = (e) => {
+}, te = ge("CommentEngine:Comment"), oe = /* @__PURE__ */ new WeakMap(), Be = (e) => {
   let t = oe.get(e);
   return t || (t = /* @__PURE__ */ new Map(), oe.set(e, t)), t;
 }, Y = (e, t) => {
   if (!e)
     return 0;
-  const s = `${e.font ?? ""}::${t}`, n = $e(e), a = n.get(s);
+  const s = `${e.font ?? ""}::${t}`, n = Be(e), a = n.get(s);
   if (a !== void 0)
     return a;
   const r = e.measureText(t).width;
   return n.set(s, r), r;
-}, Be = (e) => {
+}, Xe = (e) => {
   if (e.includes(`
 `)) {
     const t = e.split(/\r?\n/);
@@ -192,7 +192,7 @@ const Te = {
   e.lineHeightPx = n;
   const a = e.lines.length > 1 ? (e.lines.length - 1) * n : 0;
   e.height = e.fontSize + a;
-}, Xe = (e, t, i, s, n) => {
+}, Ge = (e, t, i, s, n) => {
   try {
     if (!t)
       throw new Error("Canvas context is required");
@@ -201,13 +201,13 @@ const Te = {
     if (!n)
       throw new Error("Prepare options are required");
     const a = Math.max(i, 1), r = le(Math.floor(s * 0.05)), l = le(Math.floor(r * e.sizeScale));
-    e.fontSize = l, t.font = `${e.fontSize}px ${e.fontFamily}`, e.lines = Be(e.text), j(e, t);
+    e.fontSize = l, t.font = `${e.fontSize}px ${e.fontFamily}`, e.lines = Xe(e.text), j(e, t);
     const c = !e.isScrolling && (e.layout === "ue" || e.layout === "shita");
     if (c) {
       const I = Math.max(1, a - ae * 2);
       if (e.width > I) {
         const R = Math.max(
-          ze,
+          We,
           Math.min(e.fontSize, Math.floor(r * 0.6))
         ), J = I / Math.max(e.width, 1), _ = Math.max(
           R,
@@ -216,9 +216,9 @@ const Te = {
         _ < e.fontSize && (e.fontSize = _, t.font = `${e.fontSize}px ${e.fontFamily}`, j(e, t));
         let se = 0;
         for (; e.width > I && e.fontSize > R && se < 5; ) {
-          const xe = I / Math.max(e.width, 1), ne = Math.max(
+          const Te = I / Math.max(e.width, 1), ne = Math.max(
             R,
-            Math.floor(e.fontSize * Math.max(xe, 0.7))
+            Math.floor(e.fontSize * Math.max(Te, 0.7))
           );
           ne >= e.fontSize ? e.fontSize = Math.max(R, e.fontSize - 1) : e.fontSize = ne, t.font = `${e.fontSize}px ${e.fontFamily}`, j(e, t), se += 1;
         }
@@ -248,8 +248,8 @@ const Te = {
       e.preCollisionDurationMs,
       Math.ceil(N / B)
     );
-    const be = e.width + e.bufferWidth + o;
-    e.reservationWidth = Math.min(d, be), e.lastUpdateTime = e.getTimeSource().now(), e.isPaused = !1;
+    const xe = e.width + e.bufferWidth + o;
+    e.reservationWidth = Math.min(d, xe), e.lastUpdateTime = e.getTimeSource().now(), e.isPaused = !1;
   } catch (a) {
     throw te.error("Comment.prepare", a, {
       text: e.text,
@@ -261,21 +261,21 @@ const Te = {
 }, Q = 5, E = {
   enabled: !1,
   maxLogsPerCategory: Q
-}, z = /* @__PURE__ */ new Map(), Ge = (e) => {
+}, z = /* @__PURE__ */ new Map(), Ue = (e) => {
   if (e === void 0 || !Number.isFinite(e))
     return Q;
   const t = Math.max(1, Math.floor(e));
   return Math.min(1e4, t);
-}, Ue = (e) => {
-  E.enabled = !!e.enabled, E.maxLogsPerCategory = Ge(e.maxLogsPerCategory), E.enabled || z.clear();
+}, Ye = (e) => {
+  E.enabled = !!e.enabled, E.maxLogsPerCategory = Ue(e.maxLogsPerCategory), E.enabled || z.clear();
 }, ps = () => {
   z.clear();
-}, k = () => E.enabled, Ye = (e) => {
+}, k = () => E.enabled, qe = (e) => {
   const t = z.get(e) ?? 0;
   return t >= E.maxLogsPerCategory ? (t === E.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), z.set(e, t + 1)), !1) : (z.set(e, t + 1), !0);
 }, M = (e, ...t) => {
-  E.enabled && Ye(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
-}, $ = (e, t = 32) => e.length <= t ? e : `${e.slice(0, t)}…`, qe = (e, t) => {
+  E.enabled && qe(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
+}, $ = (e, t = 32) => e.length <= t ? e : `${e.slice(0, t)}…`, Ke = (e, t) => {
   E.enabled && (console.group(`[CommentOverlay][state-dump] ${e}`), console.table({
     "Current Time": `${t.currentTime.toFixed(2)}ms`,
     Duration: `${t.duration.toFixed(2)}ms`,
@@ -288,7 +288,7 @@ const Te = {
     "Playback Begun": t.playbackHasBegun,
     "Is Stalled": t.isStalled
   }), console.groupEnd());
-}, Ke = (e, t, i) => {
+}, Je = (e, t, i) => {
   E.enabled && M("epoch-change", `Epoch changed: ${e} → ${t} (reason: ${i})`);
 }, m = {
   hits: 0,
@@ -324,7 +324,7 @@ const Te = {
     `
   Avg Characters/Comment: ${s}`
   ), m.lastReported = e;
-}, Je = () => typeof OffscreenCanvas < "u", me = (e) => {
+}, je = () => typeof OffscreenCanvas < "u", me = (e) => {
   const t = Math.max(1, Math.round(e * 0.08)), i = [
     [-t, 0],
     [t, 0],
@@ -358,8 +358,8 @@ const Te = {
     const b = Y(i, S);
     p += b, v < h.length - 1 && (p += e.letterSpacing);
   }
-}, je = (e) => `v2::${e.text}::${e.fontSize}::${e.fontFamily}::${e.color}::${e.opacity}::${e.renderStyle}::${e.letterSpacing}::${e.lines.length}`, Ze = (e, t) => {
-  if (!Je())
+}, Ze = (e) => `v2::${e.text}::${e.fontSize}::${e.fontFamily}::${e.color}::${e.opacity}::${e.renderStyle}::${e.letterSpacing}::${e.lines.length}`, Qe = (e, t) => {
+  if (!je())
     return null;
   const i = Math.abs(e.letterSpacing) >= Number.EPSILON, s = e.lines.length > 1;
   i && m.letterSpacingComments++, s && m.multiLineComments++, !i && !s && m.normalComments++, m.totalCharactersDrawn += e.text.length;
@@ -416,7 +416,7 @@ const Te = {
   }
   const b = pe(e.color, d);
   return S(b), c.restore(), l;
-}, Qe = (e, t, i) => {
+}, et = (e, t, i) => {
   m.fallbacks++, t.save(), t.font = `${e.fontSize}px ${e.fontFamily}`;
   const s = P(e.opacity), n = i ?? e.x, a = e.lines.length > 0 ? e.lines : [e.text], r = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, l = e.y + e.fontSize, c = Se(e, t, t, "fallback", n), d = me(e.fontSize), u = () => {
     const h = P(s * 0.6);
@@ -467,14 +467,14 @@ const Te = {
   }
   const f = pe(e.color, s);
   o(f), t.restore();
-}, et = (e, t, i) => {
+}, tt = (e, t, i) => {
   try {
     if (!e.isActive || !t)
       return;
-    const s = je(e), n = e.getCachedTexture();
+    const s = Ze(e), n = e.getCachedTexture();
     if (e.getTextureCacheKey() !== s || !n) {
       m.misses++, m.creates++;
-      const r = Ze(e, t);
+      const r = Qe(e, t);
       e.setCachedTexture(r), e.setTextureCacheKey(s);
     } else
       m.hits++;
@@ -484,7 +484,7 @@ const Te = {
       t.drawImage(a, r - l, e.y - l), ce();
       return;
     }
-    Qe(e, t, i), ce();
+    et(e, t, i), ce();
   } catch (s) {
     te.error("Comment.draw", s, {
       text: e.text,
@@ -493,8 +493,8 @@ const Te = {
       interpolatedX: i
     });
   }
-}, tt = (e) => e === "ltr" ? "ltr" : "rtl", it = (e) => e === "ltr" ? 1 : -1;
-class st {
+}, it = (e) => e === "ltr" ? "ltr" : "rtl", st = (e) => e === "ltr" ? 1 : -1;
+class nt {
   text;
   vposMs;
   commands;
@@ -549,16 +549,16 @@ class st {
     if (!Number.isFinite(i) || i < 0)
       throw new Error("Comment vposMs must be a non-negative number");
     this.text = t, this.vposMs = i, this.commands = Array.isArray(s) ? [...s] : [];
-    const r = He(this.commands, {
+    const r = Ne(this.commands, {
       defaultColor: n.commentColor
     });
     this.layout = r.layout, this.isScrolling = this.layout === "naka", this.sizeScale = r.sizeScale, this.opacityMultiplier = r.opacityMultiplier, this.opacityOverride = r.opacityOverride, this.colorOverride = r.colorOverride, this.isInvisible = r.isInvisible, this.fontFamily = r.fontFamily, this.color = r.resolvedColor, this.opacity = this.getEffectiveOpacity(n.commentOpacity), this.renderStyle = n.renderStyle, this.letterSpacing = r.letterSpacing, this.lineHeightMultiplier = r.lineHeight, this.timeSource = a.timeSource ?? ve(), this.applyScrollDirection(n.scrollDirection), this.syncWithSettings(n, a.settingsVersion);
   }
   prepare(t, i, s, n) {
-    Xe(this, t, i, s, n);
+    Ge(this, t, i, s, n);
   }
   draw(t, i = null) {
-    et(this, t, i);
+    tt(this, t, i);
   }
   update(t = 1, i = !1) {
     try {
@@ -630,11 +630,11 @@ class st {
     this.cachedTexture = null, this.textureCacheKey = "";
   }
   applyScrollDirection(t) {
-    const i = tt(t);
-    this.scrollDirection = i, this.directionSign = it(i);
+    const i = it(t);
+    this.scrollDirection = i, this.directionSign = st(i);
   }
 }
-const nt = 4e3, U = {
+const at = 4e3, U = {
   commentColor: "#FFFFFF",
   commentOpacity: 1,
   isCommentVisible: !0,
@@ -644,29 +644,29 @@ const nt = 4e3, U = {
   scrollDirection: "rtl",
   renderStyle: "outline-only",
   syncMode: "raf",
-  scrollVisibleDurationMs: nt,
+  scrollVisibleDurationMs: at,
   useFixedLaneCount: !1,
   fixedLaneCount: 12,
   useDprScaling: !0
-}, vs = U, at = () => ({
+}, vs = U, rt = () => ({
   ...U,
   ngWords: [...U.ngWords],
   ngRegexps: [...U.ngRegexps]
-}), gs = "v2.5.1", F = (e) => e * 1e3, rt = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), ie = 4e3, he = 1800, ot = 3, lt = 0.25, ct = 32, ht = 48, q = 120, ut = 4e3, Z = 120, dt = 800, ft = 2, W = 4e3, O = V + ie, pt = 1e3, ue = 1, ye = 12, Ce = 24, T = 1e-3, D = 50, vt = 0.05, gt = 10, mt = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Me = (e) => Math.max(
-  gt,
-  Math.floor(e * vt)
+}), gs = "v2.5.1", F = (e) => e * 1e3, ot = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), ie = 4e3, he = 1800, lt = 3, ct = 0.25, ht = 32, ut = 48, q = 120, dt = 4e3, Z = 120, ft = 800, pt = 2, W = 4e3, O = V + ie, vt = 1e3, ue = 1, ye = 12, Ce = 24, T = 1e-3, D = 50, gt = 0.05, mt = 10, St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Me = (e) => Math.max(
+  mt,
+  Math.floor(e * gt)
 ), G = (e) => {
   const t = e.scrollVisibleDurationMs, i = t == null ? null : Number.isFinite(t) ? Math.max(1, Math.floor(t)) : null;
   return {
     ...e,
     scrollDirection: e.scrollDirection === "ltr" ? "ltr" : "rtl",
-    commentOpacity: mt(e.commentOpacity),
+    commentOpacity: St(e.commentOpacity),
     renderStyle: e.renderStyle === "classic" ? "classic" : "outline-only",
     scrollVisibleDurationMs: i,
     syncMode: e.syncMode === "video-frame" ? "video-frame" : "raf",
     useDprScaling: !!e.useDprScaling
   };
-}, St = (e) => typeof window < "u" && typeof window.requestAnimationFrame == "function" && typeof window.cancelAnimationFrame == "function" ? {
+}, yt = (e) => typeof window < "u" && typeof window.requestAnimationFrame == "function" && typeof window.cancelAnimationFrame == "function" ? {
   request: (t) => window.requestAnimationFrame(t),
   cancel: (t) => window.cancelAnimationFrame(t)
 } : {
@@ -676,16 +676,16 @@ const nt = 4e3, U = {
   cancel: (t) => {
     globalThis.clearTimeout(t);
   }
-}, yt = () => typeof document > "u" ? () => {
+}, Ct = () => typeof document > "u" ? () => {
   throw new Error(
     "Document is not available. Provide a custom createCanvasElement implementation."
   );
-} : () => document.createElement("canvas"), Ct = (e) => {
+} : () => document.createElement("canvas"), Mt = (e) => {
   if (!e || typeof e != "object")
     return !1;
   const t = e;
   return typeof t.commentColor == "string" && typeof t.commentOpacity == "number" && typeof t.isCommentVisible == "boolean";
-}, Mt = function(e) {
+}, bt = function(e) {
   if (!Array.isArray(e) || e.length === 0)
     return [];
   const t = [];
@@ -696,7 +696,7 @@ const nt = 4e3, U = {
       M("comment-skip-ng", { preview: r, vposMs: n });
       continue;
     }
-    const l = rt(n);
+    const l = ot(n);
     if (l === null) {
       this.log.warn("CommentRenderer.addComment.invalidVpos", { text: s, vposMs: n }), M("comment-skip-invalid-vpos", { preview: r, vposMs: n });
       continue;
@@ -707,7 +707,7 @@ const nt = 4e3, U = {
       M("comment-skip-duplicate", { preview: r, vposMs: l });
       continue;
     }
-    const d = new st(
+    const d = new nt(
       s,
       l,
       a,
@@ -727,17 +727,17 @@ const nt = 4e3, U = {
     const n = i.vposMs - s.vposMs;
     return Math.abs(n) > T ? n : i.creationIndex - s.creationIndex;
   }), t);
-}, bt = function(e, t, i = []) {
+}, xt = function(e, t, i = []) {
   const [s] = this.addComments([{ text: e, vposMs: t, commands: i }]);
   return s ?? null;
-}, xt = function() {
+}, Tt = function() {
   if (this.comments.length = 0, this.activeComments.clear(), this.reservedLanes.clear(), this.topStaticLaneReservations.length = 0, this.bottomStaticLaneReservations.length = 0, this.commentSequence = 0, this.ctx && this.canvas) {
     const e = this.canvasDpr > 0 ? this.canvasDpr : 1, t = this.displayWidth > 0 ? this.displayWidth : this.canvas.width / e, i = this.displayHeight > 0 ? this.displayHeight : this.canvas.height / e;
     this.ctx.clearRect(0, 0, t, i);
   }
-}, Tt = function() {
-  this.clearComments(), this.currentTime = 0, this.resetFinalPhaseState(), this.playbackHasBegun = !1, this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1;
 }, wt = function() {
+  this.clearComments(), this.currentTime = 0, this.resetFinalPhaseState(), this.playbackHasBegun = !1, this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1;
+}, be = function() {
   const e = this._settings, t = Array.isArray(e.ngWords) ? e.ngWords : [];
   this.normalizedNgWords = t.filter((s) => typeof s == "string");
   const i = Array.isArray(e.ngRegexps) ? e.ngRegexps : [];
@@ -753,7 +753,7 @@ const nt = 4e3, U = {
 }, Lt = function(e) {
   return typeof e != "string" || e.length === 0 ? !1 : this.normalizedNgWords.some((t) => t.length > 0 && e.includes(t)) ? !0 : this.compiledNgRegexps.some((t) => t.test(e));
 }, It = (e) => {
-  e.prototype.addComments = Mt, e.prototype.addComment = bt, e.prototype.clearComments = xt, e.prototype.resetState = Tt, e.prototype.rebuildNgMatchers = wt, e.prototype.isNGComment = Lt;
+  e.prototype.addComments = bt, e.prototype.addComment = xt, e.prototype.clearComments = Tt, e.prototype.resetState = wt, e.prototype.rebuildNgMatchers = be, e.prototype.isNGComment = Lt;
 }, Pt = function() {
   const e = this.canvas, t = this.ctx;
   if (this.incrementEpoch("manual-reset"), this.activeComments.clear(), this.reservedLanes.clear(), this.topStaticLaneReservations.length = 0, this.bottomStaticLaneReservations.length = 0, this.comments.forEach((i) => {
@@ -767,7 +767,7 @@ const nt = 4e3, U = {
   this.finalPhaseActive = !1, this.finalPhaseStartTime = null, this.finalPhaseScheduleDirty = !1, this.finalPhaseVposOverrides.clear();
 }, Et = function(e) {
   const t = this.epochId;
-  if (this.epochId += 1, Ke(t, this.epochId, e), this.eventHooks.onEpochChange) {
+  if (this.epochId += 1, Je(t, this.epochId, e), this.eventHooks.onEpochChange) {
     const i = {
       previousEpochId: t,
       newEpochId: this.epochId,
@@ -799,7 +799,7 @@ const nt = 4e3, U = {
     playbackHasBegun: this.playbackHasBegun,
     isStalled: this.isStalled
   };
-  if (qe(e, i), this.eventHooks.onStateSnapshot)
+  if (Ke(e, i), this.eventHooks.onStateSnapshot)
     try {
       this.eventHooks.onStateSnapshot(i);
     } catch (s) {
@@ -835,13 +835,13 @@ const nt = 4e3, U = {
     this.finalPhaseScheduleDirty = !1;
     return;
   }
-  const a = Math.max(i - e, W) / Math.max(s.length, 1), r = Number.isFinite(a) ? a : Z, l = Math.max(Z, Math.min(r, dt));
+  const a = Math.max(i - e, W) / Math.max(s.length, 1), r = Number.isFinite(a) ? a : Z, l = Math.max(Z, Math.min(r, ft));
   let c = e;
   s.forEach((d, u) => {
     const o = Math.max(1, this.getFinalPhaseDisplayDuration(d)), f = i - o;
     let h = Math.max(e, Math.min(c, f));
     Number.isFinite(h) || (h = e);
-    const g = ft * u;
+    const g = pt * u;
     h + g <= f && (h += g), this.finalPhaseVposOverrides.set(d, h);
     const p = Math.max(Z, Math.min(o / 2, l));
     c = h + p;
@@ -861,7 +861,7 @@ const nt = 4e3, U = {
   const n = typeof e == "number" ? e : F(t.currentTime);
   if (this.currentTime = n, this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.updatePlaybackProgressState(), this.skipDrawingForCurrentFrame = this.shouldSuppressRendering(), this.skipDrawingForCurrentFrame)
     return;
-  const a = this.canvasDpr > 0 ? this.canvasDpr : 1, r = this.displayWidth > 0 ? this.displayWidth : i.width / a, l = this.displayHeight > 0 ? this.displayHeight : i.height / a, c = this.buildPrepareOptions(r), d = this.duration > 0 && this.duration - this.currentTime <= ut;
+  const a = this.canvasDpr > 0 ? this.canvasDpr : 1, r = this.displayWidth > 0 ? this.displayWidth : i.width / a, l = this.displayHeight > 0 ? this.displayHeight : i.height / a, c = this.buildPrepareOptions(r), d = this.duration > 0 && this.duration - this.currentTime <= dt;
   d && !this.finalPhaseActive && (this.finalPhaseActive = !0, this.finalPhaseStartTime = this.currentTime, this.finalPhaseVposOverrides.clear(), this.finalPhaseScheduleDirty = !0, s.clearRect(0, 0, r, l), this.comments.forEach((o) => {
     o.isActive = !1, o.clearActivation();
   }), this.activeComments.clear(), this.reservedLanes.clear(), this.topStaticLaneReservations.length = 0, this.bottomStaticLaneReservations.length = 0), !d && this.finalPhaseActive && this.resetFinalPhaseState(), this.finalPhaseActive && this.finalPhaseScheduleDirty && this.recomputeFinalPhaseTimeline(), this.pruneStaticLaneReservations(this.currentTime);
@@ -925,13 +925,13 @@ const nt = 4e3, U = {
   let i = ie, s = he;
   return t !== null && (i = t, s = Math.max(1, Math.min(t, he))), {
     visibleWidth: e,
-    virtualExtension: pt,
+    virtualExtension: vt,
     maxVisibleDurationMs: i,
     minVisibleDurationMs: s,
-    maxWidthRatio: ot,
-    bufferRatio: lt,
-    baseBufferPx: ct,
-    entryBufferPx: ht
+    maxWidthRatio: lt,
+    bufferRatio: ct,
+    baseBufferPx: ht,
+    entryBufferPx: ut
   };
 }, $t = function(e) {
   const t = this.currentTime;
@@ -1731,7 +1731,9 @@ class x {
   getFullscreenElement;
   addCleanup;
   runCleanupTasks;
-  rebuildNgMatchers;
+  rebuildNgMatchers() {
+    be.call(this);
+  }
   isNGComment;
   addComments;
   addComment;
@@ -1789,16 +1791,16 @@ class x {
   onSeek;
   constructor(t = null, i = void 0) {
     let s, n;
-    if (Ct(t))
+    if (Mt(t))
       s = G({ ...t }), n = i ?? {};
     else {
       const a = t ?? i ?? {};
-      n = typeof a == "object" ? a : {}, s = G(at());
+      n = typeof a == "object" ? a : {}, s = G(rt());
     }
-    this._settings = G(s), this.timeSource = n.timeSource ?? ve(), this.animationFrameProvider = n.animationFrameProvider ?? St(this.timeSource), this.createCanvasElement = n.createCanvasElement ?? yt(), this.commentDependencies = {
+    this._settings = G(s), this.timeSource = n.timeSource ?? ve(), this.animationFrameProvider = n.animationFrameProvider ?? yt(this.timeSource), this.createCanvasElement = n.createCanvasElement ?? Ct(), this.commentDependencies = {
       timeSource: this.timeSource,
       settingsVersion: this.settingsVersion
-    }, this.log = ge(n.loggerNamespace ?? "CommentRenderer"), this.eventHooks = n.eventHooks ?? {}, this.rebuildNgMatchers(), n.debug && Ue(n.debug);
+    }, this.log = ge(n.loggerNamespace ?? "CommentRenderer"), this.eventHooks = n.eventHooks ?? {}, this.rebuildNgMatchers(), n.debug && Ye(n.debug);
   }
   get settings() {
     return this._settings;
@@ -1843,18 +1845,18 @@ hs(x);
 fs(x);
 export {
   gs as COMMENT_OVERLAY_VERSION,
-  st as Comment,
+  nt as Comment,
   x as CommentRenderer,
   vs as DEFAULT_RENDERER_SETTINGS,
-  at as cloneDefaultSettings,
-  Ue as configureDebugLogging,
-  St as createDefaultAnimationFrameProvider,
+  rt as cloneDefaultSettings,
+  Ye as configureDebugLogging,
+  yt as createDefaultAnimationFrameProvider,
   ve as createDefaultTimeSource,
   ge as createLogger,
   M as debugLog,
-  qe as dumpRendererState,
+  Ke as dumpRendererState,
   k as isDebugLoggingEnabled,
-  Ke as logEpochChange,
+  Je as logEpochChange,
   ps as resetDebugCounters
 };
 //# sourceMappingURL=comment-overlay.es.js.map

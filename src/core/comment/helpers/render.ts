@@ -236,10 +236,10 @@ const createTextureCanvas = (
       offscreenCtx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
       offscreenCtx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
       offscreenCtx.fillStyle = "rgba(0, 0, 0, 0)";
-        linesToRender.forEach((line: string, index: number) => {
-          const baseline = baselineStart + index * lineAdvance;
-          drawSegment(line, baseline, "fill");
-        });
+      linesToRender.forEach((line: string, index: number) => {
+        const baseline = baselineStart + index * lineAdvance;
+        drawSegment(line, baseline, "fill");
+      });
       offscreenCtx.restore();
     });
   }
