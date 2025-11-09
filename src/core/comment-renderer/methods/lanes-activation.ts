@@ -155,7 +155,12 @@ const activateCommentImpl = function (
           ? comment.virtualStartX - displacement
           : comment.virtualStartX + displacement;
     }
-    comment.lane = this.findAvailableLane(comment);
+    const laneIndex = this.findAvailableLane(comment);
+    comment.lane = laneIndex;
+    const laneHeight = Math.max(1, this.laneHeight);
+    const maxY = Math.max(0, displayHeight - comment.height);
+    const laneY = laneIndex * laneHeight;
+    comment.y = Math.max(0, Math.min(laneY, maxY));
   } else {
     const staticPosition = comment.layout === "ue" ? "ue" : "shita";
     const laneIndex = this.assignStaticLane(staticPosition, comment, displayHeight, referenceTime);
