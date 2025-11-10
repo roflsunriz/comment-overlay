@@ -1,13 +1,4 @@
-export type LogLevel = "debug" | "info" | "warn" | "error";
-export interface Logger {
-    debug: (...messages: unknown[]) => void;
-    info: (...messages: unknown[]) => void;
-    warn: (...messages: unknown[]) => void;
-    error: (...messages: unknown[]) => void;
-}
-export interface LoggerOptions {
-    level?: LogLevel;
-    emitter?: (level: LogLevel, namespace: string, args: unknown[]) => void;
-}
+import type { Logger, LoggerOptions } from "@/shared/types";
 export declare const createLogger: (namespace: string, options?: LoggerOptions) => Logger;
+export type { LogLevel, Logger, LoggerOptions } from "@/shared/types";
 //# sourceMappingURL=logger.d.ts.map

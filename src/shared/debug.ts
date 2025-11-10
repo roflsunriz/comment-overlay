@@ -1,14 +1,7 @@
+import type { DebugLoggingOptions, DebugState } from "@/shared/types";
+export type { DebugLoggingOptions } from "@/shared/types";
+
 const DEFAULT_MAX_LOGS_PER_CATEGORY = 5;
-
-export interface DebugLoggingOptions {
-  readonly enabled: boolean;
-  readonly maxLogsPerCategory?: number;
-}
-
-type DebugState = {
-  enabled: boolean;
-  maxLogsPerCategory: number;
-};
 
 const state: DebugState = {
   enabled: false,

@@ -1,3 +1,28 @@
+import type { Comment } from "@/comment/comment";
+export type LogLevel = "debug" | "info" | "warn" | "error";
+export interface Logger {
+    debug: (...messages: unknown[]) => void;
+    info: (...messages: unknown[]) => void;
+    warn: (...messages: unknown[]) => void;
+    error: (...messages: unknown[]) => void;
+}
+export interface LoggerOptions {
+    level?: LogLevel;
+    emitter?: (level: LogLevel, namespace: string, args: unknown[]) => void;
+}
+export interface DebugLoggingOptions {
+    readonly enabled: boolean;
+    readonly maxLogsPerCategory?: number;
+}
+export interface DebugState {
+    enabled: boolean;
+    maxLogsPerCategory: number;
+}
+export interface TimeSource {
+    now(): number;
+}
+export type DrawMode = "fill" | "outline";
+export type TextMeasurementCache = Map<string, number>;
 export type ScrollDirection = "rtl" | "ltr";
 export type RenderStyle = "classic" | "outline-only";
 export type SyncMode = "raf" | "video-frame";
@@ -16,6 +41,9 @@ export interface RendererSettings {
     fixedLaneCount: number;
     useDprScaling: boolean;
 }
+export type ReadonlyRendererSettings = {
+    readonly [K in keyof RendererSettings]: RendererSettings[K] extends string | number | boolean | null | undefined ? RendererSettings[K] : ReadonlyArray<string>;
+};
 export type CommentLayoutCommand = "naka" | "ue" | "shita";
 export type CommentSizeCommand = "small" | "medium" | "big";
 export type CommentFontCommand = "defont" | "gothic" | "mincho";
@@ -78,5 +106,61 @@ export interface CommentRendererEventHooks {
     onEpochChange?: (info: EpochChangeInfo) => void;
     /** 状態スナップショットが更新されたときのコールバック（デバッグ用） */
     onStateSnapshot?: (snapshot: RendererStateSnapshot) => void;
+}
+export type CommentRendererLogger = (message: string, ...args: unknown[]) => void;
+export interface CommentRendererConfig {
+    loggerNamespace?: string;
+    timeSource?: TimeSource;
+    animationFrameProvider?: AnimationFrameProvider;
+    createCanvasElement?: () => HTMLCanvasElement;
+    debug?: DebugLoggingOptions;
+    eventHooks?: CommentRendererEventHooks;
+}
+export interface CommentRendererInitializeOptions {
+    video: HTMLVideoElement;
+    container?: HTMLElement | null;
+}
+export interface AnimationFrameProvider {
+    request(callback: FrameRequestCallback): ReturnType<typeof setTimeout>;
+    cancel(handle: ReturnType<typeof setTimeout>): void;
+}
+export type VideoFrameCallbackMetadataLike = {
+    readonly mediaTime?: number;
+};
+export type RequestVideoFrameCallback = (callback: (now: DOMHighResTimeStamp, metadata: VideoFrameCallbackMetadataLike) => void) => number;
+export type CancelVideoFrameCallback = (handle: number) => void;
+export interface LaneReservation {
+    comment: Comment;
+    startTime: number;
+    endTime: number;
+    totalEndTime: number;
+    startLeft: number;
+    width: number;
+    speed: number;
+    buffer: number;
+    directionSign: -1 | 1;
+}
+export interface StaticLaneReservation {
+    comment: Comment;
+    releaseTime: number;
+    yStart: number;
+    yEnd: number;
+    lane: number;
+}
+export type SnapshotEmitter = (info: RendererStateSnapshot) => void;
+export type EpochLogger = (info: EpochChangeInfo) => void;
+export interface CommentDependencies {
+    timeSource?: TimeSource;
+    settingsVersion?: number;
+}
+export interface CommentPrepareOptions {
+    visibleWidth: number;
+    virtualExtension: number;
+    maxVisibleDurationMs: number;
+    minVisibleDurationMs: number;
+    maxWidthRatio: number;
+    bufferRatio: number;
+    baseBufferPx: number;
+    entryBufferPx: number;
 }
 //# sourceMappingURL=types.d.ts.map

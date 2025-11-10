@@ -1,16 +1,4 @@
-export type LogLevel = "debug" | "info" | "warn" | "error";
-
-export interface Logger {
-  debug: (...messages: unknown[]) => void;
-  info: (...messages: unknown[]) => void;
-  warn: (...messages: unknown[]) => void;
-  error: (...messages: unknown[]) => void;
-}
-
-export interface LoggerOptions {
-  level?: LogLevel;
-  emitter?: (level: LogLevel, namespace: string, args: unknown[]) => void;
-}
+import type { LogLevel, Logger, LoggerOptions } from "@/shared/types";
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
@@ -58,3 +46,5 @@ export const createLogger = (namespace: string, options: LoggerOptions = {}): Lo
     error: (...messages: unknown[]) => emit("error", messages),
   };
 };
+
+export type { LogLevel, Logger, LoggerOptions } from "@/shared/types";

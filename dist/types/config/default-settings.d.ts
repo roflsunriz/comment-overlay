@@ -1,10 +1,6 @@
-import type { RendererSettings } from "../shared/types";
-type ReadonlySettings = {
-    readonly [K in keyof RendererSettings]: RendererSettings[K] extends string | number | boolean | null | undefined ? RendererSettings[K] : ReadonlyArray<string>;
-};
+import type { RendererSettings, ReadonlyRendererSettings } from "@/shared/types";
 export declare const NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS = 4000;
-export declare const DEFAULT_RENDERER_SETTINGS: ReadonlySettings;
+export declare const DEFAULT_RENDERER_SETTINGS: ReadonlyRendererSettings;
 export declare const cloneDefaultSettings: () => RendererSettings;
 export declare const COMMENT_OVERLAY_VERSION = "v2.5.1";
-export {};
 //# sourceMappingURL=default-settings.d.ts.map

@@ -1,7 +1,5 @@
-export interface DebugLoggingOptions {
-    readonly enabled: boolean;
-    readonly maxLogsPerCategory?: number;
-}
+import type { DebugLoggingOptions } from "@/shared/types";
+export type { DebugLoggingOptions } from "@/shared/types";
 export declare const configureDebugLogging: (options: DebugLoggingOptions) => void;
 export declare const resetDebugCounters: () => void;
 export declare const isDebugLoggingEnabled: () => boolean;

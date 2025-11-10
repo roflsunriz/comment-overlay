@@ -1,15 +1,4 @@
-import type { RendererSettings } from "../shared/types";
-
-type ReadonlySettings = {
-  readonly [K in keyof RendererSettings]: RendererSettings[K] extends
-    | string
-    | number
-    | boolean
-    | null
-    | undefined
-    ? RendererSettings[K]
-    : ReadonlyArray<string>;
-};
+import type { RendererSettings, ReadonlyRendererSettings } from "@/shared/types";
 
 export const NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS = 4_000;
 
@@ -29,7 +18,7 @@ const BASE_SETTINGS: RendererSettings = {
   useDprScaling: true,
 };
 
-export const DEFAULT_RENDERER_SETTINGS: ReadonlySettings = BASE_SETTINGS;
+export const DEFAULT_RENDERER_SETTINGS: ReadonlyRendererSettings = BASE_SETTINGS;
 
 export const cloneDefaultSettings = (): RendererSettings => ({
   ...BASE_SETTINGS,
