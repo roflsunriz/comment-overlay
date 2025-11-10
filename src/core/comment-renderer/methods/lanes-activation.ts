@@ -59,6 +59,18 @@ const shouldActivateCommentAtTimeImpl = function (
     }
     return false;
   }
+  if (comment.hasShown && effectiveVpos <= timeMs) {
+    if (debugActive) {
+      debugLog("comment-eval-skip", {
+        preview,
+        vposMs: comment.vposMs,
+        effectiveVposMs: effectiveVpos,
+        reason: "already-shown",
+        currentTime: timeMs,
+      });
+    }
+    return false;
+  }
   if (effectiveVpos > timeMs + SEEK_DIRECTION_EPSILON_MS) {
     if (debugActive) {
       debugLog("comment-eval-pending", {
