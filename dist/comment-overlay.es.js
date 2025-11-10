@@ -7,16 +7,16 @@ const we = {
   gothic: '"Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","Yu Gothic","Yu Gothic Medium","Meiryo","MS PGothic","Hiragino Kaku Gothic ProN","Segoe UI","Helvetica","Arial","sans-serif"',
   mincho: '"MS PMincho","MS Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","Noto Serif CJK JP","Noto Serif JP","Source Han Serif JP","Times New Roman","serif"'
 }, de = {
-  white: "#FFFFFF",
-  red: "#FF0000",
-  pink: "#FF8080",
-  orange: "#FF9900",
-  yellow: "#FFFF00",
-  green: "#00FF00",
-  cyan: "#00FFFF",
-  blue: "#0000FF",
-  purple: "#C000FF",
-  black: "#000000",
+  white: "#FFFFFC",
+  red: "#FF8888",
+  pink: "#FFA5CC",
+  orange: "#FFBA66",
+  yellow: "#FFFFAA",
+  green: "#88FF88",
+  cyan: "#88FFFF",
+  blue: "#8899FF",
+  purple: "#D9A5FF",
+  black: "#444444",
   white2: "#CC9",
   red2: "#C03",
   pink2: "#F3C",
@@ -241,7 +241,7 @@ const we = {
       const P = Math.min(S, n.maxWidthRatio), A = n.maxVisibleDurationMs / Math.max(P, 1);
       y = Math.max(n.minVisibleDurationMs, Math.floor(A));
     }
-    const T = a + e.width + e.bufferWidth + o, M = Math.max(y, 1), I = T / M, H = I * 1e3 / 60;
+    const T = a + e.width + e.bufferWidth + o, C = Math.max(y, 1), I = T / C, H = I * 1e3 / 60;
     e.baseSpeed = H, e.speed = e.baseSpeed, e.speedPixelsPerMs = I;
     const N = Math.abs(g - h), K = f === "rtl" ? Math.max(0, v - p) : Math.max(0, p - v), B = Math.max(I, Number.EPSILON);
     e.visibleDurationMs = y, e.preCollisionDurationMs = Math.max(0, Math.ceil(K / B)), e.totalDurationMs = Math.max(
@@ -273,7 +273,7 @@ const we = {
 }, k = () => L.enabled, at = (e) => {
   const t = W.get(e) ?? 0;
   return t >= L.maxLogsPerCategory ? (t === L.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), W.set(e, t + 1)), !1) : (W.set(e, t + 1), !0);
-}, C = (e, ...t) => {
+}, M = (e, ...t) => {
   L.enabled && at(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
 }, $ = (e, t = 32) => e.length <= t ? e : `${e.slice(0, t)}…`, rt = (e, t) => {
   L.enabled && (console.group(`[CommentOverlay][state-dump] ${e}`), console.table({
@@ -289,7 +289,7 @@ const we = {
     "Is Stalled": t.isStalled
   }), console.groupEnd());
 }, ot = (e, t, i) => {
-  L.enabled && C("epoch-change", `Epoch changed: ${e} → ${t} (reason: ${i})`);
+  L.enabled && M("epoch-change", `Epoch changed: ${e} → ${t} (reason: ${i})`);
 }, m = {
   hits: 0,
   misses: 0,
@@ -341,7 +341,7 @@ const we = {
     );
   }
   return i;
-}, Me = (e, t, i, s, n) => (a, r, l, c = 0) => {
+}, Ce = (e, t, i, s, n) => (a, r, l, c = 0) => {
   if (a.length === 0)
     return;
   const u = a.match(/^[\u3000\u00A0]+/), d = u ? u[0].length : 0, o = d > 0 ? q(i, u[0]) : 0, f = n + o + c, h = d > 0 ? a.substring(d) : a, g = () => {
@@ -367,18 +367,18 @@ const we = {
   if (!c)
     return null;
   c.save(), c.font = `${e.fontSize}px ${e.fontFamily}`;
-  const u = E(e.opacity), d = n, o = e.lines.length > 0 ? e.lines : [e.text], f = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, h = n + e.fontSize, g = Me(e, c, t, "cache", d), p = ye(e.fontSize), v = () => {
+  const u = E(e.opacity), d = n, o = e.lines.length > 0 ? e.lines : [e.text], f = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, h = n + e.fontSize, g = Ce(e, c, t, "cache", d), p = ye(e.fontSize), v = () => {
     const y = E(u * 0.6);
     c.save(), c.fillStyle = `rgba(0, 0, 0, ${y})`;
-    for (const [T, M] of p)
+    for (const [T, C] of p)
       o.forEach((I, H) => {
-        const N = h + H * f + M;
+        const N = h + H * f + C;
         g(I, N, "outline", T);
       });
     c.restore();
   }, S = (y) => {
-    c.save(), c.fillStyle = y, o.forEach((T, M) => {
-      const I = h + M * f;
+    c.save(), c.fillStyle = y, o.forEach((T, C) => {
+      const I = h + C * f;
       g(T, I, "fill");
     }), c.restore();
   };
@@ -418,7 +418,7 @@ const we = {
   return S(b), c.restore(), l;
 }, ut = (e, t, i) => {
   m.fallbacks++, t.save(), t.font = `${e.fontSize}px ${e.fontFamily}`;
-  const s = E(e.opacity), n = i ?? e.x, a = e.lines.length > 0 ? e.lines : [e.text], r = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, l = e.y + e.fontSize, c = Me(e, t, t, "fallback", n), u = ye(e.fontSize), d = () => {
+  const s = E(e.opacity), n = i ?? e.x, a = e.lines.length > 0 ? e.lines : [e.text], r = e.lines.length > 1 && e.lineHeightPx > 0 ? e.lineHeightPx : e.fontSize, l = e.y + e.fontSize, c = Ce(e, t, t, "fallback", n), u = ye(e.fontSize), d = () => {
     const h = E(s * 0.6);
     t.save(), t.fillStyle = `rgba(0, 0, 0, ${h})`;
     for (const [g, p] of u)
@@ -652,7 +652,7 @@ const gt = 4e3, U = {
   ...U,
   ngWords: [...U.ngWords],
   ngRegexps: [...U.ngRegexps]
-}), gs = "v2.5.1", St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Ce = (e) => Math.max(
+}), gs = "v2.5.2", St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Me = (e) => Math.max(
   je,
   Math.floor(e * Je)
 ), G = (e) => {
@@ -676,11 +676,11 @@ const gt = 4e3, U = {
   cancel: (t) => {
     globalThis.clearTimeout(t);
   }
-}, Mt = () => typeof document > "u" ? () => {
+}, Ct = () => typeof document > "u" ? () => {
   throw new Error(
     "Document is not available. Provide a custom createCanvasElement implementation."
   );
-} : () => document.createElement("canvas"), Ct = (e) => {
+} : () => document.createElement("canvas"), Mt = (e) => {
   if (!e || typeof e != "object")
     return !1;
   const t = e;
@@ -693,18 +693,18 @@ const gt = 4e3, U = {
   for (const i of e) {
     const { text: s, vposMs: n, commands: a = [] } = i, r = $(s);
     if (this.isNGComment(s)) {
-      C("comment-skip-ng", { preview: r, vposMs: n });
+      M("comment-skip-ng", { preview: r, vposMs: n });
       continue;
     }
     const l = We(n);
     if (l === null) {
-      this.log.warn("CommentRenderer.addComment.invalidVpos", { text: s, vposMs: n }), C("comment-skip-invalid-vpos", { preview: r, vposMs: n });
+      this.log.warn("CommentRenderer.addComment.invalidVpos", { text: s, vposMs: n }), M("comment-skip-invalid-vpos", { preview: r, vposMs: n });
       continue;
     }
     if (this.comments.some(
       (d) => d.text === s && d.vposMs === l
     ) || t.some((d) => d.text === s && d.vposMs === l)) {
-      C("comment-skip-duplicate", { preview: r, vposMs: l });
+      M("comment-skip-duplicate", { preview: r, vposMs: l });
       continue;
     }
     const u = new vt(
@@ -714,7 +714,7 @@ const gt = 4e3, U = {
       this._settings,
       this.commentDependencies
     );
-    u.creationIndex = this.commentSequence++, u.epochId = this.epochId, t.push(u), C("comment-added", {
+    u.creationIndex = this.commentSequence++, u.epochId = this.epochId, t.push(u), M("comment-added", {
       preview: r,
       vposMs: l,
       commands: u.commands.length,
@@ -868,7 +868,7 @@ const gt = 4e3, U = {
   const d = this.getCommentsInTimeWindow(this.currentTime, O);
   for (const o of d) {
     const f = k(), h = f ? $(o.text) : "";
-    if (f && C("comment-evaluate", {
+    if (f && M("comment-evaluate", {
       stage: "update",
       preview: h,
       vposMs: o.vposMs,
@@ -877,7 +877,7 @@ const gt = 4e3, U = {
       isActive: o.isActive,
       hasShown: o.hasShown
     }), this.isNGComment(o.text)) {
-      f && C("comment-eval-skip", {
+      f && M("comment-eval-skip", {
         preview: h,
         vposMs: o.vposMs,
         effectiveVposMs: this.getEffectiveCommentVpos(o),
@@ -886,7 +886,7 @@ const gt = 4e3, U = {
       continue;
     }
     if (o.isInvisible) {
-      f && C("comment-eval-skip", {
+      f && M("comment-eval-skip", {
         preview: h,
         vposMs: o.vposMs,
         effectiveVposMs: this.getEffectiveCommentVpos(o),
@@ -1009,41 +1009,41 @@ const gt = 4e3, U = {
   e.prototype.findCommentIndexAtOrAfter = qt, e.prototype.getCommentsInTimeWindow = Kt, e.prototype.getStaticReservations = Jt, e.prototype.getStaticLaneDepth = jt, e.prototype.getStaticLaneLimit = Zt, e.prototype.getGlobalLaneIndexForBottom = Qt, e.prototype.resolveStaticCommentOffset = ei, e.prototype.getStaticReservedLaneSet = ti;
 }, si = function(e, t, i = "") {
   const s = i.length > 0 && k(), n = this.resolveFinalPhaseVpos(e);
-  return this.finalPhaseActive && this.finalPhaseStartTime !== null && e.vposMs < this.finalPhaseStartTime - w ? (s && C("comment-eval-skip", {
+  return this.finalPhaseActive && this.finalPhaseStartTime !== null && e.vposMs < this.finalPhaseStartTime - w ? (s && M("comment-eval-skip", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
     reason: "final-phase-trimmed",
     finalPhaseStartTime: this.finalPhaseStartTime
-  }), this.finalPhaseVposOverrides.delete(e), !1) : e.isInvisible ? (s && C("comment-eval-skip", {
+  }), this.finalPhaseVposOverrides.delete(e), !1) : e.isInvisible ? (s && M("comment-eval-skip", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
     reason: "invisible"
-  }), !1) : e.isActive ? (s && C("comment-eval-skip", {
+  }), !1) : e.isActive ? (s && M("comment-eval-skip", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
     reason: "already-active"
-  }), !1) : e.hasShown && n <= t ? (s && C("comment-eval-skip", {
+  }), !1) : e.hasShown && n <= t ? (s && M("comment-eval-skip", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
     reason: "already-shown",
     currentTime: t
-  }), !1) : n > t + D ? (s && C("comment-eval-pending", {
+  }), !1) : n > t + D ? (s && M("comment-eval-pending", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
     reason: "future",
     currentTime: t
-  }), !1) : n < t - O ? (s && C("comment-eval-skip", {
+  }), !1) : n < t - O ? (s && M("comment-eval-skip", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
     reason: "expired-window",
     currentTime: t
-  }), !1) : (s && C("comment-eval-ready", {
+  }), !1) : (s && M("comment-eval-ready", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
@@ -1052,7 +1052,7 @@ const gt = 4e3, U = {
 }, ni = function(e, t, i, s, n, a) {
   e.prepare(t, i, s, n);
   const r = this.resolveFinalPhaseVpos(e);
-  if (k() && C("comment-prepared", {
+  if (k() && M("comment-prepared", {
     preview: $(e.text),
     layout: e.layout,
     isScrolling: e.isScrolling,
@@ -1088,7 +1088,7 @@ const gt = 4e3, U = {
     );
     e.x = Math.max(0, Math.min(i - e.width, e.virtualStartX)), e.y = u, e.lane = l === "ue" ? c : this.getGlobalLaneIndexForBottom(c), e.speed = 0, e.baseSpeed = 0, e.speedPixelsPerMs = 0, e.visibleDurationMs = V;
     const d = a + e.visibleDurationMs;
-    this.activeComments.add(e), e.isActive = !0, e.hasShown = !0, e.isPaused = !this.isPlaying, e.markActivated(a), e.lastUpdateTime = this.timeSource.now(), e.staticExpiryTimeMs = d, this.reserveStaticLane(l, e, c, d), k() && C("comment-activate-static", {
+    this.activeComments.add(e), e.isActive = !0, e.hasShown = !0, e.isPaused = !this.isPlaying, e.markActivated(a), e.lastUpdateTime = this.timeSource.now(), e.staticExpiryTimeMs = d, this.reserveStaticLane(l, e, c, d), k() && M("comment-activate-static", {
       preview: $(e.text),
       lane: e.lane,
       position: l,
@@ -1101,7 +1101,7 @@ const gt = 4e3, U = {
 }, ai = function(e, t, i, s) {
   const n = this.getStaticReservations(e), a = this.getStaticLaneLimit(e), r = a >= 0 ? a + 1 : 0, l = Array.from({ length: r }, (d, o) => o);
   for (const d of l) {
-    const o = this.resolveStaticCommentOffset(e, d, i, t), f = Math.max(t.height, t.fontSize), h = Ce(t.fontSize), g = o - h, p = o + f + h;
+    const o = this.resolveStaticCommentOffset(e, d, i, t), f = Math.max(t.height, t.fontSize), h = Me(t.fontSize), g = o - h, p = o + f + h;
     if (!n.some((S) => S.releaseTime > s ? !(p <= S.yStart || g >= S.yEnd) : !1))
       return d;
   }
@@ -1110,7 +1110,7 @@ const gt = 4e3, U = {
     d.releaseTime < u && (u = d.releaseTime, c = d.lane);
   return c;
 }, ri = function(e, t, i, s) {
-  const n = this.getStaticReservations(e), a = Math.max(t.height, t.fontSize), r = Ce(t.fontSize), l = t.y - r, c = t.y + a + r;
+  const n = this.getStaticReservations(e), a = Math.max(t.height, t.fontSize), r = Me(t.fontSize), l = t.y - r, c = t.y + a + r;
   n.push({
     comment: t,
     releaseTime: s,
@@ -1226,7 +1226,7 @@ const gt = 4e3, U = {
     });
   }
   this.lastDrawTime = a;
-}, Mi = function(e) {
+}, Ci = function(e) {
   const t = this.videoElement, i = this.canvas, s = this.ctx;
   if (!t || !i || !s)
     return;
@@ -1251,8 +1251,8 @@ const gt = 4e3, U = {
     }
     this.getEffectiveCommentVpos(d) < this.currentTime - O ? d.hasShown = !0 : d.hasShown = !1;
   });
-}, Ci = (e) => {
-  e.prototype.draw = yi, e.prototype.performInitialSync = Mi;
+}, Mi = (e) => {
+  e.prototype.draw = yi, e.prototype.performInitialSync = Ci;
 }, bi = function(e) {
   this.videoElement && this._settings.isCommentVisible && (this.pendingInitialSync && (this.performInitialSync(e), this.pendingInitialSync = !1), this.updateComments(e), this.draw());
 }, xi = function() {
@@ -1307,7 +1307,7 @@ const gt = 4e3, U = {
   const c = this.canvasDpr > 0 ? this.canvasDpr : 1, u = this.displayWidth > 0 ? this.displayWidth : e.width / c, d = this.displayHeight > 0 ? this.displayHeight : e.height / c, o = this.buildPrepareOptions(u);
   this.getCommentsInTimeWindow(this.currentTime, O).forEach((h) => {
     const g = k(), p = g ? $(h.text) : "";
-    if (g && C("comment-evaluate", {
+    if (g && M("comment-evaluate", {
       stage: "seek",
       preview: p,
       vposMs: h.vposMs,
@@ -1316,7 +1316,7 @@ const gt = 4e3, U = {
       isActive: h.isActive,
       hasShown: h.hasShown
     }), this.isNGComment(h.text)) {
-      g && C("comment-eval-skip", {
+      g && M("comment-eval-skip", {
         preview: p,
         vposMs: h.vposMs,
         effectiveVposMs: this.getEffectiveCommentVpos(h),
@@ -1325,7 +1325,7 @@ const gt = 4e3, U = {
       return;
     }
     if (h.isInvisible) {
-      g && C("comment-eval-skip", {
+      g && M("comment-eval-skip", {
         preview: p,
         vposMs: h.vposMs,
         effectiveVposMs: this.getEffectiveCommentVpos(h),
@@ -1560,11 +1560,11 @@ const gt = 4e3, U = {
     return;
   this.displayWidth = o, this.displayHeight = f, this.canvasDpr = p, s.width = v, s.height = S, s.style.width = `${o}px`, s.style.height = `${f}px`, n && (n.setTransform(1, 0, 0, 1, 0, 0), this._settings.useDprScaling && n.scale(p, p));
   const y = h > 0 ? o / h : 1, T = g > 0 ? f / g : 1;
-  (y !== 1 || T !== 1) && this.comments.forEach((M) => {
-    M.isActive && (M.x *= y, M.y *= T, M.width *= y, M.fontSize = Math.max(
+  (y !== 1 || T !== 1) && this.comments.forEach((C) => {
+    C.isActive && (C.x *= y, C.y *= T, C.width *= y, C.fontSize = Math.max(
       me,
-      Math.floor(Math.max(1, M.fontSize) * T)
-    ), M.height = M.fontSize, M.virtualStartX *= y, M.exitThreshold *= y, M.baseSpeed *= y, M.speed *= y, M.speedPixelsPerMs *= y, M.bufferWidth *= y, M.reservationWidth *= y);
+      Math.floor(Math.max(1, C.fontSize) * T)
+    ), C.height = C.fontSize, C.virtualStartX *= y, C.exitThreshold *= y, C.baseSpeed *= y, C.speed *= y, C.speedPixelsPerMs *= y, C.bufferWidth *= y, C.reservationWidth *= y);
   }), this.calculateLaneMetrics();
 }, Qi = function() {
   if (typeof window > "u")
@@ -1716,13 +1716,13 @@ class x {
   }
   constructor(t = null, i = void 0) {
     let s, n;
-    if (Ct(t))
+    if (Mt(t))
       s = G({ ...t }), n = i ?? {};
     else {
       const a = t ?? i ?? {};
       n = typeof a == "object" ? a : {}, s = G(mt());
     }
-    this._settings = G(s), this.timeSource = n.timeSource ?? ve(), this.animationFrameProvider = n.animationFrameProvider ?? yt(this.timeSource), this.createCanvasElement = n.createCanvasElement ?? Mt(), this.commentDependencies = {
+    this._settings = G(s), this.timeSource = n.timeSource ?? ve(), this.animationFrameProvider = n.animationFrameProvider ?? yt(this.timeSource), this.createCanvasElement = n.createCanvasElement ?? Ct(), this.commentDependencies = {
       timeSource: this.timeSource,
       settingsVersion: this.settingsVersion
     }, this.log = Se(n.loggerNamespace ?? "CommentRenderer"), this.eventHooks = n.eventHooks ?? {}, this.handleAnimationFrame = this.handleAnimationFrame.bind(this), this.handleVideoFrame = this.handleVideoFrame.bind(this), this.rebuildNgMatchers(), n.debug && nt(n.debug);
@@ -1760,7 +1760,7 @@ Yt(x);
 ii(x);
 li(x);
 Si(x);
-Ci(x);
+Mi(x);
 Ri(x);
 Ni(x);
 qi(x);
@@ -1778,7 +1778,7 @@ export {
   yt as createDefaultAnimationFrameProvider,
   ve as createDefaultTimeSource,
   Se as createLogger,
-  C as debugLog,
+  M as debugLog,
   rt as dumpRendererState,
   k as isDebugLoggingEnabled,
   ot as logEpochChange,
