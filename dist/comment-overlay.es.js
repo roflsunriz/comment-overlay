@@ -653,7 +653,7 @@ const bt = 4e3, q = {
   ...q,
   ngWords: [...q.ngWords],
   ngRegexps: [...q.ngRegexps]
-}), Cs = "v2.5.3", Tt = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, xe = (e) => Math.max(
+}), Cs = "v2.6.0", Tt = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, xe = (e) => Math.max(
   et,
   Math.floor(e * Qe)
 ), Y = (e) => {
