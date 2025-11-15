@@ -16,6 +16,7 @@ const BASE_SETTINGS: RendererSettings = {
   useFixedLaneCount: false,
   fixedLaneCount: 12,
   useDprScaling: true,
+  enableAutoHardReset: true,
 };
 
 export const DEFAULT_RENDERER_SETTINGS: ReadonlyRendererSettings = BASE_SETTINGS;

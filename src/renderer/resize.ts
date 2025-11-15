@@ -1,4 +1,5 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
+import { requestAutoHardReset } from "@/renderer/auto-hard-reset";
 import { DEFAULT_LANE_COUNT, MIN_FONT_SIZE_PX, MIN_LANE_COUNT } from "@/shared/constants";
 
 const resizeImpl = function (this: CommentRenderer, width?: number, height?: number): void {
@@ -87,6 +88,7 @@ const resizeImpl = function (this: CommentRenderer, width?: number, height?: num
   }
 
   this.calculateLaneMetrics();
+  requestAutoHardReset(this, "resize");
 };
 
 const resolveDevicePixelRatioImpl = function (this: CommentRenderer): number {

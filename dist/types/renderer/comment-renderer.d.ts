@@ -56,6 +56,11 @@ export declare class CommentRenderer {
     lastPlayResumeTime: number;
     readonly playResumeSeekIgnoreDurationMs = 500;
     lastVideoSource: string | null;
+    lastHardResetAt: number;
+    readonly autoHardResetDedupWindowMs = 500;
+    readonly initialPlaybackAutoResetDelayMs = 3000;
+    initialPlaybackAutoResetTimer: ReturnType<typeof setTimeout> | null;
+    initialPlaybackAutoResetTriggered: boolean;
     initialize: (options: HTMLVideoElement | CommentRendererInitializeOptions) => void;
     destroy: () => void;
     destroyCanvasOnly: () => void;

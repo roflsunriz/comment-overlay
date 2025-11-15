@@ -62,6 +62,9 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 | `useFixedLaneCount` | `boolean` | レーン数を固定するかどうか |
 | `fixedLaneCount` | `number` | 固定する場合のレーン数 |
 | `useDprScaling` | `boolean` | `devicePixelRatio` に応じた高解像度描画を行うか |
+| `enableAutoHardReset` | `boolean` | コメントアーティファクト除去のために自動 `hardReset()` を行うか |
+
+`enableAutoHardReset` が `true` の場合、リサイズ直後・シーク完了直後・再生再開直後・タブ復帰直後・初回再生から数秒後などのタイミングで自動的に `hardReset()` が走り、コメントの残像を抑制します。既存アプリが自前で `hardReset()` を呼び出している場合は `false` に設定することで二重実行を防げます。
 
 `ngWords` は入力をトリムしたうえで部分一致・大文字小文字を区別せずに評価されます。`scrollDirection` を `'ltr'` にするとコメントが左側から右方向へ流れ、デフォルトの `'rtl'` では従来通り右側から左方向へ流れます。
 

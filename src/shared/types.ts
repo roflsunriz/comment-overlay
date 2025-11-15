@@ -54,6 +54,7 @@ export interface RendererSettings {
   fixedLaneCount: number;
   // DPR対応の可否（キャンバス実解像度スケーリング）。実装は後続。
   useDprScaling: boolean;
+  enableAutoHardReset: boolean;
 }
 
 export type ReadonlyRendererSettings = {

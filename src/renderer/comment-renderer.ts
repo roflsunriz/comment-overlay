@@ -26,7 +26,11 @@ import type {
   StaticLaneReservation,
   VideoFrameCallbackMetadataLike,
 } from "@/shared/types";
-import { DEFAULT_LANE_COUNT } from "@/shared/constants";
+import {
+  AUTO_HARD_RESET_DEDUP_WINDOW_MS,
+  AUTO_HARD_RESET_INITIAL_PLAYBACK_DELAY_MS,
+  DEFAULT_LANE_COUNT,
+} from "@/shared/constants";
 import { rebuildNgMatchersImpl, registerCommentCollectionMethods } from "@/renderer/comments";
 import { registerFinalPhaseMethods } from "@/renderer/final-phase";
 import { registerPlaybackHelpers } from "@/renderer/playback";
@@ -98,6 +102,11 @@ export class CommentRenderer {
   public lastPlayResumeTime = 0;
   public readonly playResumeSeekIgnoreDurationMs = 500;
   public lastVideoSource: string | null = null;
+  public lastHardResetAt = 0;
+  public readonly autoHardResetDedupWindowMs = AUTO_HARD_RESET_DEDUP_WINDOW_MS;
+  public readonly initialPlaybackAutoResetDelayMs = AUTO_HARD_RESET_INITIAL_PLAYBACK_DELAY_MS;
+  public initialPlaybackAutoResetTimer: ReturnType<typeof setTimeout> | null = null;
+  public initialPlaybackAutoResetTriggered = false;
 
   declare public initialize: (options: HTMLVideoElement | CommentRendererInitializeOptions) => void;
   declare public destroy: () => void;

@@ -40,6 +40,7 @@ export const normalizeSettings = (settings: RendererSettings): RendererSettings 
     scrollVisibleDurationMs: normalizedDuration,
     syncMode: settings.syncMode === "video-frame" ? "video-frame" : "raf",
     useDprScaling: Boolean(settings.useDprScaling),
+    enableAutoHardReset: settings.enableAutoHardReset !== false,
   };
 };
 

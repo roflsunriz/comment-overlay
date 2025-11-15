@@ -16,6 +16,8 @@ import type { EpochChangeInfo, RendererStateSnapshot } from "@/shared/types";
 const hardResetImpl = function (this: CommentRenderer): void {
   const canvas = this.canvas;
   const ctx = this.ctx;
+  const now = this.timeSource.now();
+  this.lastHardResetAt = now;
 
   this.incrementEpoch("manual-reset");
 

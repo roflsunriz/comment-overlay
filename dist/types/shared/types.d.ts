@@ -40,6 +40,7 @@ export interface RendererSettings {
     useFixedLaneCount: boolean;
     fixedLaneCount: number;
     useDprScaling: boolean;
+    enableAutoHardReset: boolean;
 }
 export type ReadonlyRendererSettings = {
     readonly [K in keyof RendererSettings]: RendererSettings[K] extends string | number | boolean | null | undefined ? RendererSettings[K] : ReadonlyArray<string>;
