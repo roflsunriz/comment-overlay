@@ -130,6 +130,28 @@
       background: #1d4ed8;
     }
 
+    .profiler-controls {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .profiler-btn {
+      background: #0ea5e9;
+      font-size: 0.9rem;
+    }
+
+    .profiler-btn:hover {
+      background: #0284c7;
+    }
+
+    .clear-btn {
+      background: #dc2626;
+    }
+
+    .clear-btn:hover {
+      background: #b91c1c;
+    }
+
     pre {
       background: rgba(20, 20, 20, 0.65);
       border-radius: 8px;
@@ -176,6 +198,14 @@
         <button type="button" id="reload-comments">コメント再読込</button>
         <button type="button" id="fullscreen-button">フルスクリーン</button>
         <button type="button" id="stall-emulator">ストールテスト</button>
+      </div>
+
+      <div class="controls profiler-controls">
+        <strong>🔬 デバッグプロファイラー</strong>
+        <button type="button" id="profiler-stats" class="profiler-btn">統計表示</button>
+        <button type="button" id="profiler-download-compact" class="profiler-btn">Compact JSON</button>
+        <button type="button" id="profiler-download-raw" class="profiler-btn">Raw JSON</button>
+        <button type="button" id="profiler-clear" class="profiler-btn clear-btn">クリア</button>
       </div>
 
       <div class="field-group">

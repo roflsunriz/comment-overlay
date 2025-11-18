@@ -8,6 +8,101 @@ const DEFAULT_COMMENT_DATA_SOURCES = ["./so45409498-comments.json"];
 let debugLogFn = null;
 let isDebugOverlayEnabled = false;
 
+// ==== comment-overlay 専用プロファイラ ==========================
+const overlayDebugSamples = [];
+
+const pushOverlaySample = (sample) => {
+  overlayDebugSamples.push({
+    ts: performance.now(),
+    ...sample,
+  });
+};
+
+window.COOverlayProfiler = {
+  clear() {
+    overlayDebugSamples.length = 0;
+    console.log("[COOverlayProfiler] サンプルをクリアしました。");
+  },
+  getRaw() {
+    return overlayDebugSamples.slice();
+  },
+  getStats() {
+    const frames = overlayDebugSamples.filter((s) => s.kind === "frame");
+    const events = overlayDebugSamples.filter((s) => s.kind === "event");
+    return {
+      total: overlayDebugSamples.length,
+      frames: frames.length,
+      events: events.length,
+      firstTs: overlayDebugSamples[0]?.ts ?? 0,
+      lastTs: overlayDebugSamples[overlayDebugSamples.length - 1]?.ts ?? 0,
+    };
+  },
+  downloadRaw() {
+    const blob = new Blob(
+      [JSON.stringify(overlayDebugSamples, null, 2)],
+      { type: "application/json" },
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `comment-overlay-debug-raw-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log(`[COOverlayProfiler] Raw JSON をダウンロードしました (${overlayDebugSamples.length} samples)`);
+  },
+  downloadCompact() {
+    const compact = overlayDebugSamples.map((s) => ({
+      k: s.kind,
+      t: Math.round(s.ts),
+      vt: Math.round(s.videoTimeMs ?? 0),
+      rt: Math.round(s.rendererTimeMs ?? 0),
+      ac: s.activeCount ?? 0,
+      tc: s.totalComments ?? 0,
+      ep: s.epochId ?? 0,
+      ev: s.event ?? null,
+      dw: s.displayWidth ?? 0,
+      dh: s.displayHeight ?? 0,
+      cw: s.canvasWidth ?? 0,
+      ch: s.canvasHeight ?? 0,
+      pr: s.playbackRate ?? 1,
+      ps: s.isPaused ?? false,
+      // activeComments の詳細情報
+      acMinVpos: s.acMinVpos !== null && s.acMinVpos !== undefined 
+        ? Math.round(s.acMinVpos) 
+        : null,
+      acMaxVpos: s.acMaxVpos !== null && s.acMaxVpos !== undefined 
+        ? Math.round(s.acMaxVpos) 
+        : null,
+      acMinLane: s.acMinLane ?? null,
+      acMaxLane: s.acMaxLane ?? null,
+      acHasScroll: s.acHasScrolling ?? false,
+    }));
+    const blob = new Blob(
+      [JSON.stringify(compact)],
+      { type: "application/json" },
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `comment-overlay-debug-compact-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log(`[COOverlayProfiler] Compact JSON をダウンロードしました (${compact.length} samples)`);
+  },
+};
+
+console.log("[COOverlayProfiler] 初期化完了。使い方:");
+console.log("  COOverlayProfiler.getStats() - 統計情報を表示");
+console.log("  COOverlayProfiler.downloadCompact() - コンパクトJSON（分析用、ac/acMinVpos含む）");
+console.log("  COOverlayProfiler.downloadRaw() - 詳細JSON（調査用、sampleComments含む）");
+console.log("  COOverlayProfiler.clear() - サンプルをクリア");
+console.log("");
+console.log("📊 新規追加フィールド:");
+console.log("  ac: activeComments.size（実値）");
+console.log("  acMinVpos/acMaxVpos: アクティブコメントのvpos範囲");
+console.log("  acMinLane/acMaxLane: レーン範囲");
+console.log("  acHasScroll: スクロール系コメントの有無");
+
 const safeDebugLog = (category, payload) => {
   if (!isDebugOverlayEnabled) {
     return;
@@ -63,6 +158,10 @@ const directionSelect = document.querySelector("#scroll-direction");
 const ngWordsInput = document.querySelector("#ng-words-input");
 const ngRegexInput = document.querySelector("#ng-regex-input");
 const regexStatusEl = document.querySelector("#ng-regex-status");
+const profilerStatsButton = document.querySelector("#profiler-stats");
+const profilerDownloadCompactButton = document.querySelector("#profiler-download-compact");
+const profilerDownloadRawButton = document.querySelector("#profiler-download-raw");
+const profilerClearButton = document.querySelector("#profiler-clear");
 
 const reportStatus = (message) => {
   if (statusEl) {
@@ -129,7 +228,11 @@ const setup = async () => {
     !(stallEmulatorButton instanceof HTMLButtonElement) ||
     !(directionSelect instanceof HTMLSelectElement) ||
     !(ngWordsInput instanceof HTMLTextAreaElement) ||
-    !(ngRegexInput instanceof HTMLTextAreaElement)
+    !(ngRegexInput instanceof HTMLTextAreaElement) ||
+    !(profilerStatsButton instanceof HTMLButtonElement) ||
+    !(profilerDownloadCompactButton instanceof HTMLButtonElement) ||
+    !(profilerDownloadRawButton instanceof HTMLButtonElement) ||
+    !(profilerClearButton instanceof HTMLButtonElement)
   ) {
     reportStatus("Initialization failed: required elements are missing.");
     return;
@@ -162,6 +265,194 @@ const setup = async () => {
 
   renderer.initialize({ video: videoEl, container: containerEl });
   window.commentRenderer = renderer;
+
+  // ==== プロファイラーフック: renderer.draw をラップ ====
+  const captureRendererState = (options = { includeCommentDetails: false }) => {
+    try {
+      const canvas = renderer.canvas;
+      const baseState = {
+        videoTimeMs: videoEl.currentTime * 1000,
+        rendererTimeMs: renderer.currentTime ?? 0,
+        epochId: renderer.epochId ?? 0,
+        totalComments: renderer.comments?.length ?? 0,
+        displayWidth: renderer.displayWidth ?? 0,
+        displayHeight: renderer.displayHeight ?? 0,
+        canvasWidth: canvas?.width ?? 0,
+        canvasHeight: canvas?.height ?? 0,
+        playbackRate: videoEl.playbackRate,
+        isPaused: videoEl.paused,
+      };
+
+      // activeComments の詳細情報を取得
+      let activeCommentsArray = [];
+      if (renderer.activeComments) {
+        try {
+          activeCommentsArray = Array.from(renderer.activeComments);
+        } catch (e) {
+          console.warn("[COOverlayProfiler] activeComments変換エラー", e);
+        }
+      }
+
+      const activeCount = activeCommentsArray.length;
+      baseState.activeCount = activeCount;
+
+      if (activeCount > 0) {
+        // effectiveVpos の計算（getEffectiveCommentVposがあれば使用）
+        const vposes = [];
+        const lanes = [];
+        let hasScrolling = false;
+
+        for (const comment of activeCommentsArray) {
+          try {
+            // getEffectiveCommentVpos メソッドがあれば使用
+            let vpos = comment.vposMs ?? 0;
+            if (typeof renderer.getEffectiveCommentVpos === "function") {
+              vpos = renderer.getEffectiveCommentVpos(comment);
+            }
+            vposes.push(vpos);
+
+            if (typeof comment.lane === "number") {
+              lanes.push(comment.lane);
+            }
+            if (comment.isScrolling === true) {
+              hasScrolling = true;
+            }
+          } catch (e) {
+            // 個別エラーはスキップ
+          }
+        }
+
+        if (vposes.length > 0) {
+          baseState.acMinVpos = Math.min(...vposes);
+          baseState.acMaxVpos = Math.max(...vposes);
+        }
+        if (lanes.length > 0) {
+          baseState.acMinLane = Math.min(...lanes);
+          baseState.acMaxLane = Math.max(...lanes);
+        }
+        baseState.acHasScrolling = hasScrolling;
+
+        // 詳細情報を含める場合（Raw JSON用）
+        if (options.includeCommentDetails) {
+          const sampleComments = activeCommentsArray.slice(0, 5).map((c, idx) => {
+            try {
+              let effectiveVpos = c.vposMs ?? 0;
+              if (typeof renderer.getEffectiveCommentVpos === "function") {
+                effectiveVpos = renderer.getEffectiveCommentVpos(c);
+              }
+
+              return {
+                idx,
+                text: typeof c.text === "string" 
+                  ? c.text.slice(0, 30) + (c.text.length > 30 ? "..." : "")
+                  : "",
+                vposMs: c.vposMs ?? 0,
+                effectiveVpos,
+                lane: c.lane ?? null,
+                x: c.x ?? null,
+                isScrolling: c.isScrolling ?? false,
+                hasShown: c.hasShown ?? false,
+              };
+            } catch (e) {
+              return { idx, error: String(e) };
+            }
+          });
+          baseState.sampleComments = sampleComments;
+        }
+      } else {
+        baseState.acMinVpos = null;
+        baseState.acMaxVpos = null;
+        baseState.acMinLane = null;
+        baseState.acMaxLane = null;
+        baseState.acHasScrolling = false;
+      }
+
+      return baseState;
+    } catch (error) {
+      console.warn("[COOverlayProfiler] renderer状態取得エラー", error);
+      return {
+        videoTimeMs: videoEl.currentTime * 1000,
+        activeCount: 0,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  };
+
+  const originalDraw = renderer.draw.bind(renderer);
+  let frameCount = 0;
+  renderer.draw = () => {
+    frameCount++;
+    // フレームサンプリング: 最初の60フレーム + その後は10フレームごと
+    const shouldSample = frameCount <= 60 || frameCount % 10 === 0;
+    if (shouldSample) {
+      pushOverlaySample({
+        kind: "frame",
+        ...captureRendererState(),
+      });
+    }
+    return originalDraw();
+  };
+
+  // ==== プロファイラーフック: video イベント ====
+  const captureVideoEvent = (eventName) => {
+    pushOverlaySample({
+      kind: "event",
+      event: eventName,
+      ...captureRendererState(),
+    });
+  };
+
+  videoEl.addEventListener("play", () => captureVideoEvent("play"));
+  videoEl.addEventListener("pause", () => captureVideoEvent("pause"));
+  videoEl.addEventListener("seeked", () => captureVideoEvent("seeked"));
+  videoEl.addEventListener("ratechange", () => captureVideoEvent("ratechange"));
+  videoEl.addEventListener("waiting", () => captureVideoEvent("waiting"));
+  videoEl.addEventListener("canplay", () => captureVideoEvent("canplay"));
+
+  // resize イベントは window から検出
+  let resizeTimeout = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      captureVideoEvent("resize");
+    }, 100);
+  });
+
+  // ==== プロファイラーフック: hardReset をラップ ====
+  if (typeof renderer.hardReset === "function") {
+    const originalHardReset = renderer.hardReset.bind(renderer);
+    renderer.hardReset = () => {
+      // hardReset 前は詳細情報を含める（Raw JSON用）
+      pushOverlaySample({
+        kind: "event",
+        event: "hardReset-before",
+        ...captureRendererState({ includeCommentDetails: true }),
+      });
+      const result = originalHardReset();
+      // hardReset 後の状態は次のフレームで確実に取得できるよう、少し遅延させる
+      setTimeout(() => {
+        pushOverlaySample({
+          kind: "event",
+          event: "hardReset-after",
+          ...captureRendererState({ includeCommentDetails: true }),
+        });
+      }, 16); // 約1フレーム後
+      return result;
+    };
+  }
+
+  // resetState もフック（loadComments内で使われている）
+  if (typeof renderer.resetState === "function") {
+    const originalResetState = renderer.resetState.bind(renderer);
+    renderer.resetState = () => {
+      pushOverlaySample({
+        kind: "event",
+        event: "resetState",
+        ...captureRendererState(),
+      });
+      return originalResetState();
+    };
+  }
 
   let currentSettings = {
     ...renderer.settings,
@@ -457,6 +748,46 @@ const setup = async () => {
   stallEmulatorButton.addEventListener("click", () => {
     emulateStall();
   });
+
+  // ==== プロファイラーボタンのイベントリスナー ====
+  if (profilerStatsButton instanceof HTMLButtonElement) {
+    profilerStatsButton.addEventListener("click", () => {
+      const stats = window.COOverlayProfiler.getStats();
+      const duration = ((stats.lastTs - stats.firstTs) / 1000).toFixed(2);
+      const message = `📊 サンプル統計:\n` +
+        `  総サンプル数: ${stats.total}\n` +
+        `  フレーム: ${stats.frames}\n` +
+        `  イベント: ${stats.events}\n` +
+        `  記録期間: ${duration}秒`;
+      console.log(message);
+      reportStatus(`プロファイラー統計: ${stats.total}サンプル (${duration}秒)`);
+      alert(message);
+    });
+  }
+
+  if (profilerDownloadCompactButton instanceof HTMLButtonElement) {
+    profilerDownloadCompactButton.addEventListener("click", () => {
+      window.COOverlayProfiler.downloadCompact();
+      reportStatus("Compact JSON をダウンロードしました。");
+    });
+  }
+
+  if (profilerDownloadRawButton instanceof HTMLButtonElement) {
+    profilerDownloadRawButton.addEventListener("click", () => {
+      window.COOverlayProfiler.downloadRaw();
+      reportStatus("Raw JSON をダウンロードしました。");
+    });
+  }
+
+  if (profilerClearButton instanceof HTMLButtonElement) {
+    profilerClearButton.addEventListener("click", () => {
+      const confirmed = confirm("プロファイラーのサンプルを全てクリアしますか？");
+      if (confirmed) {
+        window.COOverlayProfiler.clear();
+        reportStatus("プロファイラーをクリアしました。");
+      }
+    });
+  }
 
   const videoSources = ["./video.mp4", "./video2.mp4"];
   const resolveInitialIndex = () => {

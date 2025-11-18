@@ -69,6 +69,42 @@ const updateCommentsImpl = function (this: CommentRenderer, frameTimeMs?: number
 
   this.pruneStaticLaneReservations(this.currentTime);
 
+  // ==== activeComments の定期クリーンアップ（古いコメント回収） ====
+  // 時間窓外のコメント、または画面外に完全に流れたコメントを削除
+  for (const comment of Array.from(this.activeComments)) {
+    const effectiveVpos = this.getEffectiveCommentVpos(comment);
+    const isPastWindow = effectiveVpos < this.currentTime - ACTIVE_WINDOW_MS;
+    const isFutureWindow = effectiveVpos > this.currentTime + ACTIVE_WINDOW_MS;
+
+    // 時間窓外のコメントを削除
+    if (isPastWindow || isFutureWindow) {
+      comment.isActive = false;
+      this.activeComments.delete(comment);
+      comment.clearActivation();
+      if (comment.lane >= 0) {
+        if (comment.layout === "ue") {
+          this.releaseStaticLane("ue", comment.lane);
+        } else if (comment.layout === "shita") {
+          this.releaseStaticLane("shita", comment.lane);
+        }
+      }
+      continue;
+    }
+
+    // スクロール完了したコメントを削除（再生中でなくても実行）
+    if (comment.isScrolling && comment.hasShown) {
+      const isOffScreen =
+        (comment.scrollDirection === "rtl" && comment.x <= comment.exitThreshold) ||
+        (comment.scrollDirection === "ltr" && comment.x >= comment.exitThreshold);
+
+      if (isOffScreen) {
+        comment.isActive = false;
+        this.activeComments.delete(comment);
+        comment.clearActivation();
+      }
+    }
+  }
+
   const activeWindowComments = this.getCommentsInTimeWindow(this.currentTime, ACTIVE_WINDOW_MS);
 
   for (const comment of activeWindowComments) {
@@ -150,21 +186,6 @@ const updateCommentsImpl = function (this: CommentRenderer, frameTimeMs?: number
       if (!comment.isScrolling && comment.hasStaticExpired(this.currentTime)) {
         const staticPosition = comment.layout === "ue" ? "ue" : "shita";
         this.releaseStaticLane(staticPosition, comment.lane);
-        comment.isActive = false;
-        this.activeComments.delete(comment);
-        comment.clearActivation();
-      }
-    }
-  }
-
-  if (this.isPlaying) {
-    for (const comment of this.comments) {
-      if (
-        comment.isActive &&
-        comment.isScrolling &&
-        ((comment.scrollDirection === "rtl" && comment.x <= comment.exitThreshold) ||
-          (comment.scrollDirection === "ltr" && comment.x >= comment.exitThreshold))
-      ) {
         comment.isActive = false;
         this.activeComments.delete(comment);
         comment.clearActivation();
