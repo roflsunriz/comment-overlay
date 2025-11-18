@@ -235,7 +235,7 @@ const assignStaticLaneImpl = function (
   for (const lane of laneIndices) {
     const yOffset = this.resolveStaticCommentOffset(position, lane, displayHeight, comment);
     const commentHeight = Math.max(comment.height, comment.fontSize);
-    const padding = calculateStaticCommentVerticalPadding(comment.fontSize);
+    const padding = calculateStaticCommentVerticalPadding(comment.fontSize, lane);
     const yStart = yOffset - padding;
     const yEnd = yOffset + commentHeight + padding;
 
@@ -273,7 +273,7 @@ const reserveStaticLaneImpl = function (
 ): void {
   const reservations = this.getStaticReservations(position);
   const commentHeight = Math.max(comment.height, comment.fontSize);
-  const padding = calculateStaticCommentVerticalPadding(comment.fontSize);
+  const padding = calculateStaticCommentVerticalPadding(comment.fontSize, lane);
   const yStart = comment.y - padding;
   const yEnd = comment.y + commentHeight + padding;
 

@@ -1,7 +1,7 @@
 import type { RendererSettings, AnimationFrameProvider, TimeSource } from "@/shared/types";
 import {
-  STATIC_COMMENT_MIN_VERTICAL_PADDING_PX,
-  STATIC_COMMENT_VERTICAL_PADDING_RATIO,
+  STATIC_COMMENT_EDGE_PADDING_PX,
+  STATIC_COMMENT_STACKING_PADDING_PX,
 } from "@/shared/constants";
 
 export const clampOpacity = (value: number): number => {
@@ -17,11 +17,15 @@ export const clampOpacity = (value: number): number => {
   return value;
 };
 
-export const calculateStaticCommentVerticalPadding = (fontSize: number): number =>
-  Math.max(
-    STATIC_COMMENT_MIN_VERTICAL_PADDING_PX,
-    Math.floor(fontSize * STATIC_COMMENT_VERTICAL_PADDING_RATIO),
-  );
+export const calculateStaticCommentVerticalPadding = (
+  _fontSize: number,
+  laneIndex: number = 0,
+): number => {
+  if (laneIndex === 0) {
+    return STATIC_COMMENT_EDGE_PADDING_PX;
+  }
+  return STATIC_COMMENT_STACKING_PADDING_PX;
+};
 
 export const normalizeSettings = (settings: RendererSettings): RendererSettings => {
   const rawDuration = settings.scrollVisibleDurationMs;

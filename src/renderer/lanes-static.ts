@@ -83,18 +83,38 @@ const resolveStaticCommentOffsetImpl = function (
 ): number {
   const effectiveHeight = Math.max(1, displayHeight);
   const commentHeight = Math.max(comment.height, comment.fontSize);
-  const padding = Math.max(1, Math.floor(comment.fontSize * 0.05));
+  const edgePadding = 5;
+  const stackPadding = 2;
 
   if (position === "ue") {
-    const baseY = lane * this.laneHeight;
-    const minY = padding;
-    const maxY = Math.max(padding, effectiveHeight - commentHeight - padding);
-    return Math.max(minY, Math.min(baseY, maxY));
+    let cumulativeY = edgePadding;
+    const reservations = this.getStaticReservations(position);
+    const laneSortedReservations = reservations
+      .filter((r) => r.lane < lane)
+      .sort((a, b) => a.lane - b.lane);
+
+    for (const reservation of laneSortedReservations) {
+      const reservedHeight = reservation.yEnd - reservation.yStart;
+      cumulativeY += reservedHeight + stackPadding;
+    }
+
+    const maxY = Math.max(edgePadding, effectiveHeight - commentHeight - edgePadding);
+    return Math.max(edgePadding, Math.min(cumulativeY, maxY));
   }
 
-  const targetBottomY = effectiveHeight - lane * this.laneHeight;
-  const adjustedY = targetBottomY - commentHeight - padding;
-  return Math.max(padding, adjustedY);
+  let cumulativeY = effectiveHeight - edgePadding;
+  const reservations = this.getStaticReservations(position);
+  const laneSortedReservations = reservations
+    .filter((r) => r.lane < lane)
+    .sort((a, b) => a.lane - b.lane);
+
+  for (const reservation of laneSortedReservations) {
+    const reservedHeight = reservation.yEnd - reservation.yStart;
+    cumulativeY -= reservedHeight + stackPadding;
+  }
+
+  const adjustedY = cumulativeY - commentHeight;
+  return Math.max(edgePadding, adjustedY);
 };
 
 const getStaticReservedLaneSetImpl = function (this: CommentRenderer): Set<number> {
