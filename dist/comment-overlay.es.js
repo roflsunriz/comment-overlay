@@ -591,7 +591,7 @@ const bt = 4e3, G = {
   ...G,
   ngWords: [...G.ngWords],
   ngRegexps: [...G.ngRegexps]
-}), Ms = "v2.8.0", xt = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, be = (e, t = 0) => t === 0 ? Qe : et, B = (e) => {
+}), Ms = "v2.8.1", xt = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, be = (e, t = 0) => t === 0 ? Qe : et, B = (e) => {
   const t = e.scrollVisibleDurationMs, s = t == null ? null : Number.isFinite(t) ? Math.max(1, Math.floor(t)) : null;
   return {
     ...e,
