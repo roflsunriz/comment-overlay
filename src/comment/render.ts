@@ -50,24 +50,36 @@ const reportCacheStats = (): void => {
 
 const isOffscreenCanvasSupported = (): boolean => typeof OffscreenCanvas !== "undefined";
 
-const getOutlineOffsets = (fontSize: number): Array<[number, number]> => {
-  const outlineThickness = Math.max(1, Math.round(fontSize * 0.08));
-  const offsets: Array<[number, number]> = [
-    [-outlineThickness, 0],
-    [outlineThickness, 0],
-    [0, -outlineThickness],
-    [0, outlineThickness],
-  ];
-  if (outlineThickness > 1) {
-    const diagonal = Math.max(1, Math.round(outlineThickness * 0.7));
-    offsets.push(
-      [-diagonal, -diagonal],
-      [-diagonal, diagonal],
-      [diagonal, -diagonal],
-      [diagonal, diagonal],
-    );
+type ShadowParams = {
+  blur: number;
+  alpha: number;
+};
+
+const getShadowParams = (
+  intensity: import("@/shared/types").ShadowIntensity,
+  fontSize: number,
+  baseOpacity: number,
+): ShadowParams => {
+  if (intensity === "none") {
+    return { blur: 0, alpha: 0 };
   }
-  return offsets;
+
+  const blurRatio = {
+    light: 0.06,
+    medium: 0.1,
+    strong: 0.15,
+  }[intensity];
+
+  const alphaMultiplier = {
+    light: 0.6,
+    medium: 0.8,
+    strong: 0.95,
+  }[intensity];
+
+  const blur = Math.max(2, fontSize * blurRatio);
+  const alpha = clampOpacity(baseOpacity * alphaMultiplier);
+
+  return { blur, alpha };
 };
 
 const createSegmentDrawer = (
@@ -81,12 +93,8 @@ const createSegmentDrawer = (
     if (line.length === 0) {
       return;
     }
-    const leadingSpaces = line.match(/^[\u3000\u00A0]+/);
-    const leadingSpaceCount = leadingSpaces ? leadingSpaces[0].length : 0;
-    const leadingSpaceOffset =
-      leadingSpaceCount > 0 ? measureTextWidth(measurementCtx, leadingSpaces![0]) : 0;
-    const effectiveDrawX = baseDrawX + leadingSpaceOffset + offsetX;
-    const trimmedLine = leadingSpaceCount > 0 ? line.substring(leadingSpaceCount) : line;
+
+    const effectiveDrawX = baseDrawX + offsetX;
 
     const recordDraw = (): void => {
       if (statsTarget === "cache") {
@@ -104,18 +112,18 @@ const createSegmentDrawer = (
 
     if (Math.abs(comment.letterSpacing) < Number.EPSILON) {
       recordDraw();
-      targetCtx.fillText(trimmedLine, effectiveDrawX, baselineY);
+      targetCtx.fillText(line, effectiveDrawX, baselineY);
       return;
     }
 
     let cursorX = effectiveDrawX;
-    for (let index = 0; index < trimmedLine.length; index += 1) {
-      const char = trimmedLine[index];
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
       recordDraw();
       targetCtx.fillText(char, cursorX, baselineY);
       const advance = measureTextWidth(measurementCtx, char);
       cursorX += advance;
-      if (index < trimmedLine.length - 1) {
+      if (index < line.length - 1) {
         cursorX += comment.letterSpacing;
       }
     }
@@ -166,85 +174,36 @@ const createTextureCanvas = (
     comment.lines.length > 1 && comment.lineHeightPx > 0 ? comment.lineHeightPx : comment.fontSize;
   const baselineStart = padding + comment.fontSize;
   const drawSegment = createSegmentDrawer(comment, offscreenCtx, ctx, "cache", drawX);
-  const outlineOffsets = getOutlineOffsets(comment.fontSize);
-
-  const drawOutline = (): void => {
-    const outlineAlpha = clampOpacity(effectiveOpacity * 0.6);
-    offscreenCtx.save();
-    offscreenCtx.fillStyle = `rgba(0, 0, 0, ${outlineAlpha})`;
-    for (const [offsetX, offsetY] of outlineOffsets) {
-      linesToRender.forEach((line: string, index: number) => {
-        const baseline = baselineStart + index * lineAdvance + offsetY;
-        drawSegment(line, baseline, "outline", offsetX);
-      });
-    }
-    offscreenCtx.restore();
-  };
-
-  const drawFill = (fillStyle: string): void => {
-    offscreenCtx.save();
-    offscreenCtx.fillStyle = fillStyle;
-    linesToRender.forEach((line: string, index: number) => {
-      const baseline = baselineStart + index * lineAdvance;
-      drawSegment(line, baseline, "fill");
-    });
-    offscreenCtx.restore();
-  };
-
-  drawOutline();
-
-  if (comment.renderStyle === "classic") {
-    const baseShadowOffset = Math.max(1, comment.fontSize * 0.04);
-    const baseShadowBlur = comment.fontSize * 0.18;
-    type ShadowLayer = Readonly<{
-      offsetXMultiplier: number;
-      offsetYMultiplier: number;
-      blurMultiplier: number;
-      alpha: number;
-      rgb: string;
-    }>;
-    const shadowLayers: ReadonlyArray<ShadowLayer> = [
-      {
-        offsetXMultiplier: 0.9,
-        offsetYMultiplier: 1.1,
-        blurMultiplier: 0.55,
-        alpha: 0.52,
-        rgb: "20, 28, 40",
-      },
-      {
-        offsetXMultiplier: 2.4,
-        offsetYMultiplier: 2.7,
-        blurMultiplier: 1.45,
-        alpha: 0.32,
-        rgb: "0, 0, 0",
-      },
-      {
-        offsetXMultiplier: -0.7,
-        offsetYMultiplier: -0.6,
-        blurMultiplier: 0.4,
-        alpha: 0.42,
-        rgb: "255, 255, 255",
-      },
-    ];
-
-    shadowLayers.forEach((layer) => {
-      const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
-      offscreenCtx.save();
-      offscreenCtx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
-      offscreenCtx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
-      offscreenCtx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
-      offscreenCtx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
-      offscreenCtx.fillStyle = "rgba(0, 0, 0, 0)";
-      linesToRender.forEach((line: string, index: number) => {
-        const baseline = baselineStart + index * lineAdvance;
-        drawSegment(line, baseline, "fill");
-      });
-      offscreenCtx.restore();
-    });
-  }
 
   const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);
-  drawFill(resolvedFillStyle);
+
+  const shadowParams = getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
+
+  if (isDebugLoggingEnabled()) {
+    console.log(
+      `[Shadow Debug - Cache]`,
+      `\n  Text: "${comment.text}"`,
+      `\n  FontSize: ${comment.fontSize}`,
+      `\n  Shadow intensity: ${comment.shadowIntensity}`,
+      `\n  Shadow blur: ${shadowParams.blur}px`,
+      `\n  Shadow alpha: ${shadowParams.alpha}`,
+      `\n  Fill style: ${resolvedFillStyle}`,
+    );
+  }
+
+  offscreenCtx.save();
+  offscreenCtx.shadowColor = `rgba(0, 0, 0, ${shadowParams.alpha})`;
+  offscreenCtx.shadowBlur = shadowParams.blur;
+  offscreenCtx.shadowOffsetX = 0;
+  offscreenCtx.shadowOffsetY = 0;
+  offscreenCtx.fillStyle = resolvedFillStyle;
+
+  linesToRender.forEach((line: string, index: number) => {
+    const baseline = baselineStart + index * lineAdvance;
+    drawSegment(line, baseline, "fill");
+  });
+
+  offscreenCtx.restore();
 
   offscreenCtx.restore();
   return offscreen;
@@ -265,85 +224,37 @@ const drawWithFallback = (
     comment.lines.length > 1 && comment.lineHeightPx > 0 ? comment.lineHeightPx : comment.fontSize;
   const baselineStart = comment.y + comment.fontSize;
   const drawSegment = createSegmentDrawer(comment, ctx, ctx, "fallback", drawX);
-  const outlineOffsets = getOutlineOffsets(comment.fontSize);
-
-  const drawOutline = (): void => {
-    const outlineAlpha = clampOpacity(effectiveOpacity * 0.6);
-    ctx.save();
-    ctx.fillStyle = `rgba(0, 0, 0, ${outlineAlpha})`;
-    for (const [offsetX, offsetY] of outlineOffsets) {
-      linesToRender.forEach((line: string, index: number) => {
-        const baseline = baselineStart + index * lineAdvance + offsetY;
-        drawSegment(line, baseline, "outline", offsetX);
-      });
-    }
-    ctx.restore();
-  };
-
-  const drawFill = (fillStyle: string): void => {
-    ctx.save();
-    ctx.fillStyle = fillStyle;
-    linesToRender.forEach((line: string, index: number) => {
-      const baseline = baselineStart + index * lineAdvance;
-      drawSegment(line, baseline, "fill");
-    });
-    ctx.restore();
-  };
-
-  drawOutline();
-
-  if (comment.renderStyle === "classic") {
-    const baseShadowOffset = Math.max(1, comment.fontSize * 0.04);
-    const baseShadowBlur = comment.fontSize * 0.18;
-    type ShadowLayer = Readonly<{
-      offsetXMultiplier: number;
-      offsetYMultiplier: number;
-      blurMultiplier: number;
-      alpha: number;
-      rgb: string;
-    }>;
-    const shadowLayers: ReadonlyArray<ShadowLayer> = [
-      {
-        offsetXMultiplier: 0.9,
-        offsetYMultiplier: 1.1,
-        blurMultiplier: 0.55,
-        alpha: 0.52,
-        rgb: "20, 28, 40",
-      },
-      {
-        offsetXMultiplier: 2.4,
-        offsetYMultiplier: 2.7,
-        blurMultiplier: 1.45,
-        alpha: 0.32,
-        rgb: "0, 0, 0",
-      },
-      {
-        offsetXMultiplier: -0.7,
-        offsetYMultiplier: -0.6,
-        blurMultiplier: 0.4,
-        alpha: 0.42,
-        rgb: "255, 255, 255",
-      },
-    ];
-
-    shadowLayers.forEach((layer) => {
-      const effectiveShadowAlpha = clampOpacity(layer.alpha * effectiveOpacity);
-      ctx.save();
-      ctx.shadowColor = `rgba(${layer.rgb}, ${effectiveShadowAlpha})`;
-      ctx.shadowBlur = baseShadowBlur * layer.blurMultiplier;
-      ctx.shadowOffsetX = baseShadowOffset * layer.offsetXMultiplier;
-      ctx.shadowOffsetY = baseShadowOffset * layer.offsetYMultiplier;
-      ctx.fillStyle = "rgba(0, 0, 0, 0)";
-      linesToRender.forEach((line: string, index: number) => {
-        const baseline = baselineStart + index * lineAdvance;
-        drawSegment(line, baseline, "fill");
-      });
-      ctx.restore();
-    });
-  }
 
   const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);
-  drawFill(resolvedFillStyle);
+
+  const shadowParams = getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
+
+  if (isDebugLoggingEnabled()) {
+    console.log(
+      `[Shadow Debug - Fallback]`,
+      `\n  Text: "${comment.text}"`,
+      `\n  FontSize: ${comment.fontSize}`,
+      `\n  Shadow intensity: ${comment.shadowIntensity}`,
+      `\n  Shadow blur: ${shadowParams.blur}px`,
+      `\n  Shadow alpha: ${shadowParams.alpha}`,
+      `\n  Fill style: ${resolvedFillStyle}`,
+    );
+  }
+
+  ctx.save();
+  ctx.shadowColor = `rgba(0, 0, 0, ${shadowParams.alpha})`;
+  ctx.shadowBlur = shadowParams.blur;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = resolvedFillStyle;
+
+  linesToRender.forEach((line: string, index: number) => {
+    const baseline = baselineStart + index * lineAdvance;
+    drawSegment(line, baseline, "fill");
+  });
+
+  ctx.restore();
+
   ctx.restore();
 };
 

@@ -26,6 +26,7 @@ export type TextMeasurementCache = Map<string, number>;
 export type ScrollDirection = "rtl" | "ltr";
 export type RenderStyle = "classic" | "outline-only";
 export type SyncMode = "raf" | "video-frame";
+export type ShadowIntensity = "none" | "light" | "medium" | "strong";
 export interface RendererSettings {
     commentColor: string;
     commentOpacity: number;
@@ -41,6 +42,7 @@ export interface RendererSettings {
     fixedLaneCount: number;
     useDprScaling: boolean;
     enableAutoHardReset: boolean;
+    shadowIntensity: ShadowIntensity;
 }
 export type ReadonlyRendererSettings = {
     readonly [K in keyof RendererSettings]: RendererSettings[K] extends string | number | boolean | null | undefined ? RendererSettings[K] : ReadonlyArray<string>;

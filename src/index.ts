@@ -20,6 +20,7 @@ export type {
   CommentRendererEventHooks,
   EpochChangeInfo,
   RendererStateSnapshot,
+  ShadowIntensity,
 } from "@/shared/types";
 export { createLogger, type LogLevel, type Logger } from "@/shared/logger";
 export {

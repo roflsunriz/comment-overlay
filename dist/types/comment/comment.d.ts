@@ -37,6 +37,7 @@ export declare class Comment {
     exitThreshold: number;
     scrollDirection: ScrollDirection;
     renderStyle: RenderStyle;
+    shadowIntensity: import("@/shared/types").ShadowIntensity;
     creationIndex: number;
     letterSpacing: number;
     lineHeightMultiplier: number;

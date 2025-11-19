@@ -54,6 +54,7 @@ export class Comment {
   exitThreshold = 0;
   scrollDirection: ScrollDirection = "rtl";
   renderStyle: RenderStyle = "outline-only";
+  shadowIntensity: import("@/shared/types").ShadowIntensity = "medium";
   creationIndex = 0;
   letterSpacing = 0;
   lineHeightMultiplier = 1;
@@ -99,6 +100,7 @@ export class Comment {
     this.color = parsedCommands.resolvedColor;
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.renderStyle = settings.renderStyle;
+    this.shadowIntensity = settings.shadowIntensity;
     this.letterSpacing = parsedCommands.letterSpacing;
     this.lineHeightMultiplier = parsedCommands.lineHeight;
 
@@ -172,6 +174,7 @@ export class Comment {
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.applyScrollDirection(settings.scrollDirection);
     this.renderStyle = settings.renderStyle;
+    this.shadowIntensity = settings.shadowIntensity;
     if (typeof settingsVersion === "number") {
       this.lastSyncedSettingsVersion = settingsVersion;
     }

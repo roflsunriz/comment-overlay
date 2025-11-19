@@ -155,6 +155,7 @@ const fullscreenButton = document.querySelector("#fullscreen-button");
 const stallEmulatorButton = document.querySelector("#stall-emulator");
 const settingsStatusEl = document.querySelector("#settings-status");
 const directionSelect = document.querySelector("#scroll-direction");
+const shadowIntensitySelect = document.querySelector("#shadow-intensity");
 const ngWordsInput = document.querySelector("#ng-words-input");
 const ngRegexInput = document.querySelector("#ng-regex-input");
 const regexStatusEl = document.querySelector("#ng-regex-status");
@@ -227,6 +228,7 @@ const setup = async () => {
     !(fullscreenButton instanceof HTMLButtonElement) ||
     !(stallEmulatorButton instanceof HTMLButtonElement) ||
     !(directionSelect instanceof HTMLSelectElement) ||
+    !(shadowIntensitySelect instanceof HTMLSelectElement) ||
     !(ngWordsInput instanceof HTMLTextAreaElement) ||
     !(ngRegexInput instanceof HTMLTextAreaElement) ||
     !(profilerStatsButton instanceof HTMLButtonElement) ||
@@ -465,7 +467,13 @@ const setup = async () => {
     const ngWords = currentSettings.ngWords.length > 0 ? "オン" : "オフ";
     const ngRegex = currentSettings.ngRegexps.length > 0 ? "オン" : "オフ";
     const direction = currentSettings.scrollDirection === "ltr" ? "左→右" : "右→左";
-    return `表示: ${visibility} / NGワード: ${ngWords} / NG正規表現: ${ngRegex} / 方向: ${direction}`;
+    const shadowLabel = {
+      none: "なし",
+      light: "弱",
+      medium: "中",
+      strong: "強",
+    }[currentSettings.shadowIntensity] ?? currentSettings.shadowIntensity;
+    return `表示: ${visibility} / NGワード: ${ngWords} / NG正規表現: ${ngRegex} / 方向: ${direction} / 影: ${shadowLabel}`;
   };
 
   const updateSettingsStatus = () => {
@@ -488,7 +496,7 @@ const setup = async () => {
       ngWords: Array.isArray(nextSettings.ngWords) ? [...nextSettings.ngWords] : [],
       ngRegexps: Array.isArray(nextSettings.ngRegexps) ? [...nextSettings.ngRegexps] : [],
     };
-    renderer.updateSettings(currentSettings);
+    renderer.settings = currentSettings;
     updateSettingsStatus();
   };
 
@@ -549,6 +557,7 @@ const setup = async () => {
 
   updateSettingsStatus();
   directionSelect.value = currentSettings.scrollDirection;
+  shadowIntensitySelect.value = currentSettings.shadowIntensity || "medium";
   ngWordsInput.value = currentSettings.ngWords.join("\n");
   ngRegexInput.value = currentSettings.ngRegexps.join("\n");
   updateRegexStatus(
@@ -696,6 +705,23 @@ const setup = async () => {
         ? "コメントを左から右へ流します。"
         : "コメントを右から左へ流します。",
     );
+  });
+
+  shadowIntensitySelect.addEventListener("change", () => {
+    const intensity = shadowIntensitySelect.value;
+    const validIntensities = ["none", "light", "medium", "strong"];
+    if (!validIntensities.includes(intensity)) {
+      reportStatus(`不正な影の強さ: ${intensity}`);
+      return;
+    }
+    pushSettings({ ...currentSettings, shadowIntensity: intensity });
+    const labels = {
+      none: "なし",
+      light: "弱",
+      medium: "中",
+      strong: "強",
+    };
+    reportStatus(`影の強さを「${labels[intensity]}」に設定しました。`);
   });
 
   ngWordsInput.addEventListener("input", () => {

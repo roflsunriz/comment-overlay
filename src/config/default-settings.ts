@@ -17,6 +17,7 @@ const BASE_SETTINGS: RendererSettings = {
   fixedLaneCount: 12,
   useDprScaling: true,
   enableAutoHardReset: true,
+  shadowIntensity: "medium",
 };
 
 export const DEFAULT_RENDERER_SETTINGS: ReadonlyRendererSettings = BASE_SETTINGS;

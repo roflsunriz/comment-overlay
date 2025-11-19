@@ -35,6 +35,7 @@ export type TextMeasurementCache = Map<string, number>;
 export type ScrollDirection = "rtl" | "ltr";
 export type RenderStyle = "classic" | "outline-only";
 export type SyncMode = "raf" | "video-frame";
+export type ShadowIntensity = "none" | "light" | "medium" | "strong";
 
 export interface RendererSettings {
   commentColor: string;
@@ -55,6 +56,8 @@ export interface RendererSettings {
   // DPR対応の可否（キャンバス実解像度スケーリング）。実装は後続。
   useDprScaling: boolean;
   enableAutoHardReset: boolean;
+  // 影の強さ（背景との視認性確保用）
+  shadowIntensity: ShadowIntensity;
 }
 
 export type ReadonlyRendererSettings = {
