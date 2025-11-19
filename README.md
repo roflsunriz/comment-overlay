@@ -94,6 +94,22 @@ video.addEventListener("ended", () => {
 - `scrollDirection`: `'rtl'` (右→左) または `'ltr'` (左→右) を指定して、横流れコメントの方向を切り替えられます。
 - `enableAutoHardReset`: デフォルトでは再生再開・シーク完了・リサイズ・タブ復帰・初回再生直後などで自動的に `hardReset()` を実行し、コメントの残像やアーティファクトを解消します。アプリ側で同様の仕組みを持っている場合は `false` に設定して二重実行を避けられます。
 
+### コメントテキストの処理に関する注意
+
+コメントデータを処理する際、**`.trim()` を使用しないでください**。`.trim()` は全角スペース（`\u3000`）や非破壊スペース（`\u00A0`）を削除するため、AAコメント（アスキーアート）のインデント構造が崩れる原因となります。
+
+```ts
+// ❌ 悪い例
+const text = commentData.body.trim();
+renderer.addComment(text, vposMs, commands);
+
+// ✅ 良い例
+const text = commentData.body;
+if (text.length > 0) {
+  renderer.addComment(text, vposMs, commands);
+}
+```
+
 ### イベントフック (v2.4.2+)
 
 ライブラリは、エポック変更や内部状態の変化をイベントフック経由で通知できます。

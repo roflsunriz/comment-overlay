@@ -181,9 +181,10 @@ const sanitizeCommentEntry = (entry) => {
       : typeof entry.body === "string"
         ? entry.body
         : "";
-  const text = rawText.trim();
+  // trim()を使わず、空文字列チェックのみ行う（全角スペースなどを保持するため）
+  const text = rawText;
   const vposMs = Number(entry.vposMs);
-  if (!text || !Number.isFinite(vposMs) || vposMs < 0) {
+  if (text.length === 0 || !Number.isFinite(vposMs) || vposMs < 0) {
     safeDebugLog("overlay-sanitize-skip", {
       reason: "invalid-values",
       preview: formatPreview(text),
