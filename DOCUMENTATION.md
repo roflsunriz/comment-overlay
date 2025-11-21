@@ -73,7 +73,7 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 
 ### パフォーマンス最適化
 
-`comment-overlay` は `strokeText` を使用せず、複数回の `fillText` と軽量なシャドウ処理でアウトラインを生成します。フォントサイズに応じてアウトラインの太さを自動調整し、描画コストを一定に抑えながら従来の視認性を維持します。
+軽量シャドウ処理で視認性を確保します。`shadowIntensity` で影の強さを指定してください。`strokeText`や`fillText`の複雑なアウトライン生成はパフォーマンス最適化の為とコメントコマンド`big`時にアウトラインが乱れるため廃止しました。
 
 配列を共有しないためにも `cloneDefaultSettings()` の戻り値を編集するか、自前でディープコピーしてください。
 
