@@ -1,5 +1,4 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
-import { requestAutoHardReset } from "@/renderer/auto-hard-reset";
 import { toMilliseconds } from "@/shared/constants";
 
 const setupVisibilityHandlingImpl = function (this: CommentRenderer): void {
@@ -47,7 +46,6 @@ const handleVisibilityRestoreImpl = function (this: CommentRenderer): void {
   this.pendingInitialSync = true;
   this.resetFinalPhaseState();
   this.updatePlaybackProgressState();
-  requestAutoHardReset(this, "visibility-restore");
   this.draw();
 };
 

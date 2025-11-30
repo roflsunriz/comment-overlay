@@ -13,40 +13,6 @@ import {
 import { dumpRendererState, logEpochChange } from "@/shared/debug";
 import type { EpochChangeInfo, RendererStateSnapshot } from "@/shared/types";
 
-const hardResetImpl = function (this: CommentRenderer): void {
-  const canvas = this.canvas;
-  const ctx = this.ctx;
-  const now = this.timeSource.now();
-  this.lastHardResetAt = now;
-
-  this.incrementEpoch("manual-reset");
-
-  this.activeComments.clear();
-  this.reservedLanes.clear();
-  this.topStaticLaneReservations.length = 0;
-  this.bottomStaticLaneReservations.length = 0;
-
-  this.comments.forEach((comment) => {
-    comment.isActive = false;
-    comment.hasShown = false;
-    comment.lane = -1;
-    comment.clearActivation();
-    comment.epochId = this.epochId;
-  });
-
-  if (canvas && ctx) {
-    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
-    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
-    const effectiveHeight =
-      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
-    ctx.clearRect(0, 0, effectiveWidth, effectiveHeight);
-  }
-
-  this.pendingInitialSync = true;
-  this.resetFinalPhaseState();
-  this.emitStateSnapshot("hardReset");
-};
-
 const resetFinalPhaseStateImpl = function (this: CommentRenderer): void {
   this.finalPhaseActive = false;
   this.finalPhaseStartTime = null;
@@ -56,7 +22,7 @@ const resetFinalPhaseStateImpl = function (this: CommentRenderer): void {
 
 const incrementEpochImpl = function (
   this: CommentRenderer,
-  reason: "source-change" | "metadata-loaded" | "manual-reset",
+  reason: "source-change" | "metadata-loaded",
 ): void {
   const previousEpochId = this.epochId;
   this.epochId += 1;
@@ -227,7 +193,6 @@ const recomputeFinalPhaseTimelineImpl = function (this: CommentRenderer): void {
 };
 
 export const registerFinalPhaseMethods = (ctor: typeof CommentRenderer): void => {
-  ctor.prototype.hardReset = hardResetImpl;
   ctor.prototype.resetFinalPhaseState = resetFinalPhaseStateImpl;
   ctor.prototype.incrementEpoch = incrementEpochImpl;
   ctor.prototype.emitStateSnapshot = emitStateSnapshotImpl;

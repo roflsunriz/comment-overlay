@@ -26,6 +26,4 @@ export declare const STATIC_COMMENT_EDGE_PADDING_PX = 5;
 export declare const STATIC_COMMENT_STACKING_PADDING_PX = 2;
 export declare const STATIC_COMMENT_SIDE_MARGIN_PX = 8;
 export declare const MIN_STATIC_FONT_SIZE_PX = 12;
-export declare const AUTO_HARD_RESET_DEDUP_WINDOW_MS = 500;
-export declare const AUTO_HARD_RESET_INITIAL_PLAYBACK_DELAY_MS = 3000;
 //# sourceMappingURL=constants.d.ts.map

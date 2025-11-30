@@ -56,11 +56,6 @@ export declare class CommentRenderer {
     lastPlayResumeTime: number;
     readonly playResumeSeekIgnoreDurationMs = 500;
     lastVideoSource: string | null;
-    lastHardResetAt: number;
-    readonly autoHardResetDedupWindowMs = 500;
-    readonly initialPlaybackAutoResetDelayMs = 3000;
-    initialPlaybackAutoResetTimer: ReturnType<typeof setTimeout> | null;
-    initialPlaybackAutoResetTriggered: boolean;
     initialize: (options: HTMLVideoElement | CommentRendererInitializeOptions) => void;
     destroy: () => void;
     destroyCanvasOnly: () => void;
@@ -100,9 +95,8 @@ export declare class CommentRenderer {
     addComment: (text: string, vposMs: number, commands?: string[]) => Comment | null;
     clearComments: () => void;
     resetState: () => void;
-    hardReset: () => void;
     resetFinalPhaseState: () => void;
-    incrementEpoch: (reason: "source-change" | "metadata-loaded" | "manual-reset") => void;
+    incrementEpoch: (reason: "source-change" | "metadata-loaded") => void;
     emitStateSnapshot: (label: string) => void;
     getEffectiveCommentVpos: (comment: Comment) => number;
     getFinalPhaseDisplayDuration: (comment: Comment) => number;

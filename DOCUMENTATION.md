@@ -62,10 +62,7 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 | `useFixedLaneCount` | `boolean` | レーン数を固定するかどうか |
 | `fixedLaneCount` | `number` | 固定する場合のレーン数 |
 | `useDprScaling` | `boolean` | `devicePixelRatio` に応じた高解像度描画を行うか |
-| `enableAutoHardReset` | `boolean` | コメントアーティファクト除去のために自動 `hardReset()` を行うか |
 | `shadowIntensity` | `'none' \| 'light' \| 'medium' \| 'strong'` | コメントの影の強さ |
-
-`enableAutoHardReset` が `true` の場合、リサイズ直後・シーク完了直後・再生再開直後・タブ復帰直後・初回再生から数秒後などのタイミングで自動的に `hardReset()` が走り、コメントの残像を抑制します。既存アプリが自前で `hardReset()` を呼び出している場合は `false` に設定することで二重実行を防げます。
 
 `ngWords` は入力をトリムしたうえで部分一致・大文字小文字を区別せずに評価されます。`scrollDirection` を `'ltr'` にするとコメントが左側から右方向へ流れ、デフォルトの `'rtl'` では従来通り右側から左方向へ流れます。
 
@@ -123,7 +120,6 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 
 - **`source-change`**: 動画ソース（`src` 属性や `<source>` 要素）が変更されたとき
 - **`metadata-loaded`**: 動画のメタデータ（`loadedmetadata` イベント）がロードされたとき
-- **`manual-reset`**: `hardReset()` メソッドが手動で呼ばれたとき
 
 エポック変更時には `onEpochChange` コールバックが呼ばれ、全ての既存コメントの `epochId` が新しい値に更新されます。
 
@@ -146,8 +142,6 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
   `CommentRendererInitializeOptions` を渡し、ビデオ要素と描画コンテナを紐付けます。`options.animationFrameProvider` を指定すればカスタムループにも対応できます。
 - `destroy()`  
   内部タイマーや `ResizeObserver` を破棄し、DOM との紐付けを解除します。SPA などでは画面遷移時に呼び出してください。
-- `hardReset()` (v2.5.0+)  
-  前エポックのゴーストコメントを強制掃除し、次のフレームで絶対時間同期を実行します。動画ロード直後の初期化やソース変更時に自動で呼ばれますが、手動で呼ぶことも可能です。エポックIDがインクリメントされ、`onEpochChange` イベントが発火します。
 
 ## ロガー
 
@@ -182,7 +176,6 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 デバッグログが有効な場合、以下の情報がコンソールに出力されます。
 
 - コメントの追加・スキップ・評価
-- ゴーストコメントの検出
 - エポック変更
 - 内部状態のスナップショット
 

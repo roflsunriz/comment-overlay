@@ -421,29 +421,6 @@ const setup = async () => {
     }, 100);
   });
 
-  // ==== プロファイラーフック: hardReset をラップ ====
-  if (typeof renderer.hardReset === "function") {
-    const originalHardReset = renderer.hardReset.bind(renderer);
-    renderer.hardReset = () => {
-      // hardReset 前は詳細情報を含める（Raw JSON用）
-      pushOverlaySample({
-        kind: "event",
-        event: "hardReset-before",
-        ...captureRendererState({ includeCommentDetails: true }),
-      });
-      const result = originalHardReset();
-      // hardReset 後の状態は次のフレームで確実に取得できるよう、少し遅延させる
-      setTimeout(() => {
-        pushOverlaySample({
-          kind: "event",
-          event: "hardReset-after",
-          ...captureRendererState({ includeCommentDetails: true }),
-        });
-      }, 16); // 約1フレーム後
-      return result;
-    };
-  }
-
   // resetState もフック（loadComments内で使われている）
   if (typeof renderer.resetState === "function") {
     const originalResetState = renderer.resetState.bind(renderer);

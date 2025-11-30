@@ -92,7 +92,6 @@ video.addEventListener("ended", () => {
 - `ngWords`: 入力テキストをトリムしたうえで部分一致 (大文字小文字を区別せず) による NG 判定を行います。
 - `ngRegexps`: コメント本文に対して評価される正規表現文字列の配列です。空配列を渡すと無効になります。
 - `scrollDirection`: `'rtl'` (右→左) または `'ltr'` (左→右) を指定して、横流れコメントの方向を切り替えられます。
-- `enableAutoHardReset`: デフォルトでは再生再開・シーク完了・リサイズ・タブ復帰・初回再生直後などで自動的に `hardReset()` を実行し、コメントの残像やアーティファクトを解消します。アプリ側で同様の仕組みを持っている場合は `false` に設定して二重実行を避けられます。
 
 ### コメントテキストの処理に関する注意
 
@@ -144,7 +143,6 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 **エポック変更のタイミング:**
 - `source-change`: 動画ソースが変更されたとき
 - `metadata-loaded`: 動画のメタデータがロードされたとき
-- `manual-reset`: `hardReset()`が手動で呼ばれたとき
 
 デバッグログを有効にすると、内部状態の変化がコンソールに出力されます。
 

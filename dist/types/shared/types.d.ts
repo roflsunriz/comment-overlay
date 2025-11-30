@@ -41,7 +41,6 @@ export interface RendererSettings {
     useFixedLaneCount: boolean;
     fixedLaneCount: number;
     useDprScaling: boolean;
-    enableAutoHardReset: boolean;
     shadowIntensity: ShadowIntensity;
 }
 export type ReadonlyRendererSettings = {
@@ -89,7 +88,7 @@ export interface VideoMetadata {
 export interface EpochChangeInfo {
     readonly previousEpochId: number;
     readonly newEpochId: number;
-    readonly reason: "source-change" | "metadata-loaded" | "manual-reset";
+    readonly reason: "source-change" | "metadata-loaded";
     readonly timestamp: number;
 }
 export interface RendererStateSnapshot {

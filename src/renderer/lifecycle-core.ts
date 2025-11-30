@@ -1,5 +1,4 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
-import { resetInitialPlaybackAutoResetState } from "@/renderer/auto-hard-reset";
 import type { CommentRendererInitializeOptions } from "@/shared/types";
 import { SEEK_DIRECTION_EPSILON_MS, toMilliseconds } from "@/shared/constants";
 
@@ -103,7 +102,6 @@ const destroyImpl = function (this: CommentRenderer): void {
   this.stopAnimation();
   this.cleanupResizeHandling();
   this.runCleanupTasks();
-  resetInitialPlaybackAutoResetState(this);
 
   if (this.canvas) {
     this.canvas.remove();
@@ -128,7 +126,6 @@ const destroyImpl = function (this: CommentRenderer): void {
 
 const destroyCanvasOnlyImpl = function (this: CommentRenderer): void {
   this.stopAnimation();
-  resetInitialPlaybackAutoResetState(this);
   if (this.canvas) {
     this.canvas.remove();
   }

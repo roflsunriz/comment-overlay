@@ -1,1 +1,1 @@
-{"version":3,"file":"visibility.d.ts","sourceRoot":"","sources":["../../../src/renderer/visibility.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,6BAA6B,CAAC;AAqDnE,eAAO,MAAM,yBAAyB,GAAI,MAAM,OAAO,eAAe,KAAG,IAGxE,CAAC"}
+{"version":3,"file":"visibility.d.ts","sourceRoot":"","sources":["../../../src/renderer/visibility.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,6BAA6B,CAAC;AAmDnE,eAAO,MAAM,yBAAyB,GAAI,MAAM,OAAO,eAAe,KAAG,IAGxE,CAAC"}

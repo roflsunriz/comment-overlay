@@ -26,11 +26,7 @@ import type {
   StaticLaneReservation,
   VideoFrameCallbackMetadataLike,
 } from "@/shared/types";
-import {
-  AUTO_HARD_RESET_DEDUP_WINDOW_MS,
-  AUTO_HARD_RESET_INITIAL_PLAYBACK_DELAY_MS,
-  DEFAULT_LANE_COUNT,
-} from "@/shared/constants";
+import { DEFAULT_LANE_COUNT } from "@/shared/constants";
 import { rebuildNgMatchersImpl, registerCommentCollectionMethods } from "@/renderer/comments";
 import { registerFinalPhaseMethods } from "@/renderer/final-phase";
 import { registerPlaybackHelpers } from "@/renderer/playback";
@@ -102,11 +98,6 @@ export class CommentRenderer {
   public lastPlayResumeTime = 0;
   public readonly playResumeSeekIgnoreDurationMs = 500;
   public lastVideoSource: string | null = null;
-  public lastHardResetAt = 0;
-  public readonly autoHardResetDedupWindowMs = AUTO_HARD_RESET_DEDUP_WINDOW_MS;
-  public readonly initialPlaybackAutoResetDelayMs = AUTO_HARD_RESET_INITIAL_PLAYBACK_DELAY_MS;
-  public initialPlaybackAutoResetTimer: ReturnType<typeof setTimeout> | null = null;
-  public initialPlaybackAutoResetTriggered = false;
 
   declare public initialize: (options: HTMLVideoElement | CommentRendererInitializeOptions) => void;
   declare public destroy: () => void;
@@ -157,11 +148,8 @@ export class CommentRenderer {
   declare public addComment: (text: string, vposMs: number, commands?: string[]) => Comment | null;
   declare public clearComments: () => void;
   declare public resetState: () => void;
-  declare public hardReset: () => void;
   declare public resetFinalPhaseState: () => void;
-  declare public incrementEpoch: (
-    reason: "source-change" | "metadata-loaded" | "manual-reset",
-  ) => void;
+  declare public incrementEpoch: (reason: "source-change" | "metadata-loaded") => void;
   declare public emitStateSnapshot: (label: string) => void;
   declare public getEffectiveCommentVpos: (comment: Comment) => number;
   declare public getFinalPhaseDisplayDuration: (comment: Comment) => number;

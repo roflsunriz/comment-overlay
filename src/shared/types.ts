@@ -55,7 +55,6 @@ export interface RendererSettings {
   fixedLaneCount: number;
   // DPR対応の可否（キャンバス実解像度スケーリング）。実装は後続。
   useDprScaling: boolean;
-  enableAutoHardReset: boolean;
   // 影の強さ（背景との視認性確保用）
   shadowIntensity: ShadowIntensity;
 }
@@ -138,7 +137,7 @@ export interface VideoMetadata {
 export interface EpochChangeInfo {
   readonly previousEpochId: number;
   readonly newEpochId: number;
-  readonly reason: "source-change" | "metadata-loaded" | "manual-reset";
+  readonly reason: "source-change" | "metadata-loaded";
   readonly timestamp: number;
 }
 

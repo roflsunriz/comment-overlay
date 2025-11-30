@@ -1,9 +1,4 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
-import {
-  requestAutoHardReset,
-  resetInitialPlaybackAutoResetState,
-  scheduleInitialPlaybackAutoReset,
-} from "@/renderer/auto-hard-reset";
 import { SEEK_DIRECTION_EPSILON_MS, toMilliseconds } from "@/shared/constants";
 
 const setupVideoEventListenersImpl = function (
@@ -12,7 +7,6 @@ const setupVideoEventListenersImpl = function (
 ): void {
   try {
     const onPlay = (): void => {
-      const wasPlaying = this.isPlaying;
       this.isPlaying = true;
       this.playbackHasBegun = true;
       const now = this.timeSource.now();
@@ -22,10 +16,6 @@ const setupVideoEventListenersImpl = function (
         comment.lastUpdateTime = now;
         comment.isPaused = false;
       });
-      if (!wasPlaying) {
-        requestAutoHardReset(this, "play-resume");
-      }
-      scheduleInitialPlaybackAutoReset(this);
     };
     const onPause = (): void => {
       this.isPlaying = false;
@@ -40,7 +30,6 @@ const setupVideoEventListenersImpl = function (
     };
     const onSeeked = (): void => {
       this.onSeek();
-      requestAutoHardReset(this, "seeked");
     };
     const onRateChange = (): void => {
       this.playbackRate = videoElement.playbackRate;
@@ -108,10 +97,8 @@ const handleVideoMetadataLoadedImpl = function (
   this.handleVideoSourceChange(videoElement);
   this.resize();
   this.calculateLaneMetrics();
-  this.hardReset();
   this.onSeek();
   this.emitStateSnapshot("metadata-loaded");
-  resetInitialPlaybackAutoResetState(this);
 };
 
 const handleVideoStalledImpl = function (this: CommentRenderer): void {
@@ -161,7 +148,6 @@ const handleVideoSourceChangeImpl = function (
     this.isPlaying = false;
     this.resetFinalPhaseState();
     this.resetCommentActivity();
-    resetInitialPlaybackAutoResetState(this);
     return;
   }
 
@@ -177,7 +163,6 @@ const handleVideoSourceChangeImpl = function (
   this.resetFinalPhaseState();
   this.resetCommentActivity();
   this.emitStateSnapshot("source-change");
-  resetInitialPlaybackAutoResetState(this);
 };
 
 const syncVideoStateImpl = function (this: CommentRenderer, videoElement: HTMLVideoElement): void {

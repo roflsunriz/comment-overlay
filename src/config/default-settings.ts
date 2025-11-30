@@ -16,7 +16,6 @@ const BASE_SETTINGS: RendererSettings = {
   useFixedLaneCount: false,
   fixedLaneCount: 12,
   useDprScaling: true,
-  enableAutoHardReset: true,
   shadowIntensity: "medium",
 };
 
