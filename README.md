@@ -34,6 +34,38 @@ npm install
 
 開発にあたり、変更後は `npm run lint`、`npm run type-check`、`npm run build` を順番に実行して品質を確認してください。
 
+## パブリッシュ手順（メンテナー向け）
+
+このプロジェクトはGitHub Actionsを使用してnpmに自動パブリッシュします。npmは2025年12月9日にクラシックトークンを無効化したため、新しいグラニュラートークンを使用します。
+
+### 初回セットアップ
+
+1. npmで新しいグラニュラートークンを作成
+   - https://www.npmjs.com/settings/[your-username]/tokens にアクセス
+   - "Generate New Token" → "Granular Access Token"を選択
+   - Permissions: "Read and write"を付与
+   - Packages: "All packages"または`comment-overlay`を選択
+   - "Automation"オプションを有効化（2FAバイパス用）
+
+2. GitHubリポジトリのSecretsに追加
+   - Settings → Secrets and variables → Actions → New repository secret
+   - Name: `NPM_TOKEN`
+   - Value: 作成したnpmトークンを貼り付け
+
+### パッケージのパブリッシュ
+
+1. `package.json`のバージョンを更新（例: 2.9.0 → 2.10.0）
+2. `src/config/default-settings.ts`のバージョンも更新
+3. 変更をコミット＆プッシュ
+4. タグを作成してプッシュ:
+   ```bash
+   git tag v2.10.0
+   git push origin v2.10.0
+   ```
+5. GitHub Actionsが自動的に実行され、npmにパブリッシュされます
+
+または、GitHubの"Actions"タブから"Publish to npm"ワークフローを手動実行することもできます。
+
 ## 非推奨バージョン
 
 次のバージョンはバグを含むため非推奨となっています:v1.2.0, v1.2.1, v1.2.2, v2.5.0
