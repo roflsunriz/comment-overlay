@@ -141,6 +141,20 @@ if (text.length > 0) {
 }
 ```
 
+### コメント表示/非表示の切り替え (v3.0.0+)
+
+コメントの表示/非表示を動的に切り替えるには `setCommentVisibility()` メソッドを使用します。
+
+```ts
+// コメントを非表示にする（即座にキャンバスがクリアされる）
+renderer.setCommentVisibility(false);
+
+// コメントを再表示する（描画が再開される）
+renderer.setCommentVisibility(true);
+```
+
+**注意:** `renderer.settings.isCommentVisible = false` のように直接設定を変更すると、キャンバスがクリアされずコメントがフリーズした状態になります。必ず `setCommentVisibility()` メソッドを使用してください。
+
 ### イベントフック (v2.4.2+)
 
 ライブラリは、エポック変更や内部状態の変化をイベントフック経由で通知できます。

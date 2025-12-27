@@ -671,7 +671,11 @@ const setup = async () => {
 
   toggleEl.addEventListener("change", () => {
     const isVisible = toggleEl.checked;
-    pushSettings({ ...currentSettings, isCommentVisible: isVisible });
+    // v3.0.0+: setCommentVisibility()を使用して即座にキャンバスをクリア/再描画
+    renderer.setCommentVisibility(isVisible);
+    // UIの状態表示を同期
+    currentSettings.isCommentVisible = isVisible;
+    updateSettingsStatus();
     reportStatus(isVisible ? "コメント表示を有効にしました。" : "コメント表示を無効にしました。");
   });
 

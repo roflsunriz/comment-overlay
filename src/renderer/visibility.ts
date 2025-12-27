@@ -49,7 +49,42 @@ const handleVisibilityRestoreImpl = function (this: CommentRenderer): void {
   this.draw();
 };
 
+const setCommentVisibilityImpl = function (this: CommentRenderer, visible: boolean): void {
+  const previousVisible = this._settings.isCommentVisible;
+  this._settings.isCommentVisible = visible;
+
+  // 状態が変化した場合のみ処理
+  if (previousVisible === visible) {
+    return;
+  }
+
+  this.settingsVersion += 1;
+  this.commentDependencies.settingsVersion = this.settingsVersion;
+
+  const canvas = this.canvas;
+  const ctx = this.ctx;
+
+  if (!canvas || !ctx) {
+    return;
+  }
+
+  if (!visible) {
+    // 非表示に変更：キャンバスをクリアしてコメントを消す
+    const effectiveDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
+    const effectiveWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / effectiveDpr;
+    const effectiveHeight =
+      this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
+    ctx.clearRect(0, 0, effectiveWidth, effectiveHeight);
+  } else {
+    // 表示に変更：即座に描画を再開
+    this.lastDrawTime = this.timeSource.now();
+    this.pendingInitialSync = true;
+    this.scheduleNextFrame();
+  }
+};
+
 export const registerVisibilityMethods = (ctor: typeof CommentRenderer): void => {
   ctor.prototype.setupVisibilityHandling = setupVisibilityHandlingImpl;
   ctor.prototype.handleVisibilityRestore = handleVisibilityRestoreImpl;
+  ctor.prototype.setCommentVisibility = setCommentVisibilityImpl;
 };

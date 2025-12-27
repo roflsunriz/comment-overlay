@@ -87,6 +87,25 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 | `debug` | `DebugLoggingOptions` | デバッグログの設定 |
 | `eventHooks` | `CommentRendererEventHooks` | イベントコールバック（後述） |
 
+## コメント表示/非表示の切り替え (v3.0.0+)
+
+コメントの表示/非表示を動的に切り替えるには `setCommentVisibility()` メソッドを使用します。
+
+```ts
+// コメントを非表示にする（即座にキャンバスがクリアされる）
+renderer.setCommentVisibility(false);
+
+// コメントを再表示する（描画が再開される）
+renderer.setCommentVisibility(true);
+```
+
+このメソッドは以下の処理を行います：
+
+- `visible=false`: `isCommentVisible` 設定を更新し、キャンバスをクリアしてコメントを即座に消去
+- `visible=true`: `isCommentVisible` 設定を更新し、描画を再開
+
+**注意:** `renderer.settings.isCommentVisible = false` のように直接設定を変更すると、キャンバスがクリアされずコメントがフリーズした状態になります。必ず `setCommentVisibility()` メソッドを使用してください。
+
 ## イベントフック (v2.5.0+)
 
 `CommentRendererConfig` の `eventHooks` プロパティで、以下のイベントにコールバックを登録できます。

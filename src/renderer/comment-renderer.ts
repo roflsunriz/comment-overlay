@@ -126,6 +126,7 @@ export class CommentRenderer {
   declare public extractVideoElement: (node: Node) => HTMLVideoElement | null;
   declare public setupVisibilityHandling: () => void;
   declare public handleVisibilityRestore: () => void;
+  declare public setCommentVisibility: (visible: boolean) => void;
   declare public setupFullscreenHandling: () => void;
   declare public resolveResizeObserverTarget: (videoElement: HTMLVideoElement) => Element;
   declare public handleFullscreenChange: () => Promise<void>;

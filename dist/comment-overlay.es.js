@@ -1,4 +1,4 @@
-const we = {
+const Te = {
   small: 0.8,
   medium: 1,
   big: 1.4
@@ -45,7 +45,7 @@ const we = {
     return Number.isFinite(i) ? i / 100 : null;
   }
   return he(t);
-}, Re = (e) => Number.isFinite(e) ? Math.min(100, Math.max(-100, e)) : 0, De = (e) => !Number.isFinite(e) || e === 0 ? 1 : Math.min(5, Math.max(0.25, e)), Ve = (e) => e === "naka" || e === "ue" || e === "shita", Oe = (e) => e === "small" || e === "medium" || e === "big", ke = (e) => e === "defont" || e === "gothic" || e === "mincho", Ne = (e) => e in ce, He = (e, t) => {
+}, De = (e) => Number.isFinite(e) ? Math.min(100, Math.max(-100, e)) : 0, Re = (e) => !Number.isFinite(e) || e === 0 ? 1 : Math.min(5, Math.max(0.25, e)), Ve = (e) => e === "naka" || e === "ue" || e === "shita", Oe = (e) => e === "small" || e === "medium" || e === "big", ke = (e) => e === "defont" || e === "gothic" || e === "mincho", He = (e) => e in ce, Ne = (e, t) => {
   let i = "naka", s = "medium", n = "defont", a = null, r = 1, l = null, c = !1, d = 0, u = 1;
   for (const g of e) {
     const p = Ee(typeof g == "string" ? g : "");
@@ -71,7 +71,7 @@ const we = {
       n = v;
       continue;
     }
-    if (Ne(v)) {
+    if (He(v)) {
       a = ce[v].toUpperCase();
       continue;
     }
@@ -86,16 +86,16 @@ const we = {
     if (v.startsWith("ls:") || v.startsWith("letterspacing:")) {
       const S = p.indexOf(":");
       if (S >= 0) {
-        const T = he(p.slice(S + 1));
-        T !== null && (d = Re(T));
+        const w = he(p.slice(S + 1));
+        w !== null && (d = De(w));
       }
       continue;
     }
     if (v.startsWith("lh:") || v.startsWith("lineheight:")) {
       const S = p.indexOf(":");
       if (S >= 0) {
-        const T = Ae(p.slice(S + 1));
-        T !== null && (u = De(T));
+        const w = Ae(p.slice(S + 1));
+        w !== null && (u = Re(w));
       }
       continue;
     }
@@ -104,7 +104,7 @@ const we = {
   return {
     layout: i,
     size: s,
-    sizeScale: we[s],
+    sizeScale: Te[s],
     font: n,
     fontFamily: Ie[n],
     resolvedColor: f,
@@ -126,7 +126,7 @@ const we = {
   return `rgba(${n}, ${a}, ${r}, ${c})`;
 }, ze = () => ({
   now: () => typeof performance < "u" && typeof performance.now == "function" ? performance.now() : Date.now()
-}), de = () => ze(), I = (e) => e * 1e3, We = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), J = 4e3, ie = 1800, $e = 3, Be = 0.25, Ge = 32, Xe = 48, B = 120, Ue = 4e3, U = 120, qe = 800, Ke = 2, N = 4e3, V = 4e3, P = V + J, Ye = 1e3, se = 1, fe = 12, pe = 24, x = 1e-3, R = 50, Je = 5, je = 2, ne = 8, Ze = 12, ae = {
+}), de = () => ze(), I = (e) => e * 1e3, We = (e) => !Number.isFinite(e) || e < 0 ? null : Math.round(e), J = 4e3, ie = 1800, $e = 3, Be = 0.25, Ge = 32, Xe = 48, B = 120, Ue = 4e3, U = 120, qe = 800, Ke = 2, H = 4e3, V = 4e3, P = V + J, Ye = 1e3, se = 1, fe = 12, pe = 24, x = 1e-3, D = 50, Je = 5, je = 2, ne = 8, Ze = 12, ae = {
   debug: 0,
   info: 1,
   warn: 2,
@@ -204,21 +204,21 @@ const we = {
     e.fontSize = l, t.font = `${e.fontSize}px ${e.fontFamily}`, e.lines = tt(e.text), q(e, t);
     const c = !e.isScrolling && (e.layout === "ue" || e.layout === "shita");
     if (c) {
-      const w = Math.max(1, a - ne * 2);
-      if (e.width > w) {
+      const T = Math.max(1, a - ne * 2);
+      if (e.width > T) {
         const E = Math.max(
           Ze,
           Math.min(e.fontSize, Math.floor(r * 0.6))
-        ), X = w / Math.max(e.width, 1), k = Math.max(
+        ), X = T / Math.max(e.width, 1), k = Math.max(
           E,
           Math.floor(e.fontSize * Math.min(X, 1))
         );
         k < e.fontSize && (e.fontSize = k, t.font = `${e.fontSize}px ${e.fontFamily}`, q(e, t));
         let ee = 0;
-        for (; e.width > w && e.fontSize > E && ee < 5; ) {
-          const Te = w / Math.max(e.width, 1), te = Math.max(
+        for (; e.width > T && e.fontSize > E && ee < 5; ) {
+          const we = T / Math.max(e.width, 1), te = Math.max(
             E,
-            Math.floor(e.fontSize * Math.max(Te, 0.7))
+            Math.floor(e.fontSize * Math.max(we, 0.7))
           );
           te >= e.fontSize ? e.fontSize = Math.max(E, e.fontSize - 1) : e.fontSize = te, t.font = `${e.fontSize}px ${e.fontFamily}`, q(e, t), ee += 1;
         }
@@ -226,7 +226,7 @@ const we = {
     }
     if (!e.isScrolling) {
       e.bufferWidth = 0;
-      const w = c ? ne : 0, E = Math.max((a - e.width) / 2, w), X = Math.max(w, a - e.width - w), k = Math.min(E, Math.max(X, w));
+      const T = c ? ne : 0, E = Math.max((a - e.width) / 2, T), X = Math.max(T, a - e.width - T), k = Math.min(E, Math.max(X, T));
       e.virtualStartX = k, e.x = k, e.baseSpeed = 0, e.speed = 0, e.speedPixelsPerMs = 0, e.visibleDurationMs = V, e.preCollisionDurationMs = V, e.totalDurationMs = V, e.reservationWidth = e.width, e.staticExpiryTimeMs = e.vposMs + V, e.lastUpdateTime = e.getTimeSource().now(), e.isPaused = !1;
       return;
     }
@@ -235,13 +235,13 @@ const we = {
     e.bufferWidth = Math.max(n.baseBufferPx, u);
     const o = Math.max(n.entryBufferPx, e.bufferWidth), f = e.scrollDirection, h = f === "rtl" ? a + n.virtualExtension : -e.width - e.bufferWidth - n.virtualExtension, g = f === "rtl" ? -e.width - e.bufferWidth - o : a + o, p = f === "rtl" ? a + o : -o, v = f === "rtl" ? h + e.width + e.bufferWidth : h - e.bufferWidth;
     e.virtualStartX = h, e.x = h, e.exitThreshold = g;
-    const S = a > 0 ? e.width / a : 0, T = n.maxVisibleDurationMs === n.minVisibleDurationMs;
+    const S = a > 0 ? e.width / a : 0, w = n.maxVisibleDurationMs === n.minVisibleDurationMs;
     let y = n.maxVisibleDurationMs;
-    if (!T && S > 1) {
-      const w = Math.min(S, n.maxWidthRatio), E = n.maxVisibleDurationMs / Math.max(w, 1);
+    if (!w && S > 1) {
+      const T = Math.min(S, n.maxWidthRatio), E = n.maxVisibleDurationMs / Math.max(T, 1);
       y = Math.max(n.minVisibleDurationMs, Math.floor(E));
     }
-    const D = a + e.width + e.bufferWidth + o, M = Math.max(y, 1), G = D / M, Ce = G * 1e3 / 60;
+    const R = a + e.width + e.bufferWidth + o, M = Math.max(y, 1), G = R / M, Ce = G * 1e3 / 60;
     e.baseSpeed = Ce, e.speed = e.baseSpeed, e.speedPixelsPerMs = G;
     const Me = Math.abs(g - h), be = f === "rtl" ? Math.max(0, v - p) : Math.max(0, p - v), Q = Math.max(G, Number.EPSILON);
     e.visibleDurationMs = y, e.preCollisionDurationMs = Math.max(0, Math.ceil(be / Q)), e.totalDurationMs = Math.max(
@@ -261,18 +261,18 @@ const we = {
 }, K = 5, F = {
   enabled: !1,
   maxLogsPerCategory: K
-}, H = /* @__PURE__ */ new Map(), st = (e) => {
+}, N = /* @__PURE__ */ new Map(), st = (e) => {
   if (e === void 0 || !Number.isFinite(e))
     return K;
   const t = Math.max(1, Math.floor(e));
   return Math.min(1e4, t);
 }, nt = (e) => {
-  F.enabled = !!e.enabled, F.maxLogsPerCategory = st(e.maxLogsPerCategory), F.enabled || H.clear();
-}, fs = () => {
-  H.clear();
+  F.enabled = !!e.enabled, F.maxLogsPerCategory = st(e.maxLogsPerCategory), F.enabled || N.clear();
+}, ps = () => {
+  N.clear();
 }, A = () => F.enabled, at = (e) => {
-  const t = H.get(e) ?? 0;
-  return t >= F.maxLogsPerCategory ? (t === F.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), H.set(e, t + 1)), !1) : (H.set(e, t + 1), !0);
+  const t = N.get(e) ?? 0;
+  return t >= F.maxLogsPerCategory ? (t === F.maxLogsPerCategory && (console.debug(`[CommentOverlay][${e}]`, "Further logs suppressed."), N.set(e, t + 1)), !1) : (N.set(e, t + 1), !0);
 }, C = (e, ...t) => {
   F.enabled && at(e) && console.debug(`[CommentOverlay][${e}]`, ...t);
 }, _ = (e, t = 32) => e.length <= t ? e : `${e.slice(0, t)}…`, rt = (e, t) => {
@@ -378,8 +378,8 @@ const we = {
   Shadow alpha: ${v.alpha}`,
     `
   Fill style: ${p}`
-  ), c.save(), c.shadowColor = `rgba(0, 0, 0, ${v.alpha})`, c.shadowBlur = v.blur, c.shadowOffsetX = 0, c.shadowOffsetY = 0, c.fillStyle = p, o.forEach((S, T) => {
-    const y = h + T * f;
+  ), c.save(), c.shadowColor = `rgba(0, 0, 0, ${v.alpha})`, c.shadowBlur = v.blur, c.shadowOffsetX = 0, c.shadowOffsetY = 0, c.fillStyle = p, o.forEach((S, w) => {
+    const y = h + w * f;
     g(S, y, "fill");
   }), c.restore(), c.restore(), l;
 }, ut = (e, t, i) => {
@@ -486,7 +486,7 @@ class vt {
     if (!Number.isFinite(i) || i < 0)
       throw new Error("Comment vposMs must be a non-negative number");
     this.text = t, this.vposMs = i, this.commands = Array.isArray(s) ? [...s] : [];
-    const r = He(this.commands, {
+    const r = Ne(this.commands, {
       defaultColor: n.commentColor
     });
     this.layout = r.layout, this.isScrolling = this.layout === "naka", this.sizeScale = r.sizeScale, this.opacityMultiplier = r.opacityMultiplier, this.opacityOverride = r.opacityOverride, this.colorOverride = r.colorOverride, this.isInvisible = r.isInvisible, this.fontFamily = r.fontFamily, this.color = r.resolvedColor, this.opacity = this.getEffectiveOpacity(n.commentOpacity), this.renderStyle = n.renderStyle, this.shadowIntensity = n.shadowIntensity, this.letterSpacing = r.letterSpacing, this.lineHeightMultiplier = r.lineHeight, this.timeSource = a.timeSource ?? de(), this.applyScrollDirection(n.scrollDirection), this.syncWithSettings(n, a.settingsVersion);
@@ -586,11 +586,11 @@ const gt = 4e3, $ = {
   fixedLaneCount: 12,
   useDprScaling: !0,
   shadowIntensity: "medium"
-}, ps = $, mt = () => ({
+}, vs = $, mt = () => ({
   ...$,
   ngWords: [...$.ngWords],
   ngRegexps: [...$.ngRegexps]
-}), vs = "v2.8.1", St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Se = (e, t = 0) => t === 0 ? Je : je, W = (e) => {
+}), gs = "v3.0.0", St = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, Se = (e, t = 0) => t === 0 ? Je : je, W = (e) => {
   const t = e.scrollVisibleDurationMs, i = t == null ? null : Number.isFinite(t) ? Math.max(1, Math.floor(t)) : null;
   return {
     ...e,
@@ -665,12 +665,12 @@ const gt = 4e3, $ = {
 }, xt = function(e, t, i = []) {
   const [s] = this.addComments([{ text: e, vposMs: t, commands: i }]);
   return s ?? null;
-}, Tt = function() {
+}, wt = function() {
   if (this.comments.length = 0, this.activeComments.clear(), this.reservedLanes.clear(), this.topStaticLaneReservations.length = 0, this.bottomStaticLaneReservations.length = 0, this.commentSequence = 0, this.ctx && this.canvas) {
     const e = this.canvasDpr > 0 ? this.canvasDpr : 1, t = this.displayWidth > 0 ? this.displayWidth : this.canvas.width / e, i = this.displayHeight > 0 ? this.displayHeight : this.canvas.height / e;
     this.ctx.clearRect(0, 0, t, i);
   }
-}, wt = function() {
+}, Tt = function() {
   this.clearComments(), this.currentTime = 0, this.resetFinalPhaseState(), this.playbackHasBegun = !1, this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1;
 }, ye = function() {
   const e = this._settings, t = Array.isArray(e.ngWords) ? e.ngWords : [];
@@ -688,7 +688,7 @@ const gt = 4e3, $ = {
 }, It = function(e) {
   return typeof e != "string" || e.length === 0 ? !1 : this.normalizedNgWords.some((t) => t.length > 0 && e.includes(t)) ? !0 : this.compiledNgRegexps.some((t) => t.test(e));
 }, Pt = (e) => {
-  e.prototype.addComments = bt, e.prototype.addComment = xt, e.prototype.clearComments = Tt, e.prototype.resetState = wt, e.prototype.rebuildNgMatchers = ye, e.prototype.isNGComment = It;
+  e.prototype.addComments = bt, e.prototype.addComment = xt, e.prototype.clearComments = wt, e.prototype.resetState = Tt, e.prototype.rebuildNgMatchers = ye, e.prototype.isNGComment = It;
 }, Ft = function() {
   this.finalPhaseActive = !1, this.finalPhaseStartTime = null, this.finalPhaseScheduleDirty = !1, this.finalPhaseVposOverrides.clear();
 }, Et = function(e) {
@@ -734,12 +734,12 @@ const gt = 4e3, $ = {
   this.lastSnapshotEmitTime = t;
 }, At = function(e) {
   return this.finalPhaseActive && this.finalPhaseScheduleDirty && this.recomputeFinalPhaseTimeline(), this.finalPhaseVposOverrides.get(e) ?? e.vposMs;
-}, Rt = function(e) {
+}, Dt = function(e) {
   if (!e.isScrolling)
     return V;
   const t = [];
   return Number.isFinite(e.visibleDurationMs) && e.visibleDurationMs > 0 && t.push(e.visibleDurationMs), Number.isFinite(e.totalDurationMs) && e.totalDurationMs > 0 && t.push(e.totalDurationMs), t.length > 0 ? Math.max(...t) : J;
-}, Dt = function(e) {
+}, Rt = function(e) {
   if (!this.finalPhaseActive || this.finalPhaseStartTime === null)
     return this.finalPhaseVposOverrides.delete(e), e.vposMs;
   this.finalPhaseScheduleDirty && this.recomputeFinalPhaseTimeline();
@@ -753,7 +753,7 @@ const gt = 4e3, $ = {
     this.finalPhaseVposOverrides.clear(), this.finalPhaseScheduleDirty = !1;
     return;
   }
-  const e = this.finalPhaseStartTime, t = this.duration > 0 ? this.duration : e + N, i = Math.max(e + N, t), s = this.comments.filter((d) => d.hasShown || d.isInvisible || this.isNGComment(d.text) ? !1 : d.vposMs >= e - P).sort((d, u) => {
+  const e = this.finalPhaseStartTime, t = this.duration > 0 ? this.duration : e + H, i = Math.max(e + H, t), s = this.comments.filter((d) => d.hasShown || d.isInvisible || this.isNGComment(d.text) ? !1 : d.vposMs >= e - P).sort((d, u) => {
     const o = d.vposMs - u.vposMs;
     return Math.abs(o) > x ? o : d.creationIndex - u.creationIndex;
   });
@@ -761,7 +761,7 @@ const gt = 4e3, $ = {
     this.finalPhaseScheduleDirty = !1;
     return;
   }
-  const a = Math.max(i - e, N) / Math.max(s.length, 1), r = Number.isFinite(a) ? a : U, l = Math.max(U, Math.min(r, qe));
+  const a = Math.max(i - e, H) / Math.max(s.length, 1), r = Number.isFinite(a) ? a : U, l = Math.max(U, Math.min(r, qe));
   let c = e;
   s.forEach((d, u) => {
     const o = Math.max(1, this.getFinalPhaseDisplayDuration(d)), f = i - o;
@@ -773,13 +773,13 @@ const gt = 4e3, $ = {
     c = h + p;
   }), this.finalPhaseScheduleDirty = !1;
 }, Ot = (e) => {
-  e.prototype.resetFinalPhaseState = Ft, e.prototype.incrementEpoch = Et, e.prototype.emitStateSnapshot = Lt, e.prototype.getEffectiveCommentVpos = At, e.prototype.getFinalPhaseDisplayDuration = Rt, e.prototype.resolveFinalPhaseVpos = Dt, e.prototype.recomputeFinalPhaseTimeline = Vt;
+  e.prototype.resetFinalPhaseState = Ft, e.prototype.incrementEpoch = Et, e.prototype.emitStateSnapshot = Lt, e.prototype.getEffectiveCommentVpos = At, e.prototype.getFinalPhaseDisplayDuration = Dt, e.prototype.resolveFinalPhaseVpos = Rt, e.prototype.recomputeFinalPhaseTimeline = Vt;
 }, kt = function() {
-  return !this.playbackHasBegun && !this.isPlaying && this.currentTime <= R;
-}, Nt = function() {
-  this.playbackHasBegun || (this.isPlaying || this.currentTime > R) && (this.playbackHasBegun = !0);
-}, Ht = (e) => {
-  e.prototype.shouldSuppressRendering = kt, e.prototype.updatePlaybackProgressState = Nt;
+  return !this.playbackHasBegun && !this.isPlaying && this.currentTime <= D;
+}, Ht = function() {
+  this.playbackHasBegun || (this.isPlaying || this.currentTime > D) && (this.playbackHasBegun = !0);
+}, Nt = (e) => {
+  e.prototype.shouldSuppressRendering = kt, e.prototype.updatePlaybackProgressState = Ht;
 }, _t = function(e) {
   const t = this.videoElement, i = this.canvas, s = this.ctx;
   if (!t || !i || !s)
@@ -841,7 +841,7 @@ const gt = 4e3, $ = {
         this.releaseStaticLane(g, o.lane), o.isActive = !1, this.activeComments.delete(o), o.clearActivation();
         continue;
       }
-      if (o.layout === "naka" && this.getEffectiveCommentVpos(o) > this.currentTime + R) {
+      if (o.layout === "naka" && this.getEffectiveCommentVpos(o) > this.currentTime + D) {
         o.x = o.virtualStartX, o.lastUpdateTime = this.timeSource.now();
         continue;
       }
@@ -974,7 +974,7 @@ const gt = 4e3, $ = {
     effectiveVposMs: n,
     reason: "already-shown",
     currentTime: t
-  }), !1) : n > t + R ? (s && C("comment-eval-pending", {
+  }), !1) : n > t + D ? (s && C("comment-eval-pending", {
     preview: i,
     vposMs: e.vposMs,
     effectiveVposMs: n,
@@ -1007,13 +1007,13 @@ const gt = 4e3, $ = {
   }), e.layout === "naka") {
     const l = Math.max(0, a - r), c = e.speedPixelsPerMs * l;
     if (this.finalPhaseActive && this.finalPhaseStartTime !== null) {
-      const h = this.duration > 0 ? this.duration : this.finalPhaseStartTime + N, g = Math.max(
-        this.finalPhaseStartTime + N,
+      const h = this.duration > 0 ? this.duration : this.finalPhaseStartTime + H, g = Math.max(
+        this.finalPhaseStartTime + H,
         h
       ), p = e.width + i, v = p > 0 ? p / Math.max(e.speedPixelsPerMs, 1) : 0;
       if (r + v > g) {
-        const T = g - a, y = Math.max(0, T) * e.speedPixelsPerMs, D = e.scrollDirection === "rtl" ? Math.max(e.virtualStartX - c, i - y) : Math.min(e.virtualStartX + c, y - e.width);
-        e.x = D;
+        const w = g - a, y = Math.max(0, w) * e.speedPixelsPerMs, R = e.scrollDirection === "rtl" ? Math.max(e.virtualStartX - c, i - y) : Math.min(e.virtualStartX + c, y - e.width);
+        e.x = R;
       } else
         e.x = e.scrollDirection === "rtl" ? e.virtualStartX - c : e.virtualStartX + c;
     } else
@@ -1205,12 +1205,12 @@ const gt = 4e3, $ = {
   this.videoFrameHandle = null;
   const i = typeof t?.mediaTime == "number" ? t.mediaTime * 1e3 : void 0;
   this.processFrame(typeof i == "number" ? i : void 0), this.scheduleNextFrame();
-}, Ti = function() {
+}, wi = function() {
   if (this._settings.syncMode !== "video-frame")
     return !1;
   const e = this.videoElement;
   return !!e && typeof e.requestVideoFrameCallback == "function" && typeof e.cancelVideoFrameCallback == "function";
-}, wi = function() {
+}, Ti = function() {
   const e = this.videoElement;
   if (e) {
     if (this.shouldUseVideoFrameCallback()) {
@@ -1241,7 +1241,7 @@ const gt = 4e3, $ = {
     this.currentTime = s, this._settings.isCommentVisible && (this.lastDrawTime = a, this.draw());
     return;
   }
-  const l = n > R;
+  const l = n > D;
   if (this.currentTime = s, this.resetFinalPhaseState(), this.updatePlaybackProgressState(), !l) {
     this._settings.isCommentVisible && (this.lastDrawTime = this.timeSource.now(), this.draw());
     return;
@@ -1290,8 +1290,8 @@ const gt = 4e3, $ = {
     this.getEffectiveCommentVpos(h) < this.currentTime - P ? h.hasShown = !0 : h.hasShown = !1;
   }), this._settings.isCommentVisible && (this.lastDrawTime = this.timeSource.now(), this.draw());
 }, Ai = (e) => {
-  e.prototype.processFrame = Mi, e.prototype.handleAnimationFrame = bi, e.prototype.handleVideoFrame = xi, e.prototype.shouldUseVideoFrameCallback = Ti, e.prototype.scheduleNextFrame = wi, e.prototype.cancelAnimationFrameRequest = Ii, e.prototype.cancelVideoFrameCallback = Pi, e.prototype.startAnimation = Fi, e.prototype.stopAnimation = Ei, e.prototype.onSeek = Li;
-}, Ri = function(e, t) {
+  e.prototype.processFrame = Mi, e.prototype.handleAnimationFrame = bi, e.prototype.handleVideoFrame = xi, e.prototype.shouldUseVideoFrameCallback = wi, e.prototype.scheduleNextFrame = Ti, e.prototype.cancelAnimationFrameRequest = Ii, e.prototype.cancelVideoFrameCallback = Pi, e.prototype.startAnimation = Fi, e.prototype.stopAnimation = Ei, e.prototype.onSeek = Li;
+}, Di = function(e, t) {
   if (e)
     return e;
   if (t.parentElement)
@@ -1301,7 +1301,7 @@ const gt = 4e3, $ = {
   throw new Error(
     "Cannot resolve container element. Provide container explicitly when DOM is unavailable."
   );
-}, Di = function(e) {
+}, Ri = function(e) {
   if (typeof getComputedStyle == "function") {
     getComputedStyle(e).position === "static" && (e.style.position = "relative");
     return;
@@ -1311,7 +1311,7 @@ const gt = 4e3, $ = {
   try {
     this.destroyCanvasOnly();
     const t = e instanceof HTMLVideoElement ? e : e.video, i = e instanceof HTMLVideoElement ? e.parentElement : e.container ?? e.video.parentElement, s = this.resolveContainer(i ?? null, t);
-    this.videoElement = t, this.containerElement = s, this.lastVideoSource = this.getCurrentVideoSource(), this.duration = Number.isFinite(t.duration) ? I(t.duration) : 0, this.currentTime = I(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.isStalled = !1, this.lastDrawTime = this.timeSource.now(), this.playbackHasBegun = this.isPlaying || this.currentTime > R, this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
+    this.videoElement = t, this.containerElement = s, this.lastVideoSource = this.getCurrentVideoSource(), this.duration = Number.isFinite(t.duration) ? I(t.duration) : 0, this.currentTime = I(t.currentTime), this.playbackRate = t.playbackRate, this.isPlaying = !t.paused, this.isStalled = !1, this.lastDrawTime = this.timeSource.now(), this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.skipDrawingForCurrentFrame = this.shouldSuppressRendering();
     const n = this.createCanvasElement(), a = n.getContext("2d");
     if (!a)
       throw new Error("Failed to acquire 2D canvas context");
@@ -1325,9 +1325,9 @@ const gt = 4e3, $ = {
   this.stopAnimation(), this.cleanupResizeHandling(), this.runCleanupTasks(), this.canvas && this.canvas.remove(), this.canvas = null, this.ctx = null, this.videoElement = null, this.containerElement = null, this.comments.length = 0, this.activeComments.clear(), this.reservedLanes.clear(), this.resetFinalPhaseState(), this.displayWidth = 0, this.displayHeight = 0, this.canvasDpr = 1, this.commentSequence = 0, this.playbackHasBegun = !1, this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1;
 }, ki = function() {
   this.stopAnimation(), this.canvas && this.canvas.remove(), this.canvas = null, this.ctx = null, this.displayWidth = 0, this.displayHeight = 0, this.canvasDpr = 1, this.fullscreenActive = !1;
-}, Ni = (e) => {
-  e.prototype.resolveContainer = Ri, e.prototype.ensureContainerPositioning = Di, e.prototype.initialize = Vi, e.prototype.destroy = Oi, e.prototype.destroyCanvasOnly = ki;
-}, Hi = function(e) {
+}, Hi = (e) => {
+  e.prototype.resolveContainer = Di, e.prototype.ensureContainerPositioning = Ri, e.prototype.initialize = Vi, e.prototype.destroy = Oi, e.prototype.destroyCanvasOnly = ki;
+}, Ni = function(e) {
   try {
     const t = () => {
       this.isPlaying = !0, this.playbackHasBegun = !0;
@@ -1390,10 +1390,10 @@ const gt = 4e3, $ = {
   const i = this.getCurrentVideoSource();
   i !== this.lastVideoSource && (this.lastVideoSource = i, this.incrementEpoch("source-change"), this.syncVideoState(t), this.resetFinalPhaseState(), this.resetCommentActivity(), this.emitStateSnapshot("source-change"));
 }, Bi = function(e) {
-  this.duration = Number.isFinite(e.duration) ? I(e.duration) : 0, this.currentTime = I(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.isStalled = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > R, this.lastDrawTime = this.timeSource.now();
+  this.duration = Number.isFinite(e.duration) ? I(e.duration) : 0, this.currentTime = I(e.currentTime), this.playbackRate = e.playbackRate, this.isPlaying = !e.paused, this.isStalled = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, this.lastDrawTime = this.timeSource.now();
 }, Gi = function() {
   const e = this.timeSource.now(), t = this.canvas, i = this.ctx;
-  if (this.resetFinalPhaseState(), this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > R, t && i) {
+  if (this.resetFinalPhaseState(), this.skipDrawingForCurrentFrame = !1, this.isStalled = !1, this.pendingInitialSync = !1, this.playbackHasBegun = this.isPlaying || this.currentTime > D, t && i) {
     const s = this.canvasDpr > 0 ? this.canvasDpr : 1, n = this.displayWidth > 0 ? this.displayWidth : t.width / s, a = this.displayHeight > 0 ? this.displayHeight : t.height / s;
     i.clearRect(0, 0, n, a);
   }
@@ -1474,7 +1474,7 @@ const gt = 4e3, $ = {
   }
   return null;
 }, qi = (e) => {
-  e.prototype.setupVideoEventListeners = Hi, e.prototype.handleVideoMetadataLoaded = _i, e.prototype.handleVideoStalled = zi, e.prototype.handleVideoCanPlay = Wi, e.prototype.handleVideoSourceChange = $i, e.prototype.syncVideoState = Bi, e.prototype.resetCommentActivity = Gi, e.prototype.setupVideoChangeDetection = Xi, e.prototype.extractVideoElement = Ui;
+  e.prototype.setupVideoEventListeners = Ni, e.prototype.handleVideoMetadataLoaded = _i, e.prototype.handleVideoStalled = zi, e.prototype.handleVideoCanPlay = Wi, e.prototype.handleVideoSourceChange = $i, e.prototype.syncVideoState = Bi, e.prototype.resetCommentActivity = Gi, e.prototype.setupVideoChangeDetection = Xi, e.prototype.extractVideoElement = Ui;
 }, Ki = function() {
   if (typeof document > "u" || typeof document.addEventListener != "function" || typeof document.removeEventListener != "function")
     return;
@@ -1489,9 +1489,22 @@ const gt = 4e3, $ = {
 }, Yi = function() {
   const e = this.canvas, t = this.ctx, i = this.videoElement;
   !e || !t || !i || (this.currentTime = I(i.currentTime), this.lastDrawTime = this.timeSource.now(), this.isPlaying = !i.paused, this.isStalled = !1, this.pendingInitialSync = !0, this.resetFinalPhaseState(), this.updatePlaybackProgressState(), this.draw());
-}, Ji = (e) => {
-  e.prototype.setupVisibilityHandling = Ki, e.prototype.handleVisibilityRestore = Yi;
-}, ji = function(e, t) {
+}, Ji = function(e) {
+  const t = this._settings.isCommentVisible;
+  if (this._settings.isCommentVisible = e, t === e)
+    return;
+  this.settingsVersion += 1, this.commentDependencies.settingsVersion = this.settingsVersion;
+  const i = this.canvas, s = this.ctx;
+  if (!(!i || !s))
+    if (e)
+      this.lastDrawTime = this.timeSource.now(), this.pendingInitialSync = !0, this.scheduleNextFrame();
+    else {
+      const n = this.canvasDpr > 0 ? this.canvasDpr : 1, a = this.displayWidth > 0 ? this.displayWidth : i.width / n, r = this.displayHeight > 0 ? this.displayHeight : i.height / n;
+      s.clearRect(0, 0, a, r);
+    }
+}, ji = (e) => {
+  e.prototype.setupVisibilityHandling = Ki, e.prototype.handleVisibilityRestore = Yi, e.prototype.setCommentVisibility = Ji;
+}, Zi = function(e, t) {
   const i = this.videoElement, s = this.canvas, n = this.ctx;
   if (!i || !s)
     return;
@@ -1502,19 +1515,19 @@ const gt = 4e3, $ = {
   if (!(this.displayWidth !== o || this.displayHeight !== f || Math.abs(this.canvasDpr - p) > Number.EPSILON || s.width !== v || s.height !== S))
     return;
   this.displayWidth = o, this.displayHeight = f, this.canvasDpr = p, s.width = v, s.height = S, s.style.width = `${o}px`, s.style.height = `${f}px`, n && (n.setTransform(1, 0, 0, 1, 0, 0), this._settings.useDprScaling && n.scale(p, p));
-  const y = h > 0 ? o / h : 1, D = g > 0 ? f / g : 1;
-  (y !== 1 || D !== 1) && this.comments.forEach((M) => {
-    M.isActive && (M.x *= y, M.y *= D, M.width *= y, M.fontSize = Math.max(
+  const y = h > 0 ? o / h : 1, R = g > 0 ? f / g : 1;
+  (y !== 1 || R !== 1) && this.comments.forEach((M) => {
+    M.isActive && (M.x *= y, M.y *= R, M.width *= y, M.fontSize = Math.max(
       pe,
-      Math.floor(Math.max(1, M.fontSize) * D)
+      Math.floor(Math.max(1, M.fontSize) * R)
     ), M.height = M.fontSize, M.virtualStartX *= y, M.exitThreshold *= y, M.baseSpeed *= y, M.speed *= y, M.speedPixelsPerMs *= y, M.bufferWidth *= y, M.reservationWidth *= y);
   }), this.calculateLaneMetrics();
-}, Zi = function() {
+}, Qi = function() {
   if (typeof window > "u")
     return 1;
   const e = Number(window.devicePixelRatio);
   return !Number.isFinite(e) || e <= 0 ? 1 : e;
-}, Qi = function() {
+}, es = function() {
   const e = this.canvas;
   if (!e)
     return;
@@ -1527,7 +1540,7 @@ const gt = 4e3, $ = {
   } else
     this.laneCount = Math.max(se, s);
   this.topStaticLaneReservations.length = 0, this.bottomStaticLaneReservations.length = 0;
-}, es = function(e) {
+}, ts = function(e) {
   if (this.cleanupResizeHandling(), this._settings.useContainerResizeObserver && this.isResizeObserverAvailable) {
     const t = this.resolveResizeObserverTarget(e), i = new ResizeObserver((s) => {
       for (const n of s) {
@@ -1545,11 +1558,11 @@ const gt = 4e3, $ = {
     this.log.debug(
       "Resize handling is disabled because neither ResizeObserver nor window APIs are available."
     );
-}, ts = function() {
+}, is = function() {
   this.resizeObserver && this.resizeObserverTarget && this.resizeObserver.unobserve(this.resizeObserverTarget), this.resizeObserver?.disconnect(), this.resizeObserver = null, this.resizeObserverTarget = null;
-}, is = (e) => {
-  e.prototype.resize = ji, e.prototype.resolveDevicePixelRatio = Zi, e.prototype.calculateLaneMetrics = Qi, e.prototype.setupResizeHandling = es, e.prototype.cleanupResizeHandling = ts;
-}, ss = function() {
+}, ss = (e) => {
+  e.prototype.resize = Zi, e.prototype.resolveDevicePixelRatio = Qi, e.prototype.calculateLaneMetrics = es, e.prototype.setupResizeHandling = ts, e.prototype.cleanupResizeHandling = is;
+}, ns = function() {
   if (typeof document > "u" || typeof document.addEventListener != "function" || typeof document.removeEventListener != "function")
     return;
   const e = () => {
@@ -1563,10 +1576,10 @@ const gt = 4e3, $ = {
   ].forEach((i) => {
     document.addEventListener(i, e), this.addCleanup(() => document.removeEventListener(i, e));
   }), this.handleFullscreenChange();
-}, ns = function(e) {
+}, as = function(e) {
   const t = this.resolveFullscreenContainer(e);
   return t || (e.parentElement ?? e);
-}, as = async function() {
+}, rs = async function() {
   const e = this.canvas, t = this.videoElement;
   if (!e || !t)
     return;
@@ -1576,21 +1589,21 @@ const gt = 4e3, $ = {
   e.parentElement !== n ? (this.ensureContainerPositioning(n), n.appendChild(e)) : this.ensureContainerPositioning(n);
   const r = (s instanceof HTMLElement && s.contains(t) ? s : null) !== null;
   this.fullscreenActive !== r && (this.fullscreenActive = r, this.setupResizeHandling(t)), e.style.position = "absolute", e.style.top = "0", e.style.left = "0", this.resize();
-}, rs = function(e) {
+}, os = function(e) {
   const t = this.getFullscreenElement();
   return t instanceof HTMLElement && (t === e || t.contains(e)) ? t : null;
-}, os = function(e, t, i) {
+}, ls = function(e, t, i) {
   return i instanceof HTMLElement && i.contains(e) ? i instanceof HTMLVideoElement && t instanceof HTMLElement ? t : i : t ?? null;
-}, ls = function() {
+}, cs = function() {
   if (typeof document > "u")
     return null;
   const e = document;
   return document.fullscreenElement ?? e.webkitFullscreenElement ?? e.mozFullScreenElement ?? e.msFullscreenElement ?? null;
-}, cs = (e) => {
-  e.prototype.setupFullscreenHandling = ss, e.prototype.resolveResizeObserverTarget = ns, e.prototype.handleFullscreenChange = as, e.prototype.resolveFullscreenContainer = rs, e.prototype.resolveActiveOverlayContainer = os, e.prototype.getFullscreenElement = ls;
-}, hs = function(e) {
+}, hs = (e) => {
+  e.prototype.setupFullscreenHandling = ns, e.prototype.resolveResizeObserverTarget = as, e.prototype.handleFullscreenChange = rs, e.prototype.resolveFullscreenContainer = os, e.prototype.resolveActiveOverlayContainer = ls, e.prototype.getFullscreenElement = cs;
+}, us = function(e) {
   this.cleanupTasks.push(e);
-}, us = function() {
+}, ds = function() {
   for (; this.cleanupTasks.length > 0; ) {
     const e = this.cleanupTasks.pop();
     try {
@@ -1599,8 +1612,8 @@ const gt = 4e3, $ = {
       this.log.error("CommentRenderer.cleanupTask", t);
     }
   }
-}, ds = (e) => {
-  e.prototype.addCleanup = hs, e.prototype.runCleanupTasks = us;
+}, fs = (e) => {
+  e.prototype.addCleanup = us, e.prototype.runCleanupTasks = ds;
 };
 class b {
   _settings;
@@ -1697,7 +1710,7 @@ class b {
 }
 Pt(b);
 Ot(b);
-Ht(b);
+Nt(b);
 $t(b);
 Ut(b);
 ti(b);
@@ -1705,17 +1718,17 @@ oi(b);
 mi(b);
 Ci(b);
 Ai(b);
-Ni(b);
+Hi(b);
 qi(b);
-Ji(b);
-is(b);
-cs(b);
-ds(b);
+ji(b);
+ss(b);
+hs(b);
+fs(b);
 export {
-  vs as COMMENT_OVERLAY_VERSION,
+  gs as COMMENT_OVERLAY_VERSION,
   vt as Comment,
   b as CommentRenderer,
-  ps as DEFAULT_RENDERER_SETTINGS,
+  vs as DEFAULT_RENDERER_SETTINGS,
   mt as cloneDefaultSettings,
   nt as configureDebugLogging,
   yt as createDefaultAnimationFrameProvider,
@@ -1725,6 +1738,6 @@ export {
   rt as dumpRendererState,
   A as isDebugLoggingEnabled,
   ot as logEpochChange,
-  fs as resetDebugCounters
+  ps as resetDebugCounters
 };
 //# sourceMappingURL=comment-overlay.es.js.map
