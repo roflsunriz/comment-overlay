@@ -9,3 +9,7 @@ coverage/
 *.tsbuildinfo
 overlay-tests/video.mp4
 overlay-tests/video2.mp4
+
+# Claw-Code specific ignores
+.claw/
+CLAUDE.md
