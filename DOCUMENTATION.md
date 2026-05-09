@@ -5,7 +5,7 @@
 ## インストール
 
 ```bash
-npm install comment-overlay
+bun add comment-overlay
 ```
 
 TypeScript プロジェクトでは `tsconfig.json` の `moduleResolution` が `node16` もしくは `bundler` であることを推奨します。`types` フィールドにより、型定義は自動的に解決されます。

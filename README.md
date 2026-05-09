@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/comment-overlay)](https://www.npmjs.com/package/comment-overlay)
 [![license](https://img.shields.io/github/license/roflsunriz/comment-overlay)](./LICENSE)
 
-再利用可能なコメントオーバーレイ描画エンジンです。ニコニコ動画のような横流れコメントを、HTML5 動画など任意の再生コンテンツ上に重ねて表示できます。npm モジュールとして公開されており、`npm install comment-overlay` で導入できます。
+再利用可能なコメントオーバーレイ描画エンジンです。ニコニコ動画のような横流れコメントを、HTML5 動画など任意の再生コンテンツ上に重ねて表示できます。npm レジストリで公開されており、`bun add comment-overlay` で導入できます。
 
 ![cover](./images/cover.png)
 
@@ -15,24 +15,23 @@
 
 ## 開発に必要な環境
 
-- Node.js 20.x
-- npm 10 以降
+- Bun 1.3.8 以降
 
 ## 開発環境のセットアップ
 
 ```bash
-npm install
+bun install
 ```
 
 ## スクリプト
 
-- `npm run dev`: Vite 開発サーバーを起動します。
-- `npm run build`: 出力をクリーンアップして型定義を生成した後、ライブラリをビルドします。
-- `npm run lint`: `src` ディレクトリの TypeScript ファイルを ESLint で検査します。
-- `npm run type-check`: `tsconfig.build.json` を用いた型チェックを実行します。
-- `npm run serve`: `overlay-tests` ディレクトリを静的サーバーで起動し、ビルド成果物を使って動作確認できます。
+- `bun run dev`: Vite 開発サーバーを起動します。
+- `bun run build`: 出力をクリーンアップして型定義を生成した後、ライブラリをビルドします。
+- `bun run lint`: `src` ディレクトリの TypeScript ファイルを ESLint で検査します。
+- `bun run type-check`: `tsconfig.build.json` を用いた型チェックを実行します。
+- `bun run serve`: `overlay-tests` ディレクトリを静的サーバーで起動し、ビルド成果物を使って動作確認できます。
 
-開発にあたり、変更後は `npm run lint`、`npm run type-check`、`npm run build` を順番に実行して品質を確認してください。
+開発にあたり、変更後は `bun run lint`、`bun run type-check`、`bun run build` を順番に実行して品質を確認してください。
 
 ## パブリッシュ手順（メンテナー向け）
 
@@ -194,8 +193,8 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 
 ### サンプルを試す
 
-1. ライブラリをビルドします: `npm run build`
-2. サンプルサーバーを起動します: `npm run serve`
+1. ライブラリをビルドします: `bun run build`
+2. サンプルサーバーを起動します: `bun run serve`
 3. ブラウザーで表示される URL を開き、`overlay-tests` 内のテスト UI でコメント描画を確認できます。
 
 サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータは `overlay-tests/so45409498-comments.json` を編集して調整できます。動画データは `overlay-tests/video.mp4` と `overlay-tests/video2.mp4` に配置してください。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
