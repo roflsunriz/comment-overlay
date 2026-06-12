@@ -4,6 +4,21 @@ const moduleCandidates = [
   "../dist/comment-overlay.es",
 ];
 const DEFAULT_COMMENT_DATA_SOURCES = ["./so45409498-comments.json"];
+const INITIAL_VIDEO_VOLUME = 0.01;
+const COMMENT_PRESETS = {
+  default: {
+    label: "Default sample",
+    comments: "./so45409498-comments.json",
+    video: "./video.mp4",
+    seekSeconds: 0,
+  },
+  "cat-mario": {
+    label: "sm6240144 猫マリオCA",
+    comments: "./sm6240144-comments.json",
+    video: "./sm6240144.mp4",
+    seekSeconds: 100,
+  },
+};
 
 let debugLogFn = null;
 let isDebugOverlayEnabled = false;
@@ -150,6 +165,8 @@ const statusEl = document.querySelector("#status");
 const videoEl = document.querySelector("#test-video");
 const containerEl = document.querySelector(".overlay-container");
 const toggleEl = document.querySelector("#toggle-visibility");
+const commentPresetSelect = document.querySelector("#comment-preset");
+const catMarioJumpButton = document.querySelector("#cat-mario-jump");
 const reloadButton = document.querySelector("#reload-comments");
 const fullscreenButton = document.querySelector("#fullscreen-button");
 const stallEmulatorButton = document.querySelector("#stall-emulator");
@@ -225,6 +242,8 @@ const setup = async () => {
     !(videoEl instanceof HTMLVideoElement) ||
     !(containerEl instanceof HTMLElement) ||
     !(toggleEl instanceof HTMLInputElement) ||
+    !(commentPresetSelect instanceof HTMLSelectElement) ||
+    !(catMarioJumpButton instanceof HTMLButtonElement) ||
     !(reloadButton instanceof HTMLButtonElement) ||
     !(fullscreenButton instanceof HTMLButtonElement) ||
     !(stallEmulatorButton instanceof HTMLButtonElement) ||
@@ -242,6 +261,7 @@ const setup = async () => {
   }
 
   reportStatus("Bootstrapping overlay module...");
+  videoEl.volume = INITIAL_VIDEO_VOLUME;
 
   const {
     CommentRenderer,
@@ -253,6 +273,17 @@ const setup = async () => {
   debugLogFn = typeof exportedDebugLog === "function" ? exportedDebugLog : null;
 
   const query = new URLSearchParams(window.location.search);
+  const initialPreset = COMMENT_PRESETS[query.get("preset")] ? query.get("preset") : "default";
+  let selectedPreset = initialPreset;
+  let selectedCommentSource = query.get("comments") || COMMENT_PRESETS[selectedPreset].comments;
+  const videoOverride = query.get("video");
+  if (typeof videoOverride === "string" && videoOverride.length > 0) {
+    videoEl.src = videoOverride;
+    videoEl.load();
+  } else {
+    videoEl.src = COMMENT_PRESETS[selectedPreset].video;
+    videoEl.load();
+  }
   const debugParam = query.get("overlayDebug");
   isDebugOverlayEnabled =
     debugParam === "1" || debugParam === "true" || debugParam === "yes" || debugParam === "on";
@@ -534,6 +565,7 @@ const setup = async () => {
   };
 
   updateSettingsStatus();
+  commentPresetSelect.value = selectedPreset;
   directionSelect.value = currentSettings.scrollDirection;
   shadowIntensitySelect.value = currentSettings.shadowIntensity || "medium";
   ngWordsInput.value = currentSettings.ngWords.join("\n");
@@ -586,10 +618,9 @@ const setup = async () => {
   };
 
   const resolveCommentData = async () => {
-    const overrideSource = query.get("comments");
     const sourceCandidates =
-      typeof overrideSource === "string" && overrideSource.length > 0
-        ? [overrideSource]
+      typeof selectedCommentSource === "string" && selectedCommentSource.length > 0
+        ? [selectedCommentSource]
         : DEFAULT_COMMENT_DATA_SOURCES;
     const failures = [];
     for (const source of sourceCandidates) {
@@ -719,6 +750,32 @@ const setup = async () => {
     void loadComments();
   });
 
+  const applyCommentPreset = async (presetName) => {
+    const preset = COMMENT_PRESETS[presetName] ?? COMMENT_PRESETS.default;
+    selectedPreset = COMMENT_PRESETS[presetName] ? presetName : "default";
+    selectedCommentSource = preset.comments;
+    commentPresetSelect.value = selectedPreset;
+    if (!videoOverride && videoEl.getAttribute("src") !== preset.video) {
+      videoEl.src = preset.video;
+      videoEl.load();
+    }
+    renderer.resetState();
+    await loadComments();
+    if (preset.seekSeconds > 0) {
+      await seekVideo(preset.seekSeconds);
+      await resumeVideo();
+      reportStatus(`${preset.label} を読み込み、${preset.seekSeconds.toFixed(0)}秒へ移動しました。`);
+    }
+  };
+
+  commentPresetSelect.addEventListener("change", () => {
+    void applyCommentPreset(commentPresetSelect.value);
+  });
+
+  catMarioJumpButton.addEventListener("click", () => {
+    void applyCommentPreset("cat-mario");
+  });
+
   fullscreenButton.addEventListener("click", () => {
     if (!(containerEl instanceof HTMLElement)) {
       return;
@@ -797,7 +854,14 @@ const setup = async () => {
     });
   }
 
-  const videoSources = ["./video.mp4", "./video2.mp4"];
+  const videoSources =
+    typeof videoOverride === "string" && videoOverride.length > 0
+      ? [videoOverride, "./video.mp4", "./video2.mp4"]
+      : [
+          COMMENT_PRESETS[selectedPreset].video,
+          "./video.mp4",
+          "./video2.mp4",
+        ].filter((source, index, sources) => source && sources.indexOf(source) === index);
   const resolveInitialIndex = () => {
     const currentSrc = videoEl.getAttribute("src") ?? "";
     const normalizedSrc = currentSrc.startsWith("./") ? currentSrc : `./${currentSrc}`;
@@ -837,6 +901,10 @@ const setup = async () => {
   });
 
   await loadComments();
+  if (selectedPreset === "cat-mario") {
+    await seekVideo(COMMENT_PRESETS["cat-mario"].seekSeconds);
+    await resumeVideo();
+  }
 };
 
 void setup();

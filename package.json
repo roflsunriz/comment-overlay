@@ -1,6 +1,6 @@
 {
   "name": "comment-overlay",
-  "version": "3.0.0",
+  "version": "3.1.2",
   "description": "Reusable comment overlay renderer engine.",
   "repository": {
     "url": "https://github.com/roflsunriz/comment-overlay"
@@ -32,7 +32,10 @@
     "type-check": "tsc --project tsconfig.build.json --noEmit",
     "typegen": "tsc --project tsconfig.build.json",
     "lint": "eslint src --ext .ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "nico:trace": "bun scripts/nico-trace.mjs",
+    "nico:report": "bun scripts/nico-report.mjs",
+    "nico:overlay-trace": "bun scripts/nico-overlay-trace.mjs"
   },
   "keywords": [
     "comment",
@@ -45,6 +48,7 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.48.1",
     "@typescript-eslint/parser": "^8.48.1",
+    "chrome-remote-interface": "^0.34.0",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

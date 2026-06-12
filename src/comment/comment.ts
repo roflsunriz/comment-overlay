@@ -1,5 +1,6 @@
 import type {
   CommentLayoutCommand,
+  CommentSizeCommand,
   RenderStyle,
   RendererSettings,
   ScrollDirection,
@@ -21,11 +22,13 @@ export class Comment {
   readonly commands: string[];
   readonly layout: CommentLayoutCommand;
   readonly isScrolling: boolean;
+  readonly size: CommentSizeCommand;
   readonly sizeScale: number;
   readonly opacityMultiplier: number;
   readonly opacityOverride: number | null;
   readonly colorOverride: string | null;
   readonly isInvisible: boolean;
+  readonly isFull: boolean;
 
   x = 0;
   y = 0;
@@ -37,6 +40,7 @@ export class Comment {
   color: string;
   fontSize = 0;
   fontFamily: string;
+  fontWeight: string;
   opacity: number;
   activationTimeMs: number | null = null;
   staticExpiryTimeMs: number | null = null;
@@ -91,12 +95,15 @@ export class Comment {
 
     this.layout = parsedCommands.layout;
     this.isScrolling = this.layout === "naka";
+    this.size = parsedCommands.size;
     this.sizeScale = parsedCommands.sizeScale;
     this.opacityMultiplier = parsedCommands.opacityMultiplier;
     this.opacityOverride = parsedCommands.opacityOverride;
     this.colorOverride = parsedCommands.colorOverride;
     this.isInvisible = parsedCommands.isInvisible;
+    this.isFull = parsedCommands.isFull;
     this.fontFamily = parsedCommands.fontFamily;
+    this.fontWeight = parsedCommands.fontWeight;
     this.color = parsedCommands.resolvedColor;
     this.opacity = this.getEffectiveOpacity(settings.commentOpacity);
     this.renderStyle = settings.renderStyle;

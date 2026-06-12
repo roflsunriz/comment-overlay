@@ -1,0 +1,109 @@
+import type { CommentRenderer } from "@/renderer/comment-renderer";
+import type { CalibrationTraceEmitter, CalibrationTraceRecord } from "@/shared/calibration-trace";
+
+export interface CalibrationActiveCommentSnapshot {
+  readonly text: string;
+  readonly vposMs: number;
+  readonly commands: readonly string[];
+  readonly layout: string;
+  readonly lane: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly fontSize: number;
+  readonly fontFamily: string;
+  readonly color: string;
+  readonly opacity: number;
+  readonly visibleDurationMs: number;
+  readonly totalDurationMs: number;
+  readonly speedPixelsPerMs: number;
+  readonly creationIndex: number;
+}
+
+export interface CalibrationFrameSnapshot {
+  readonly frameTimeMs: number;
+  readonly canvas: {
+    readonly width: number;
+    readonly height: number;
+    readonly cssWidth: number;
+    readonly cssHeight: number;
+    readonly dpr: number;
+  } | null;
+  readonly activeComments: readonly CalibrationActiveCommentSnapshot[];
+  readonly records: readonly CalibrationTraceRecord[];
+}
+
+export interface CaptureCalibrationFrameOptions {
+  readonly collectTrace?: boolean;
+}
+
+const snapshotActiveComment = (
+  comment: CommentRenderer["comments"][number],
+): CalibrationActiveCommentSnapshot => ({
+  text: comment.text,
+  vposMs: comment.vposMs,
+  commands: comment.commands,
+  layout: comment.layout,
+  lane: comment.lane,
+  x: comment.x,
+  y: comment.y,
+  width: comment.width,
+  height: comment.height,
+  fontSize: comment.fontSize,
+  fontFamily: comment.fontFamily,
+  color: comment.color,
+  opacity: comment.opacity,
+  visibleDurationMs: comment.visibleDurationMs,
+  totalDurationMs: comment.totalDurationMs,
+  speedPixelsPerMs: comment.speedPixelsPerMs,
+  creationIndex: comment.creationIndex,
+});
+
+const snapshotCanvas = (renderer: CommentRenderer): CalibrationFrameSnapshot["canvas"] => {
+  const canvas = renderer.canvas;
+  if (!canvas) {
+    return null;
+  }
+  const dpr = renderer.canvasDpr > 0 ? renderer.canvasDpr : 1;
+  return {
+    width: canvas.width,
+    height: canvas.height,
+    cssWidth: renderer.displayWidth > 0 ? renderer.displayWidth : canvas.width / dpr,
+    cssHeight: renderer.displayHeight > 0 ? renderer.displayHeight : canvas.height / dpr,
+    dpr,
+  };
+};
+
+export const captureRendererCalibrationFrame = (
+  renderer: CommentRenderer,
+  frameTimeMs: number,
+  options: CaptureCalibrationFrameOptions = {},
+): CalibrationFrameSnapshot => {
+  const records: CalibrationTraceRecord[] = [];
+  const previousEnabled = globalThis.__COMMENT_OVERLAY_TRACE_ENABLED__;
+  const previousEmitter = globalThis.__COMMENT_OVERLAY_TRACE__;
+
+  if (options.collectTrace === true) {
+    globalThis.__COMMENT_OVERLAY_TRACE_ENABLED__ = true;
+    globalThis.__COMMENT_OVERLAY_TRACE__ = ((record) => {
+      records.push(record);
+    }) satisfies CalibrationTraceEmitter;
+  }
+
+  try {
+    renderer.processFrame(frameTimeMs);
+  } finally {
+    if (options.collectTrace === true) {
+      globalThis.__COMMENT_OVERLAY_TRACE_ENABLED__ = previousEnabled;
+      globalThis.__COMMENT_OVERLAY_TRACE__ = previousEmitter;
+    }
+  }
+
+  return {
+    frameTimeMs,
+    canvas: snapshotCanvas(renderer),
+    activeComments: Array.from(renderer.activeComments, snapshotActiveComment),
+    records,
+  };
+};

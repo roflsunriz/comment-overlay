@@ -3,7 +3,9 @@ import type { DrawMode } from "@/shared/types";
 import { clampOpacity, resolveFillStyleWithOpacity } from "@/comment/color";
 import { commentLogger as logger } from "@/comment/logger";
 import { isDebugLoggingEnabled } from "@/shared/debug";
+import { emitCalibrationTrace } from "@/shared/calibration-trace";
 import { measureTextWidth } from "@/comment/text-measure";
+import { getCommentCanvasFont } from "@/comment/prepare";
 
 const cacheStats = {
   hits: 0,
@@ -82,6 +84,90 @@ const getShadowParams = (
   return { blur, alpha };
 };
 
+const getStrokeWidth = (): number => 2.8;
+const NICO_FULL_BIG_FINAL_WIDTH_PX = 566;
+const NICO_FULL_BIG_FINAL_HEIGHT_PX = 808;
+const NICO_FULL_BIG_SOURCE_WIDTH_PX = 1098;
+const NICO_FULL_BIG_SOURCE_HEIGHT_PX = 1530;
+const NICO_FULL_BIG_SOURCE_PADDING_X_PX = 20.9;
+const NICO_FULL_BIG_SOURCE_BASELINE_Y_PX = 58.9;
+const NICO_FULL_BIG_SOURCE_LINE_HEIGHT_RATIO = 45.23908523908523 / 39;
+const NICO_FULL_BIG_FINAL_FONT_SIZE_PX = 20;
+const NICO_FULL_BIG_FINAL_PADDING_X_PX = 11.4;
+const NICO_FULL_BIG_FINAL_BASELINE_Y_PX = 31.4;
+const NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX = 23.87692307692307;
+const NICO_FULL_DRAW_Y_OFFSET_PX = 2.4;
+
+const isNearBlackColor = (color: string): boolean => {
+  const normalized = color.trim().toLowerCase();
+  if (normalized === "black") {
+    return true;
+  }
+  const match = normalized.match(/^#([0-9a-f]{3,8})$/i);
+  if (!match) {
+    return false;
+  }
+  const hex = match[1];
+  const isShort = hex.length === 3 || hex.length === 4;
+  const expand = (value: string): string => (value.length === 1 ? `${value}${value}` : value);
+  const red = Number.parseInt(expand(isShort ? hex[0] : hex.slice(0, 2)), 16);
+  const green = Number.parseInt(expand(isShort ? hex[1] : hex.slice(2, 4)), 16);
+  const blue = Number.parseInt(expand(isShort ? hex[2] : hex.slice(4, 6)), 16);
+  return red === 0 && green === 0 && blue === 0;
+};
+
+const getOutlineStrokeStyle = (comment: Comment): string =>
+  isNearBlackColor(comment.color) ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.4)";
+
+const getCanvasFont = (comment: Comment, fontSize: number): string =>
+  `${comment.fontWeight ? `${comment.fontWeight} ` : ""}${fontSize}px ${comment.fontFamily}`;
+
+const getTextureBaselineStart = (comment: Comment, paddingY: number): number => {
+  if (!comment.isScrolling) {
+    return paddingY + comment.fontSize;
+  }
+  const smallFontAdjustment = comment.fontSize <= 18 ? comment.fontSize * 0.08 : 0;
+  return comment.fontSize * 1.5 + smallFontAdjustment;
+};
+
+const getTexturePadding = (
+  comment: Comment,
+): { paddingX: number; paddingY: number; textureWidth: number; textureHeight: number } => {
+  const isFullScrolling = comment.isScrolling && comment.isFull;
+  if (isFullScrolling) {
+    return {
+      paddingX: Math.max(10, comment.fontSize * 0.5),
+      paddingY:
+        (comment.fontSize >= 35 ? comment.fontSize * 0.5 : Math.max(18, comment.fontSize)) +
+        NICO_FULL_DRAW_Y_OFFSET_PX,
+      textureWidth: Math.ceil(comment.width),
+      textureHeight: Math.ceil(comment.height),
+    };
+  }
+
+  const paddingX = comment.isScrolling
+    ? comment.fontSize * 1.15
+    : Math.max(10, comment.fontSize * 0.5);
+  const minimumTextureHeight = comment.isScrolling
+    ? Math.round(comment.fontSize * (40 / 9))
+    : comment.height + Math.max(10, comment.fontSize * 0.5) * 2;
+  const textureHeight = Math.ceil(
+    Math.max(comment.height + Math.max(10, comment.fontSize), minimumTextureHeight),
+  );
+  const paddingY = comment.isScrolling
+    ? comment.fontSize
+    : Math.max(0, (textureHeight - comment.height) / 2);
+
+  return {
+    paddingX,
+    paddingY,
+    textureWidth: Math.ceil(
+      comment.isScrolling ? comment.width * 2 + paddingX * 2 : comment.width + paddingX * 2,
+    ),
+    textureHeight,
+  };
+};
+
 const createSegmentDrawer = (
   comment: Comment,
   targetCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -110,17 +196,36 @@ const createSegmentDrawer = (
       }
     };
 
-    if (Math.abs(comment.letterSpacing) < Number.EPSILON) {
+    const drawText = (text: string, x: number, meta?: Record<string, number>): void => {
       recordDraw();
-      targetCtx.fillText(line, effectiveDrawX, baselineY);
+      if (mode === "outline") {
+        targetCtx.strokeText(text, x, baselineY);
+        emitCalibrationTrace("strokeText", targetCtx, comment, {
+          text,
+          x,
+          y: baselineY,
+          meta: { statsTarget, mode, ...meta },
+        });
+        return;
+      }
+      targetCtx.fillText(text, x, baselineY);
+      emitCalibrationTrace("fillText", targetCtx, comment, {
+        text,
+        x,
+        y: baselineY,
+        meta: { statsTarget, mode, ...meta },
+      });
+    };
+
+    if (Math.abs(comment.letterSpacing) < Number.EPSILON) {
+      drawText(line, effectiveDrawX);
       return;
     }
 
     let cursorX = effectiveDrawX;
     for (let index = 0; index < line.length; index += 1) {
       const char = line[index];
-      recordDraw();
-      targetCtx.fillText(char, cursorX, baselineY);
+      drawText(char, cursorX, { characterIndex: index });
       const advance = measureTextWidth(measurementCtx, char);
       cursorX += advance;
       if (index < line.length - 1) {
@@ -131,7 +236,122 @@ const createSegmentDrawer = (
 };
 
 const generateTextureCacheKey = (comment: Comment): string => {
-  return `v2::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lines.length}`;
+  return `v5::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.fontWeight}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lineHeightPx}::${comment.lines.length}`;
+};
+
+const shouldUseFullBigDownscaleTexture = (
+  comment: Comment,
+  textureWidth: number,
+  textureHeight: number,
+): boolean =>
+  comment.isScrolling &&
+  comment.isFull &&
+  comment.fontSize >= 35 &&
+  textureWidth === NICO_FULL_BIG_FINAL_WIDTH_PX &&
+  textureHeight === NICO_FULL_BIG_FINAL_HEIGHT_PX;
+
+const createFullBigDownscaleTexture = (
+  comment: Comment,
+  ctx: CanvasRenderingContext2D,
+): OffscreenCanvas | null => {
+  const finalCanvas = new OffscreenCanvas(
+    NICO_FULL_BIG_FINAL_WIDTH_PX,
+    NICO_FULL_BIG_FINAL_HEIGHT_PX,
+  );
+  const finalCtx = finalCanvas.getContext("2d");
+  if (!finalCtx) {
+    return null;
+  }
+
+  const sourceCanvas = new OffscreenCanvas(
+    NICO_FULL_BIG_SOURCE_WIDTH_PX,
+    NICO_FULL_BIG_SOURCE_HEIGHT_PX,
+  );
+  const sourceCtx = sourceCanvas.getContext("2d");
+  if (!sourceCtx) {
+    return null;
+  }
+
+  sourceCtx.save();
+  sourceCtx.font = getCommentCanvasFont(comment);
+  const effectiveOpacity = clampOpacity(comment.opacity);
+  const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);
+  const shouldUseStrokeOutline = comment.renderStyle === "outline-only";
+  const shadowParams = shouldUseStrokeOutline
+    ? { blur: 0, alpha: 0 }
+    : getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
+
+  sourceCtx.shadowColor = `rgba(0, 0, 0, ${shadowParams.alpha})`;
+  sourceCtx.shadowBlur = shadowParams.blur;
+  sourceCtx.shadowOffsetX = 0;
+  sourceCtx.shadowOffsetY = 0;
+  sourceCtx.lineJoin = "round";
+  sourceCtx.lineWidth = getStrokeWidth();
+  sourceCtx.strokeStyle = getOutlineStrokeStyle(comment);
+  sourceCtx.fillStyle = resolvedFillStyle;
+
+  const linesToRender = comment.lines.length > 0 ? comment.lines : [comment.text];
+  const lineAdvance = comment.fontSize * NICO_FULL_BIG_SOURCE_LINE_HEIGHT_RATIO;
+  const drawSegment = createSegmentDrawer(
+    comment,
+    sourceCtx,
+    ctx,
+    "cache",
+    NICO_FULL_BIG_SOURCE_PADDING_X_PX,
+  );
+
+  if (shouldUseStrokeOutline) {
+    linesToRender.forEach((line: string, index: number) => {
+      drawSegment(line, NICO_FULL_BIG_SOURCE_BASELINE_Y_PX + index * lineAdvance, "outline");
+    });
+  }
+
+  linesToRender.forEach((line: string, index: number) => {
+    drawSegment(line, NICO_FULL_BIG_SOURCE_BASELINE_Y_PX + index * lineAdvance, "fill");
+  });
+
+  sourceCtx.restore();
+
+  finalCtx.save();
+  finalCtx.font = getCanvasFont(comment, NICO_FULL_BIG_FINAL_FONT_SIZE_PX);
+  finalCtx.shadowColor = `rgba(0, 0, 0, ${shadowParams.alpha})`;
+  finalCtx.shadowBlur = shadowParams.blur;
+  finalCtx.shadowOffsetX = 0;
+  finalCtx.shadowOffsetY = 0;
+  finalCtx.lineJoin = "round";
+  finalCtx.lineWidth = getStrokeWidth();
+  finalCtx.strokeStyle = getOutlineStrokeStyle(comment);
+  finalCtx.fillStyle = resolvedFillStyle;
+
+  const finalDrawSegment = createSegmentDrawer(
+    comment,
+    finalCtx,
+    ctx,
+    "cache",
+    NICO_FULL_BIG_FINAL_PADDING_X_PX,
+  );
+
+  if (shouldUseStrokeOutline) {
+    linesToRender.forEach((line: string, index: number) => {
+      finalDrawSegment(
+        line,
+        NICO_FULL_BIG_FINAL_BASELINE_Y_PX + index * NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
+        "outline",
+      );
+    });
+  }
+
+  linesToRender.forEach((line: string, index: number) => {
+    finalDrawSegment(
+      line,
+      NICO_FULL_BIG_FINAL_BASELINE_Y_PX + index * NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
+      "fill",
+    );
+  });
+
+  finalCtx.restore();
+
+  return finalCanvas;
 };
 
 const createTextureCanvas = (
@@ -155,9 +375,11 @@ const createTextureCanvas = (
   }
   cacheStats.totalCharactersDrawn += comment.text.length;
 
-  const padding = Math.max(10, comment.fontSize * 0.5);
-  const textureWidth = Math.ceil(comment.width + padding * 2);
-  const textureHeight = Math.ceil(comment.height + padding * 2);
+  const { paddingX, paddingY, textureWidth, textureHeight } = getTexturePadding(comment);
+
+  if (shouldUseFullBigDownscaleTexture(comment, textureWidth, textureHeight)) {
+    return createFullBigDownscaleTexture(comment, ctx);
+  }
 
   const offscreen = new OffscreenCanvas(textureWidth, textureHeight);
   const offscreenCtx = offscreen.getContext("2d");
@@ -166,18 +388,21 @@ const createTextureCanvas = (
   }
 
   offscreenCtx.save();
-  offscreenCtx.font = `${comment.fontSize}px ${comment.fontFamily}`;
+  offscreenCtx.font = getCommentCanvasFont(comment);
   const effectiveOpacity = clampOpacity(comment.opacity);
-  const drawX = padding;
+  const drawX = paddingX;
   const linesToRender = comment.lines.length > 0 ? comment.lines : [comment.text];
   const lineAdvance =
     comment.lines.length > 1 && comment.lineHeightPx > 0 ? comment.lineHeightPx : comment.fontSize;
-  const baselineStart = padding + comment.fontSize;
+  const baselineStart = getTextureBaselineStart(comment, paddingY);
   const drawSegment = createSegmentDrawer(comment, offscreenCtx, ctx, "cache", drawX);
 
   const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);
 
-  const shadowParams = getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
+  const shouldUseStrokeOutline = comment.renderStyle === "outline-only";
+  const shadowParams = shouldUseStrokeOutline
+    ? { blur: 0, alpha: 0 }
+    : getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
 
   if (isDebugLoggingEnabled()) {
     console.log(
@@ -196,7 +421,17 @@ const createTextureCanvas = (
   offscreenCtx.shadowBlur = shadowParams.blur;
   offscreenCtx.shadowOffsetX = 0;
   offscreenCtx.shadowOffsetY = 0;
+  offscreenCtx.lineJoin = "round";
+  offscreenCtx.lineWidth = getStrokeWidth();
+  offscreenCtx.strokeStyle = getOutlineStrokeStyle(comment);
   offscreenCtx.fillStyle = resolvedFillStyle;
+
+  if (shouldUseStrokeOutline) {
+    linesToRender.forEach((line: string, index: number) => {
+      const baseline = baselineStart + index * lineAdvance;
+      drawSegment(line, baseline, "outline");
+    });
+  }
 
   linesToRender.forEach((line: string, index: number) => {
     const baseline = baselineStart + index * lineAdvance;
@@ -216,7 +451,7 @@ const drawWithFallback = (
 ): void => {
   cacheStats.fallbacks++;
   ctx.save();
-  ctx.font = `${comment.fontSize}px ${comment.fontFamily}`;
+  ctx.font = getCommentCanvasFont(comment);
   const effectiveOpacity = clampOpacity(comment.opacity);
   const drawX = interpolatedX ?? comment.x;
   const linesToRender = comment.lines.length > 0 ? comment.lines : [comment.text];
@@ -227,7 +462,10 @@ const drawWithFallback = (
 
   const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);
 
-  const shadowParams = getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
+  const shouldUseStrokeOutline = comment.renderStyle === "outline-only";
+  const shadowParams = shouldUseStrokeOutline
+    ? { blur: 0, alpha: 0 }
+    : getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
 
   if (isDebugLoggingEnabled()) {
     console.log(
@@ -246,7 +484,17 @@ const drawWithFallback = (
   ctx.shadowBlur = shadowParams.blur;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = getStrokeWidth();
+  ctx.strokeStyle = getOutlineStrokeStyle(comment);
   ctx.fillStyle = resolvedFillStyle;
+
+  if (shouldUseStrokeOutline) {
+    linesToRender.forEach((line: string, index: number) => {
+      const baseline = baselineStart + index * lineAdvance;
+      drawSegment(line, baseline, "outline");
+    });
+  }
 
   linesToRender.forEach((line: string, index: number) => {
     const baseline = baselineStart + index * lineAdvance;
@@ -282,8 +530,15 @@ export const drawComment = (
     const texture = comment.getCachedTexture();
     if (texture) {
       const drawX = interpolatedX ?? comment.x;
-      const padding = Math.max(10, comment.fontSize * 0.5);
-      ctx.drawImage(texture, drawX - padding, comment.y - padding);
+      const { paddingX, paddingY } = getTexturePadding(comment);
+      ctx.drawImage(texture, drawX - paddingX, comment.y - paddingY);
+      emitCalibrationTrace("drawImage", ctx, comment, {
+        x: drawX - paddingX,
+        y: comment.y - paddingY,
+        width: texture.width,
+        height: texture.height,
+        meta: { statsTarget: "cache", paddingX, paddingY },
+      });
       reportCacheStats();
       return;
     }

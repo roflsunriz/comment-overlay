@@ -9,31 +9,36 @@ import {
 } from "@/shared/types";
 
 const COMMENT_SIZE_SCALE: Record<CommentSizeCommand, number> = {
-  small: 0.8,
+  small: 2 / 3,
   medium: 1,
-  big: 1.4,
+  big: 13 / 9,
 };
 
 const FONT_FAMILY_MAP: Record<CommentFontCommand, string> = {
-  defont:
-    '"MS PGothic","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro","Yu Gothic UI","Yu Gothic","Meiryo","Segoe UI","Osaka","Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","IPAPGothic","TakaoPGothic","Roboto","Helvetica Neue","Helvetica","Arial","sans-serif"',
+  defont: 'Arial,"ＭＳ Ｐゴシック","MS PGothic",MSPGothic,MS-PGothic',
   gothic:
-    '"Noto Sans CJK JP","Noto Sans JP","Source Han Sans JP","Yu Gothic","Yu Gothic Medium","Meiryo","MS PGothic","Hiragino Kaku Gothic ProN","Segoe UI","Helvetica","Arial","sans-serif"',
+    '"游ゴシック体","游ゴシック","Yu Gothic",YuGothic,yugothic,YuGo-Medium,"宋体",SimSun,Arial,"ＭＳ Ｐゴシック","MS PGothic",MSPGothic,MS-PGothic',
   mincho:
     '"MS PMincho","MS Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","Noto Serif CJK JP","Noto Serif JP","Source Han Serif JP","Times New Roman","serif"',
 };
 
+const FONT_WEIGHT_MAP: Record<CommentFontCommand, string> = {
+  defont: "600",
+  gothic: "",
+  mincho: "",
+};
+
 const COLOR_COMMAND_MAP: Record<CommentColorCommand, string> = {
-  white: "#FFFFFC",
-  red: "#FF8888",
+  white: "#FFFFFF",
+  red: "#FF0000",
   pink: "#FFA5CC",
   orange: "#FFBA66",
   yellow: "#FFFFAA",
-  green: "#88FF88",
+  green: "#00FF00",
   cyan: "#88FFFF",
   blue: "#8899FF",
   purple: "#D9A5FF",
-  black: "#444444",
+  black: "#000000",
   white2: "#CC9",
   red2: "#C03",
   pink2: "#F3C",
@@ -137,6 +142,7 @@ export const parseCommentCommands = (
   let opacityMultiplier = 1;
   let opacityOverride: number | null = null;
   let isInvisible = false;
+  let isFull = false;
   let letterSpacing = 0;
   let lineHeight = 1;
 
@@ -187,6 +193,11 @@ export const parseCommentCommands = (
       continue;
     }
 
+    if (lower === "full") {
+      isFull = true;
+      continue;
+    }
+
     if (lower.startsWith("ls:") || lower.startsWith("letterspacing:")) {
       const separatorIndex = normalizedToken.indexOf(":");
       if (separatorIndex >= 0) {
@@ -221,11 +232,13 @@ export const parseCommentCommands = (
     sizeScale: COMMENT_SIZE_SCALE[size],
     font,
     fontFamily: FONT_FAMILY_MAP[font],
+    fontWeight: FONT_WEIGHT_MAP[font],
     resolvedColor,
     colorOverride,
     opacityMultiplier: clampedOpacityMultiplier,
     opacityOverride: resolvedOpacityOverride,
     isInvisible,
+    isFull,
     letterSpacing,
     lineHeight,
   };

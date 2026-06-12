@@ -108,8 +108,8 @@ const calculateLaneMetricsImpl = function (this: CommentRenderer): void {
 
   const effectiveHeight =
     this.displayHeight > 0 ? this.displayHeight : canvas.height / Math.max(this.canvasDpr, 1);
-  const baseHeight = Math.max(MIN_FONT_SIZE_PX, Math.floor(effectiveHeight * 0.05));
-  this.laneHeight = baseHeight * 1.2;
+  const baseHeight = Math.max(MIN_FONT_SIZE_PX, Math.floor(effectiveHeight * (27 / 665)));
+  this.laneHeight = baseHeight * 2.2;
   const availableLanes = Math.floor(effectiveHeight / Math.max(this.laneHeight, 1));
   if (this._settings.useFixedLaneCount) {
     const desired = Number.isFinite(this._settings.fixedLaneCount)

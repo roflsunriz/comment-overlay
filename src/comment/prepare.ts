@@ -8,15 +8,87 @@ import {
 import { commentLogger as logger } from "@/comment/logger";
 import { measureTextWidth } from "@/comment/text-measure";
 
+export const getCommentCanvasFont = (
+  comment: Pick<Comment, "fontSize" | "fontFamily" | "fontWeight">,
+): string =>
+  `${comment.fontWeight ? `${comment.fontWeight} ` : ""}${comment.fontSize}px ${comment.fontFamily}`;
+
+const NICO_BASE_FONT_SIZE_RATIO = 27 / 665;
+const MIN_SCROLL_FONT_SIZE_PX = 12;
+
+const NICO_TAB_REPLACEMENT = "\u2003\u2003";
+const NICO_FULL_SMALL_WIDTH_BUCKETS = [366, 510, 1662] as const;
+const NICO_FULL_BIG_WIDTH_PX = 566;
+const NICO_FULL_SMALL_HEIGHT_RATIO = 806 / 665;
+const NICO_FULL_BIG_HEIGHT_RATIO = 808 / 665;
+const NICO_FULL_SCROLL_X_OFFSET_RATIO = 0.25;
+const NICO_FULL_SCROLL_MIN_X_OFFSET_PX = 160;
+const NICO_FULL_SCROLL_MAX_X_OFFSET_PX = 420;
+const NICO_SCROLL_EXTENSION_BASE_PX = 80;
+const NICO_SCROLL_EXTENSION_WIDTH_RATIO = 0.18;
+const NICO_SCROLL_EXTENSION_WIDE_THRESHOLD_PX = 400;
+const NICO_SCROLL_EXTENSION_WIDE_RATIO = 0.2;
+const NICO_SCROLL_EXTENSION_MAX_PX = 420;
+const NICO_SCROLL_EXIT_EXTENSION_THRESHOLD_PX = 250;
+const NICO_SCROLL_EXIT_EXTENSION_RATIO = 1.8;
+const NICO_SCROLL_EXIT_EXTENSION_MAX_PX = 420;
+const NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX = 20;
+const NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO = 0.045;
+
+const normalizeCommentTextForCanvas = (text: string): string =>
+  text.replaceAll("\t", NICO_TAB_REPLACEMENT);
+
 const ensureLines = (text: string): string[] => {
-  if (text.includes("\n")) {
-    const rawLines = text.split(/\r?\n/);
+  const normalizedText = normalizeCommentTextForCanvas(text);
+  if (normalizedText.includes("\n")) {
+    const rawLines = normalizedText.split(/\r?\n/);
     return rawLines.length > 0 ? rawLines : [""];
   }
-  return [text];
+  return [normalizedText];
 };
 
-const clampFontSize = (value: number): number => Math.max(24, value);
+const clampFontSize = (value: number, minSize = MIN_SCROLL_FONT_SIZE_PX): number =>
+  Math.max(minSize, value);
+
+const snapFullCommentWidth = (comment: Comment): number => {
+  if (comment.fontSize >= 35) {
+    return NICO_FULL_BIG_WIDTH_PX;
+  }
+  const rawLines = comment.text.split(/\r?\n/);
+  const maxRawTabCount = Math.max(0, ...rawLines.map((line) => (line.match(/\t/g) || []).length));
+  if (maxRawTabCount >= 12) {
+    return NICO_FULL_SMALL_WIDTH_BUCKETS[2];
+  }
+  if (comment.width >= 1_200) {
+    return NICO_FULL_SMALL_WIDTH_BUCKETS[2];
+  }
+  if (comment.width >= 300) {
+    return NICO_FULL_SMALL_WIDTH_BUCKETS[1];
+  }
+  return NICO_FULL_SMALL_WIDTH_BUCKETS[0];
+};
+
+const getFullScrollXOffset = (comment: Comment): number =>
+  Math.min(
+    NICO_FULL_SCROLL_MAX_X_OFFSET_PX,
+    Math.max(NICO_FULL_SCROLL_MIN_X_OFFSET_PX, comment.width * NICO_FULL_SCROLL_X_OFFSET_RATIO),
+  );
+
+const getScrollDistanceExtension = (comment: Comment): number =>
+  Math.min(
+    NICO_SCROLL_EXTENSION_MAX_PX,
+    NICO_SCROLL_EXTENSION_BASE_PX +
+      comment.width * NICO_SCROLL_EXTENSION_WIDTH_RATIO +
+      Math.max(0, comment.width - NICO_SCROLL_EXTENSION_WIDE_THRESHOLD_PX) *
+        NICO_SCROLL_EXTENSION_WIDE_RATIO,
+  );
+
+const getScrollExitExtension = (comment: Comment): number =>
+  Math.min(
+    NICO_SCROLL_EXIT_EXTENSION_MAX_PX,
+    Math.max(0, comment.width - NICO_SCROLL_EXIT_EXTENSION_THRESHOLD_PX) *
+      NICO_SCROLL_EXIT_EXTENSION_RATIO,
+  );
 
 const updateTextMetrics = (comment: Comment, ctx: CanvasRenderingContext2D): void => {
   let maxLineWidth = 0;
@@ -59,12 +131,18 @@ export const prepareComment = (
     }
 
     const safeVisibleWidth = Math.max(visibleWidth, 1);
-    const baseFontSize = clampFontSize(Math.floor(canvasHeight * 0.05));
+    const baseFontSize = clampFontSize(Math.floor(canvasHeight * NICO_BASE_FONT_SIZE_RATIO));
     const scaledFontSize = clampFontSize(Math.floor(baseFontSize * comment.sizeScale));
     comment.fontSize = scaledFontSize;
-    ctx.font = `${comment.fontSize}px ${comment.fontFamily}`;
+    ctx.font = getCommentCanvasFont(comment);
     comment.lines = ensureLines(comment.text);
     updateTextMetrics(comment, ctx);
+    if (comment.isScrolling && comment.isFull) {
+      const fullHeightRatio =
+        comment.fontSize >= 35 ? NICO_FULL_BIG_HEIGHT_RATIO : NICO_FULL_SMALL_HEIGHT_RATIO;
+      comment.width = snapFullCommentWidth(comment);
+      comment.height = Math.max(comment.height, Math.round(canvasHeight * fullHeightRatio));
+    }
 
     const isStaticTopOrBottom =
       !comment.isScrolling && (comment.layout === "ue" || comment.layout === "shita");
@@ -82,7 +160,7 @@ export const prepareComment = (
         );
         if (initialShrink < comment.fontSize) {
           comment.fontSize = initialShrink;
-          ctx.font = `${comment.fontSize}px ${comment.fontFamily}`;
+          ctx.font = getCommentCanvasFont(comment);
           updateTextMetrics(comment, ctx);
         }
         let iteration = 0;
@@ -101,7 +179,7 @@ export const prepareComment = (
           } else {
             comment.fontSize = proposedSize;
           }
-          ctx.font = `${comment.fontSize}px ${comment.fontFamily}`;
+          ctx.font = getCommentCanvasFont(comment);
           updateTextMetrics(comment, ctx);
           iteration += 1;
         }
@@ -138,14 +216,34 @@ export const prepareComment = (
 
     const direction = comment.scrollDirection;
 
+    const fullScrollXOffset = comment.isFull ? getFullScrollXOffset(comment) : 0;
+    const fullScrollSpeedExtension = comment.isFull
+      ? NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX +
+        comment.width * NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO
+      : 0;
+    const scrollDistanceExtension = comment.isFull ? 0 : getScrollDistanceExtension(comment);
+    const scrollExitExtension = comment.isFull ? 0 : getScrollExitExtension(comment);
     const startLeft =
       direction === "rtl"
-        ? safeVisibleWidth + options.virtualExtension
-        : -comment.width - comment.bufferWidth - options.virtualExtension;
+        ? safeVisibleWidth + options.virtualExtension + fullScrollXOffset + scrollDistanceExtension
+        : -comment.width -
+          comment.bufferWidth -
+          options.virtualExtension -
+          fullScrollXOffset -
+          scrollDistanceExtension;
     const exitLeft =
       direction === "rtl"
-        ? -comment.width - comment.bufferWidth - entryBuffer
-        : safeVisibleWidth + entryBuffer;
+        ? -comment.width -
+          comment.bufferWidth -
+          entryBuffer +
+          fullScrollXOffset -
+          scrollDistanceExtension -
+          scrollExitExtension
+        : safeVisibleWidth +
+          entryBuffer -
+          fullScrollXOffset +
+          scrollDistanceExtension +
+          scrollExitExtension;
     const trailingBoundary = direction === "rtl" ? safeVisibleWidth + entryBuffer : -entryBuffer;
     const trailingEdgeAtStart =
       direction === "rtl"
@@ -159,13 +257,21 @@ export const prepareComment = (
     const widthRatio = safeVisibleWidth > 0 ? comment.width / safeVisibleWidth : 0;
     const hasFixedDuration = options.maxVisibleDurationMs === options.minVisibleDurationMs;
     let visibleDurationMs = options.maxVisibleDurationMs;
-    if (!hasFixedDuration && widthRatio > 1) {
+    if (!hasFixedDuration && widthRatio > 1 && !comment.isFull) {
       const clampedRatio = Math.min(widthRatio, options.maxWidthRatio);
       const adjustedDuration = options.maxVisibleDurationMs / Math.max(clampedRatio, 1);
       visibleDurationMs = Math.max(options.minVisibleDurationMs, Math.floor(adjustedDuration));
     }
 
-    const visibleDistance = safeVisibleWidth + comment.width + comment.bufferWidth + entryBuffer;
+    const visibleDistance =
+      safeVisibleWidth +
+      comment.width +
+      comment.bufferWidth +
+      entryBuffer +
+      options.virtualExtension +
+      fullScrollSpeedExtension +
+      scrollDistanceExtension * 2 +
+      scrollExitExtension;
     const safeVisibleDuration = Math.max(visibleDurationMs, 1);
     const pixelsPerMs = visibleDistance / safeVisibleDuration;
     const pixelsPerFrame = (pixelsPerMs * 1000) / 60;

@@ -30,8 +30,34 @@ bun install
 - `bun run lint`: `src` ディレクトリの TypeScript ファイルを ESLint で検査します。
 - `bun run type-check`: `tsconfig.build.json` を用いた型チェックを実行します。
 - `bun run serve`: `overlay-tests` ディレクトリを静的サーバーで起動し、ビルド成果物を使って動作確認できます。
+- `bun run nico:trace -- ...`: CDP 接続した Chrome 上のニコニコ動画プレイヤーから Canvas 描画ログとスクリーンショットを採取します。
+- `bun run nico:overlay-trace -- ...`: 生コメントJSONを `comment-overlay` で描画し、校正用トレースを採取します。
+- `bun run nico:report -- ...`: 実プレイヤー採取ログと `comment-overlay` 側ログの差分レポートを生成します。
 
 開発にあたり、変更後は `bun run lint`、`bun run type-check`、`bun run build` を順番に実行して品質を確認してください。
+
+## ニコニコ実プレイヤー計測
+
+`scripts/nico-trace.mjs` は、ログイン済み Chrome を CDP 経由で計測し、ニコニコ実プレイヤーの Canvas 描画呼び出しを JSONL として保存する開発用ツールです。Chrome はあらかじめ `--remote-debugging-port=9222` 付きで起動してください。
+
+```bash
+bun run nico:trace -- --url "https://www.nicovideo.jp/watch/VIDEO_ID" --video-id VIDEO_ID --case baseline --start-ms 60000 --duration-ms 5000
+```
+
+出力は `.calibration/nico/<videoId>/<case>/` に保存されます。主な成果物は `trace.jsonl`、`network-comments.json`、`screenshots/*.png`、`meta.json` です。`trace.jsonl` の各 Canvas レコードには、可能な場合 `videoCurrentTimeMs` と `videoRect` も含まれるため、コメントの `x(t)` を実再生時刻に対して比較できます。
+
+`.calibration/` は校正用の一時成果物ディレクトリで、git 管理対象外です。必要な教師データ、スクリーンショット、レポートはローカルで再採取・再生成してください。
+
+`comment-overlay` 側の描画ログを採取したい場合は、ブラウザー上で `globalThis.__COMMENT_OVERLAY_TRACE_ENABLED__ = true` と `globalThis.__COMMENT_OVERLAY_TRACE__ = (record) => { ... }` を設定します。これは校正用の内部フックで、公開 API ではありません。
+
+実プレイヤーと `comment-overlay` のトレースを比較するには次を実行します。
+
+```bash
+bun run nico:overlay-trace -- --comments .calibration/sm6240144-comments.json --out .calibration/nico/sm6240144/overlay-cat-mario-100s-30s --width 1182 --height 665 --start-ms 100000 --duration-ms 30000 --fps 15
+bun run nico:report -- --real .calibration/nico/VIDEO_ID/baseline/trace.jsonl --overlay overlay-trace.jsonl --out .calibration/nico/VIDEO_ID/baseline/report.html
+```
+
+レポートには `fillText` / `strokeText` の本文一致に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも出力されます。`366x806` や `1662x806` のようなコメントアート由来の大きなテクスチャが、実プレイヤーと `comment-overlay` の双方に出ているか、また `x(t)` の速度が一致しているかを確認できます。PNG同士の簡易差分も同じHTML内で確認する場合は、`--real-image` と `--overlay-image` を追加してください。
 
 ## パブリッシュ手順（メンテナー向け）
 
@@ -113,10 +139,13 @@ video.addEventListener("ended", () => {
 - フォント指定: `defont`(システムフォント), `gothic`(ゴシック体), `mincho`(明朝体)
 - 色指定: `white`, `red`, `pink`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `black`, `white2`, `red2`, `pink2`, `orange2`, `yellow2`, `green2`, `cyan2`, `blue2`, `purple2`, `black2`
 - 透明度指定: `_live`(半透明), `invisible`(非表示)
+- スクロール幅指定: `full`(横流れコメントの幅に応じた表示時間短縮を行わない)
 - 色指定: `#FF0000`, `#00FF00`, `#0000FF`などの16進数カラーコード
 - 字間指定: `ls:10` や `letterspacing:10` (px単位)
 - 行高指定: `lh:1.5` や `lineheight:150%` (倍率またはパーセント)
 - コメントコマンドが未指定のときは`naka` `medium` `defont` `white` 相当の表示になります。
+
+`small` / `medium` / `big` のフォント比率と `gothic` のフォント候補は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ### RendererSettings のポイント
 
@@ -197,7 +226,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 2. サンプルサーバーを起動します: `bun run serve`
 3. ブラウザーで表示される URL を開き、`overlay-tests` 内のテスト UI でコメント描画を確認できます。
 
-サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータは `overlay-tests/so45409498-comments.json` を編集して調整できます。動画データは `overlay-tests/video.mp4` と `overlay-tests/video2.mp4` に配置してください。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
+サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータは `overlay-tests/so45409498-comments.json` を編集して調整できます。動画データは `overlay-tests/video.mp4` と `overlay-tests/video2.mp4` に配置してください。`overlay-tests/sm6240144.mp4` と `overlay-tests/sm6240144-comments.json` がローカルにある場合は、`http://127.0.0.1:4173/?preset=cat-mario` または UI の `sm6240144 猫マリオCA` preset で 01:40 付近のコメントアート確認を開始できます。これらの `sm6240144` 用アセットはgit管理対象外です。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
 
 より詳細なセットアップや API の使い方は [DOCUMENTATION.md](./DOCUMENTATION.md) を参照してください。
 

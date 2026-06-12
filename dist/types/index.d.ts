@@ -8,4 +8,7 @@ export type { RendererSettings, VideoMetadata, CommentRendererEventHooks, EpochC
 export { createLogger, type LogLevel, type Logger } from "@/shared/logger";
 export { configureDebugLogging, debugLog, isDebugLoggingEnabled, resetDebugCounters, dumpRendererState, logEpochChange, } from "@/shared/debug";
 export type { DebugLoggingOptions } from "@/shared/debug";
+export { captureRendererCalibrationFrame } from "@/shared/calibration-debug";
+export type { CalibrationActiveCommentSnapshot, CalibrationFrameSnapshot, CaptureCalibrationFrameOptions, } from "@/shared/calibration-debug";
+export type { CalibrationTraceEmitter, CalibrationTraceRecord } from "@/shared/calibration-trace";
 //# sourceMappingURL=index.d.ts.map

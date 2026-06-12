@@ -112,11 +112,13 @@ export interface CommentCommandParseResult {
   readonly layout: CommentLayoutCommand;
   readonly font: CommentFontCommand;
   readonly fontFamily: string;
+  readonly fontWeight: string;
   readonly resolvedColor: string;
   readonly colorOverride: string | null;
   readonly opacityMultiplier: number;
   readonly opacityOverride: number | null;
   readonly isInvisible: boolean;
+  readonly isFull: boolean;
   readonly letterSpacing: number;
   readonly lineHeight: number;
 }

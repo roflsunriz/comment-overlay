@@ -10,21 +10,22 @@ export const sanitizeVposMs = (value: number): number | null => {
   return Math.round(value);
 };
 
-export const MAX_VISIBLE_DURATION_MS = 4_000;
-export const MIN_VISIBLE_DURATION_MS = 1_800;
+export const MAX_VISIBLE_DURATION_MS = 6_000;
+export const MIN_VISIBLE_DURATION_MS = 2_700;
 export const MAX_COMMENT_WIDTH_RATIO = 3;
 export const COLLISION_BUFFER_RATIO = 0.25;
 export const BASE_COLLISION_BUFFER_PX = 32;
 export const ENTRY_BUFFER_PX = 48;
 export const RESERVATION_TIME_MARGIN_MS = 120;
-export const FINAL_PHASE_THRESHOLD_MS = 4_000;
+export const FINAL_PHASE_THRESHOLD_MS = 6_000;
 export const FINAL_PHASE_MIN_GAP_MS = 120;
 export const FINAL_PHASE_MAX_GAP_MS = 800;
 export const FINAL_PHASE_ORDER_EPSILON_MS = 2;
-export const FINAL_PHASE_MIN_WINDOW_MS = 4_000;
+export const FINAL_PHASE_MIN_WINDOW_MS = 6_000;
 export const STATIC_VISIBLE_DURATION_MS = 4_000;
 export const ACTIVE_WINDOW_MS = STATIC_VISIBLE_DURATION_MS + MAX_VISIBLE_DURATION_MS;
-export const VIRTUAL_CANVAS_EXTENSION_PX = 1_000;
+export const VIRTUAL_CANVAS_EXTENSION_PX = 240;
+export const NICO_SCROLL_VPOS_LEAD_MS = 2_000;
 export const MIN_LANE_COUNT = 1;
 export const DEFAULT_LANE_COUNT = 12;
 export const MIN_FONT_SIZE_PX = 24;

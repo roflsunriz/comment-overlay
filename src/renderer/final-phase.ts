@@ -8,6 +8,7 @@ import {
   FINAL_PHASE_ORDER_EPSILON_MS,
   FINAL_PHASE_MIN_WINDOW_MS,
   MAX_VISIBLE_DURATION_MS,
+  NICO_SCROLL_VPOS_LEAD_MS,
   STATIC_VISIBLE_DURATION_MS,
 } from "@/shared/constants";
 import { dumpRendererState, logEpochChange } from "@/shared/debug";
@@ -85,7 +86,12 @@ const getEffectiveCommentVposImpl = function (this: CommentRenderer, comment: Co
     this.recomputeFinalPhaseTimeline();
   }
   const override = this.finalPhaseVposOverrides.get(comment);
-  return override ?? comment.vposMs;
+  if (override !== undefined) {
+    return override;
+  }
+  return comment.isScrolling
+    ? Math.max(0, comment.vposMs - NICO_SCROLL_VPOS_LEAD_MS)
+    : comment.vposMs;
 };
 
 const getFinalPhaseDisplayDurationImpl = function (
@@ -114,7 +120,9 @@ const getFinalPhaseDisplayDurationImpl = function (
 const resolveFinalPhaseVposImpl = function (this: CommentRenderer, comment: Comment): number {
   if (!this.finalPhaseActive || this.finalPhaseStartTime === null) {
     this.finalPhaseVposOverrides.delete(comment);
-    return comment.vposMs;
+    return comment.isScrolling
+      ? Math.max(0, comment.vposMs - NICO_SCROLL_VPOS_LEAD_MS)
+      : comment.vposMs;
   }
   if (this.finalPhaseScheduleDirty) {
     this.recomputeFinalPhaseTimeline();

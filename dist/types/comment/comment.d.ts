@@ -1,15 +1,17 @@
-import type { CommentLayoutCommand, RenderStyle, RendererSettings, ScrollDirection, CommentDependencies, CommentPrepareOptions, TimeSource } from "@/shared/types";
+import type { CommentLayoutCommand, CommentSizeCommand, RenderStyle, RendererSettings, ScrollDirection, CommentDependencies, CommentPrepareOptions, TimeSource } from "@/shared/types";
 export declare class Comment {
     readonly text: string;
     readonly vposMs: number;
     readonly commands: string[];
     readonly layout: CommentLayoutCommand;
     readonly isScrolling: boolean;
+    readonly size: CommentSizeCommand;
     readonly sizeScale: number;
     readonly opacityMultiplier: number;
     readonly opacityOverride: number | null;
     readonly colorOverride: string | null;
     readonly isInvisible: boolean;
+    readonly isFull: boolean;
     x: number;
     y: number;
     width: number;
@@ -20,6 +22,7 @@ export declare class Comment {
     color: string;
     fontSize: number;
     fontFamily: string;
+    fontWeight: string;
     opacity: number;
     activationTimeMs: number | null;
     staticExpiryTimeMs: number | null;
