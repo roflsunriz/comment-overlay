@@ -5,6 +5,7 @@
 2. Typescriptでは`bun run lint`, `bun run type-check`, `bun run build`を順番に実行してコードの品質を確認してください。
 3. 品質確認コマンドでエラーがクリーンになるまで繰り返し修正してください。
 4. Typescriptでないファイルやjsファイル、mdファイルでは品質確認コマンドを実行する必要はありません。
+5. コミットメッセージは日本語のConventional Commits形式に従ってください。形式は`type(scope): 日本語の要約`を基本とし、例として`feat(renderer): ニコニコ互換の描画補正を追加`、`fix(lanes): 上下レーンのはみ出しを修正`、`docs(readme): 校正手順を追記`のように記述してください。
 
 ## コードベース環境
 1. コードベース環境は`src`ディレクトリと`dist`ディレクトリです。
