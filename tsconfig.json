@@ -17,7 +17,6 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "types": ["vite/client", "node"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
       "@runtime/*": ["runtime/*"],
