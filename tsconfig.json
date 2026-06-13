@@ -18,9 +18,9 @@
     "skipLibCheck": true,
     "types": ["vite/client", "node"],
     "paths": {
-      "@/*": ["src/*"],
-      "@runtime/*": ["runtime/*"],
-      "@/d-anime/*": ["config/*"]
+      "@/*": ["./src/*"],
+      "@runtime/*": ["./runtime/*"],
+      "@/d-anime/*": ["./config/*"]
     }
   },
   "include": ["src/**/*.ts", "vite.config.ts"],
