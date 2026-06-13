@@ -22,6 +22,11 @@ const NICO_FULL_MINCHO_BIG_WIDTH_RATIO = 1176 / 665;
 const NICO_FULL_MINCHO_BIG_HEIGHT_RATIO = 900 / 665;
 const NICO_FULL_MINCHO_MEDIUM_WIDTH_RATIO = 1126 / 665;
 const NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO = 810 / 665;
+const NICO_ENDER_MINCHO_BIG_EYE_WIDTH_RATIO = 1254 / 665;
+const NICO_ENDER_GROUP_MINCHO_BODY_WIDTH_RATIO = 1126 / 665;
+const NICO_ENDER_GROUP_MINCHO_EYE_WIDTH_RATIO = 1046 / 665;
+const NICO_ENDER_GROUP_MINCHO_MEDIUM_WIDTH_RATIO = 1140 / 665;
+const NICO_ENDER_GROUP_MINCHO_MEDIUM_HEIGHT_RATIO = 878 / 665;
 const NICO_FULL_SCROLL_X_OFFSET_RATIO = 0.25;
 const NICO_FULL_SCROLL_MIN_X_OFFSET_PX = 160;
 const NICO_FULL_SCROLL_MAX_X_OFFSET_PX = 420;
@@ -38,6 +43,8 @@ const NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO = 0.045;
 
 const normalizeCommentTextForCanvas = (text: string): string =>
   text.replaceAll("\t", NICO_TAB_REPLACEMENT);
+
+const NICO_ART_BLANK_CHARS_PATTERN = /[\s\u00a0\u2000-\u200f\u202f\u205f\u3000]/g;
 
 const ensureLines = (text: string): string[] => {
   const normalizedText = normalizeCommentTextForCanvas(text);
@@ -91,6 +98,22 @@ const getScrollExitExtension = (comment: Comment): number =>
       NICO_SCROLL_EXIT_EXTENSION_RATIO,
   );
 
+const getNonEmptyLineCount = (comment: Comment): number =>
+  comment.lines.filter((line) => line.replace(NICO_ART_BLANK_CHARS_PATTERN, "").length > 0).length;
+
+const isSparseEyeLayer = (comment: Comment): boolean => {
+  if (getNonEmptyLineCount(comment) !== 1) {
+    return false;
+  }
+  const compactText = comment.text.replace(NICO_ART_BLANK_CHARS_PATTERN, "");
+  return (
+    compactText === "●" ||
+    compactText.includes("●●") ||
+    compactText.includes("○○") ||
+    compactText.includes("◉")
+  );
+};
+
 const updateTextMetrics = (comment: Comment, ctx: CanvasRenderingContext2D): void => {
   let maxLineWidth = 0;
   const effectiveLetterSpacing = comment.letterSpacing;
@@ -142,7 +165,40 @@ export const prepareComment = (
       const isMinchoFullArt =
         comment.lines.length > 1 &&
         (comment.fontFamily.includes("Yu Mincho") || comment.fontFamily.includes("游明朝"));
-      if (isMinchoFullArt && comment.fontSize >= 35) {
+      if (isMinchoFullArt && comment.isEnderGroup && !comment.isEnder && comment.fontSize >= 35) {
+        comment.width = Math.round(
+          canvasHeight *
+            (isSparseEyeLayer(comment)
+              ? NICO_ENDER_GROUP_MINCHO_EYE_WIDTH_RATIO
+              : NICO_ENDER_GROUP_MINCHO_BODY_WIDTH_RATIO),
+        );
+        comment.height = Math.max(
+          comment.height,
+          Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO),
+        );
+      } else if (
+        isMinchoFullArt &&
+        comment.isEnderGroup &&
+        comment.isEnder &&
+        comment.fontSize >= 35
+      ) {
+        comment.width = Math.round(
+          canvasHeight *
+            (isSparseEyeLayer(comment)
+              ? NICO_ENDER_MINCHO_BIG_EYE_WIDTH_RATIO
+              : NICO_FULL_MINCHO_BIG_WIDTH_RATIO),
+        );
+        comment.height = Math.max(
+          comment.height,
+          Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_HEIGHT_RATIO),
+        );
+      } else if (isMinchoFullArt && comment.isEnderGroup && comment.isEnder) {
+        comment.width = Math.round(canvasHeight * NICO_ENDER_GROUP_MINCHO_MEDIUM_WIDTH_RATIO);
+        comment.height = Math.max(
+          comment.height,
+          Math.round(canvasHeight * NICO_ENDER_GROUP_MINCHO_MEDIUM_HEIGHT_RATIO),
+        );
+      } else if (isMinchoFullArt && comment.fontSize >= 35) {
         comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_WIDTH_RATIO);
         comment.height = Math.max(
           comment.height,
