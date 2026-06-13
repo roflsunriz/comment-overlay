@@ -101,6 +101,18 @@ const shouldActivateCommentAtTimeImpl = function (
     }
     return false;
   }
+  if (!comment.isScrolling && effectiveVpos + STATIC_VISIBLE_DURATION_MS <= timeMs) {
+    if (debugActive) {
+      debugLog("comment-eval-skip", {
+        preview,
+        vposMs: comment.vposMs,
+        effectiveVposMs: effectiveVpos,
+        reason: "static-expired",
+        currentTime: timeMs,
+      });
+    }
+    return false;
+  }
 
   if (debugActive) {
     debugLog("comment-eval-ready", {
@@ -195,8 +207,8 @@ const activateCommentImpl = function (
     comment.speed = 0;
     comment.baseSpeed = 0;
     comment.speedPixelsPerMs = 0;
-    comment.visibleDurationMs = STATIC_VISIBLE_DURATION_MS;
-    const displayEnd = referenceTime + comment.visibleDurationMs;
+    const displayEnd = effectiveVpos + STATIC_VISIBLE_DURATION_MS;
+    comment.visibleDurationMs = Math.max(0, displayEnd - referenceTime);
     this.activeComments.add(comment);
     comment.isActive = true;
     comment.hasShown = true;

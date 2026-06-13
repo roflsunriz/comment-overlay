@@ -102,6 +102,7 @@ const NICO_FULL_MINCHO_SYNC_CANVAS_SCALE = 2;
 const NICO_FULL_MINCHO_SYNC_BIG_PADDING_Y_PX = 66.9;
 const NICO_FULL_MINCHO_SYNC_MEDIUM_PADDING_Y_PX = 55.6;
 const NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_X_PX = 46;
+const NICO_FULL_MINCHO_SYNC_BOTTOM_MARGIN_PX = 0.4;
 const NICO_STATIC_WIDE_FINAL_FONT_SIZE_PX = 10;
 const NICO_STATIC_WIDE_FINAL_PADDING_X_PX = 6.75;
 const NICO_STATIC_WIDE_FINAL_BASELINE_Y_PX = 16.75;
@@ -147,6 +148,14 @@ const getTexturePadding = (
 ): { paddingX: number; paddingY: number; textureWidth: number; textureHeight: number } => {
   const isFullScrolling = comment.isScrolling && comment.isFull;
   if (isFullScrolling) {
+    if (comment.hasSameVposFullMinchoEnder) {
+      return {
+        paddingX: Math.max(10, comment.fontSize * 0.5),
+        paddingY: 0,
+        textureWidth: Math.ceil(comment.width),
+        textureHeight: Math.ceil(comment.height),
+      };
+    }
     const synchronizedFullMinchoPaddingY =
       comment.hasSameVposFullMinchoEnder && comment.isEnder
         ? comment.fontSize >= 35
@@ -359,6 +368,26 @@ type TextureProfile = {
   traces?: TexturePass[];
 };
 
+const getSynchronizedMultilinePassLineHeight = (
+  comment: Comment,
+  passHeight: number,
+  canvasScale: number,
+): number => {
+  const lineCount = Math.max(1, comment.lines.length);
+  if (lineCount <= 1) {
+    return NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX;
+  }
+  const logicalHeight = passHeight / canvasScale;
+  const availableHeight = Math.max(
+    NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
+    logicalHeight - NICO_FULL_BIG_FINAL_BASELINE_Y_PX - NICO_FULL_MINCHO_SYNC_BOTTOM_MARGIN_PX,
+  );
+  return availableHeight / (lineCount - 1);
+};
+
+const getSynchronizedMultilinePassFontSize = (lineHeight: number): number =>
+  Math.min(NICO_FULL_MINCHO_SYNC_FONT_SIZE_PX, Math.max(1, lineHeight * 0.95));
+
 const createTexturePass = (
   comment: Comment,
   ctx: CanvasRenderingContext2D,
@@ -456,22 +485,20 @@ const resolveTextureProfile = (
     };
   }
 
-  if (
-    comment.isScrolling &&
-    comment.isFull &&
-    comment.hasSameVposFullMinchoEnder &&
-    !comment.isEnder &&
-    textureWidth >= 1_000 &&
-    textureHeight >= 800
-  ) {
+  if (comment.isScrolling && comment.isFull && comment.hasSameVposFullMinchoEnder) {
+    const lineHeight = getSynchronizedMultilinePassLineHeight(
+      comment,
+      textureHeight,
+      NICO_FULL_MINCHO_SYNC_CANVAS_SCALE,
+    );
     return {
       output: {
         width: textureWidth,
         height: textureHeight,
-        fontSize: NICO_FULL_MINCHO_SYNC_FONT_SIZE_PX,
+        fontSize: getSynchronizedMultilinePassFontSize(lineHeight),
         paddingX: NICO_FULL_BIG_FINAL_PADDING_X_PX,
         baselineY: NICO_FULL_BIG_FINAL_BASELINE_Y_PX,
-        lineHeight: NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
+        lineHeight,
         canvasScale: NICO_FULL_MINCHO_SYNC_CANVAS_SCALE,
       },
     };

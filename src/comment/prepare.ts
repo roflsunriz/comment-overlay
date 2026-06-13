@@ -22,11 +22,11 @@ const NICO_FULL_MINCHO_BIG_WIDTH_RATIO = 1176 / 665;
 const NICO_FULL_MINCHO_BIG_HEIGHT_RATIO = 900 / 665;
 const NICO_FULL_MINCHO_MEDIUM_WIDTH_RATIO = 1126 / 665;
 const NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO = 810 / 665;
-const NICO_FULL_MINCHO_CLUSTER_MEMBER_BIG_WIDTH_RATIO = 1126 / 665;
+const NICO_FULL_MINCHO_SYNC_MEMBER_BIG_WIDTH_RATIO = 1126 / 665;
 const NICO_FULL_MINCHO_SYNC_SPARSE_MEMBER_WIDTH_RATIO = 1046 / 665;
 const NICO_FULL_MINCHO_SYNC_SPARSE_ENDER_WIDTH_RATIO = 1254 / 665;
-const NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_WIDTH_RATIO = 1140 / 665;
-const NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_HEIGHT_RATIO = 878 / 665;
+const NICO_FULL_MINCHO_SYNC_MEMBER_MEDIUM_WIDTH_RATIO = 1140 / 665;
+const NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO = 1;
 const NICO_FULL_SCROLL_X_OFFSET_RATIO = 0.25;
 const NICO_FULL_SCROLL_MIN_X_OFFSET_PX = 160;
 const NICO_FULL_SCROLL_MAX_X_OFFSET_PX = 420;
@@ -80,11 +80,16 @@ const snapFullCommentWidth = (comment: Comment): number => {
   return NICO_FULL_SMALL_WIDTH_BUCKETS[0];
 };
 
-const getFullScrollXOffset = (comment: Comment): number =>
+const getFullScrollXOffset = (motionWidth: number): number =>
   Math.min(
     NICO_FULL_SCROLL_MAX_X_OFFSET_PX,
-    Math.max(NICO_FULL_SCROLL_MIN_X_OFFSET_PX, comment.width * NICO_FULL_SCROLL_X_OFFSET_RATIO),
+    Math.max(NICO_FULL_SCROLL_MIN_X_OFFSET_PX, motionWidth * NICO_FULL_SCROLL_X_OFFSET_RATIO),
   );
+
+const getScrollMotionWidth = (comment: Comment, canvasHeight: number): number =>
+  comment.isScrolling && comment.isFull && comment.hasSameVposFullMinchoEnder
+    ? Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_SPARSE_ENDER_WIDTH_RATIO)
+    : comment.width;
 
 const getScrollDistanceExtension = (comment: Comment): number =>
   Math.min(
@@ -108,6 +113,9 @@ const getNonEmptyLineCount = (comment: Comment): number =>
 
 const isSparseMultilineLayer = (comment: Comment): boolean =>
   comment.lines.length > 1 && getNonEmptyLineCount(comment) === 1;
+
+const isLargeComment = (comment: Comment): boolean =>
+  comment.size === "big" || comment.fontSize >= 35;
 
 const updateTextMetrics = (comment: Comment, ctx: CanvasRenderingContext2D): void => {
   let maxLineWidth = 0;
@@ -164,23 +172,23 @@ export const prepareComment = (
         isFullMinchoMultiline &&
         comment.hasSameVposFullMinchoEnder &&
         !comment.isEnder &&
-        comment.fontSize >= 35
+        isLargeComment(comment)
       ) {
         comment.width = Math.round(
           canvasHeight *
             (isSparseMultilineLayer(comment)
               ? NICO_FULL_MINCHO_SYNC_SPARSE_MEMBER_WIDTH_RATIO
-              : NICO_FULL_MINCHO_CLUSTER_MEMBER_BIG_WIDTH_RATIO),
+              : NICO_FULL_MINCHO_SYNC_MEMBER_BIG_WIDTH_RATIO),
         );
         comment.height = Math.max(
           comment.height,
-          Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO),
+          Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO),
         );
       } else if (
         isFullMinchoMultiline &&
         comment.hasSameVposFullMinchoEnder &&
         comment.isEnder &&
-        comment.fontSize >= 35
+        isLargeComment(comment)
       ) {
         comment.width = Math.round(
           canvasHeight *
@@ -190,17 +198,15 @@ export const prepareComment = (
         );
         comment.height = Math.max(
           comment.height,
-          Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_HEIGHT_RATIO),
+          Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO),
         );
       } else if (isFullMinchoMultiline && comment.hasSameVposFullMinchoEnder && comment.isEnder) {
-        comment.width = Math.round(
-          canvasHeight * NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_WIDTH_RATIO,
-        );
+        comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_MEMBER_MEDIUM_WIDTH_RATIO);
         comment.height = Math.max(
           comment.height,
-          Math.round(canvasHeight * NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_HEIGHT_RATIO),
+          Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO),
         );
-      } else if (isFullMinchoMultiline && comment.fontSize >= 35) {
+      } else if (isFullMinchoMultiline && isLargeComment(comment)) {
         comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_WIDTH_RATIO);
         comment.height = Math.max(
           comment.height,
@@ -213,8 +219,9 @@ export const prepareComment = (
           Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO),
         );
       } else {
-        const fullHeightRatio =
-          comment.fontSize >= 35 ? NICO_FULL_BIG_HEIGHT_RATIO : NICO_FULL_SMALL_HEIGHT_RATIO;
+        const fullHeightRatio = isLargeComment(comment)
+          ? NICO_FULL_BIG_HEIGHT_RATIO
+          : NICO_FULL_SMALL_HEIGHT_RATIO;
         comment.width = snapFullCommentWidth(comment);
         comment.height = Math.max(comment.height, Math.round(canvasHeight * fullHeightRatio));
       }
@@ -247,16 +254,17 @@ export const prepareComment = (
     comment.staticExpiryTimeMs = null;
     const maxReservationWidth = measureTextWidth(ctx, "??".repeat(150));
 
-    const bufferFromWidth = comment.width * Math.max(options.bufferRatio, 0);
+    const motionWidth = getScrollMotionWidth(comment, canvasHeight);
+    const bufferFromWidth = motionWidth * Math.max(options.bufferRatio, 0);
     comment.bufferWidth = Math.max(options.baseBufferPx, bufferFromWidth);
     const entryBuffer = Math.max(options.entryBufferPx, comment.bufferWidth);
 
     const direction = comment.scrollDirection;
 
-    const fullScrollXOffset = comment.isFull ? getFullScrollXOffset(comment) : 0;
+    const fullScrollXOffset = comment.isFull ? getFullScrollXOffset(motionWidth) : 0;
     const fullScrollSpeedExtension = comment.isFull
       ? NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX +
-        comment.width * NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO
+        motionWidth * NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO
       : 0;
     const scrollDistanceExtension = comment.isFull ? 0 : getScrollDistanceExtension(comment);
     const scrollExitExtension = comment.isFull ? 0 : getScrollExitExtension(comment);
@@ -302,7 +310,7 @@ export const prepareComment = (
 
     const visibleDistance =
       safeVisibleWidth +
-      comment.width +
+      motionWidth +
       comment.bufferWidth +
       entryBuffer +
       options.virtualExtension +
