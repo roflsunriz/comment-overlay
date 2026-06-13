@@ -72,8 +72,11 @@ const initializeImpl = function (
     canvas.style.position = "absolute";
     canvas.style.top = "0";
     canvas.style.left = "0";
+    canvas.style.right = "0";
+    canvas.style.bottom = "0";
+    canvas.style.display = "block";
     canvas.style.pointerEvents = "none";
-    canvas.style.zIndex = "1000";
+    canvas.style.zIndex = "2147483647";
 
     const parent = this.containerElement;
     if (parent instanceof HTMLElement) {

@@ -117,8 +117,26 @@
     .video-wrapper:fullscreen {
       width: 100vw;
       height: 100vh;
+      border: 0;
       border-radius: 0;
       aspect-ratio: auto;
+      box-shadow: none;
+    }
+
+    .video-wrapper:fullscreen video {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .video-wrapper:fullscreen canvas {
+      position: absolute !important;
+      inset: 0 !important;
+      z-index: 2 !important;
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      pointer-events: none !important;
     }
 
     video {
@@ -127,6 +145,52 @@
       height: 100%;
       object-fit: fill;
       background: #000;
+    }
+
+    .video-wrapper canvas {
+      z-index: 2 !important;
+    }
+
+    .media-controls {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      left: 12px;
+      z-index: 3;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto minmax(84px, 120px) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 999px;
+      background: rgba(3, 7, 18, 0.72);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+      backdrop-filter: blur(14px);
+    }
+
+    .media-controls button {
+      min-width: 42px;
+      min-height: 32px;
+      padding: 7px 11px;
+    }
+
+    .media-controls input[type="range"] {
+      width: 100%;
+      accent-color: #38bdf8;
+    }
+
+    .media-time {
+      min-width: 92px;
+      color: #d7e3f2;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.82rem;
+      font-weight: 720;
+      text-align: right;
+    }
+
+    .media-volume {
+      min-width: 84px;
     }
 
     .controls {
@@ -431,17 +495,36 @@
       <div class="video-wrapper overlay-container">
         <video
           id="test-video"
-          controls
+          controlsList="nofullscreen nodownload noremoteplayback"
           crossorigin="anonymous"
+          disablepictureinpicture
+          playsinline
           preload="metadata"
           autoplay
         >
           <source
-            src="./video.mp4"
+            src="./fixtures/video.mp4"
             type="video/mp4"
           />
           Your browser does not support the HTML5 video element.
         </video>
+        <div class="media-controls" aria-label="動画操作">
+          <button type="button" id="media-play-toggle">停止</button>
+          <input id="media-seek" type="range" min="0" max="0" step="0.01" value="0" />
+          <span id="media-time" class="media-time">00:00 / 00:00</span>
+          <button type="button" id="media-mute-toggle">音量</button>
+          <input
+            id="media-volume"
+            class="media-volume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.01"
+            aria-label="音量"
+          />
+          <button type="button" id="media-fullscreen-toggle">全画面</button>
+        </div>
       </div>
 
       <div class="toolbar">
@@ -529,6 +612,6 @@
       </div>
     </section>
   </main>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./build/main.js"></script>
 </body>
 </html>

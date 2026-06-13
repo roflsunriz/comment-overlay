@@ -7,10 +7,8 @@ overlay-tests/dist/
 *.swp
 coverage/
 *.tsbuildinfo
-overlay-tests/video.mp4
-overlay-tests/video2.mp4
-overlay-tests/sm6240144.mp4
-overlay-tests/sm6240144-comments.json
+overlay-tests/fixtures/*.mp4
+overlay-tests/fixtures/sm6240144-comments.json
 .calibration/
 
 # Claw-Code specific ignores

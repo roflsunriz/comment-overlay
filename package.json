@@ -27,7 +27,8 @@
   "scripts": {
     "clean": "rimraf dist",
     "dev": "vite",
-    "build": "bun run clean && bun run typegen && vite build && bun scripts/sync-overlay-tests.mjs",
+    "build": "bun run clean && bun run typegen && vite build && bun scripts/sync-overlay-tests.mjs && bun run build:overlay-tests",
+    "build:overlay-tests": "tsc --project tsconfig.overlay-tests.json",
     "serve": "bunx serve overlay-tests",
     "type-check": "tsc --project tsconfig.build.json --noEmit",
     "typegen": "tsc --project tsconfig.build.json",

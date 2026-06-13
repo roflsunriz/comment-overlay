@@ -74,6 +74,17 @@ const handleFullscreenChangeImpl = async function (this: CommentRenderer): Promi
   canvas.style.position = "absolute";
   canvas.style.top = "0";
   canvas.style.left = "0";
+  canvas.style.right = "0";
+  canvas.style.bottom = "0";
+  canvas.style.display = "block";
+  canvas.style.pointerEvents = "none";
+  canvas.style.zIndex = "2147483647";
+
+  if (fullscreenContainer) {
+    const rect = fullscreenContainer.getBoundingClientRect();
+    this.resize(rect.width, rect.height);
+    return;
+  }
 
   this.resize();
 };

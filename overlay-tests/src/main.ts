@@ -1,136 +1,100 @@
-const moduleCandidates = [
-  "./dist/comment-overlay.es.js",
-  "../dist/comment-overlay.es.js",
-  "../dist/comment-overlay.es",
-];
-const DEFAULT_COMMENT_DATA_SOURCES = ["./so45409498-comments.json"];
-const INITIAL_VIDEO_VOLUME = 0.01;
-const COMMENT_PRESETS = {
-  default: {
-    label: "Default sample",
-    comments: "./so45409498-comments.json",
-    video: "./video.mp4",
-    seekSeconds: 0,
-  },
-  "cat-mario": {
-    label: "sm6240144 猫マリオCA",
-    comments: "./sm6240144-comments.json",
-    video: "./sm6240144.mp4",
-    seekSeconds: 100,
-  },
-  "wing-monster": {
-    label: "sm6240144 羽モンスターCA",
-    comments: "./sm6240144-comments.json",
-    video: "./sm6240144.mp4",
-    seekSeconds: 313,
-  },
-  "ender-dragon": {
-    label: "sm6240144 05:46 エンダーCA",
-    comments: "./sm6240144-comments.json",
-    video: "./sm6240144.mp4",
-    seekSeconds: 344.9,
-  },
+import {
+  COMMENT_PRESETS,
+  DEFAULT_COMMENT_DATA_SOURCES,
+  INITIAL_VIDEO_VOLUME,
+  type CommentPresetName,
+} from "./presets.js";
+import { loadOverlayModule } from "./overlay-module.js";
+import { installOverlayProfiler, pushOverlaySample, type OverlayDebugSample } from "./profiler.js";
+
+type DebugLogFn = (category: string, payload: unknown) => void;
+
+type CommentEntry = {
+  text: string;
+  vposMs: number;
+  commands: string[];
 };
 
-let debugLogFn = null;
+type RawCommentEntry = {
+  text?: unknown;
+  body?: unknown;
+  vposMs?: unknown;
+  commands?: unknown;
+};
+
+type RendererCommentLike = {
+  text?: string;
+  vposMs?: number;
+  lane?: number;
+  x?: number;
+  isScrolling?: boolean;
+  hasShown?: boolean;
+};
+
+type RendererLike = {
+  canvas: HTMLCanvasElement | null;
+  currentTime?: number;
+  epochId?: number;
+  comments?: unknown[];
+  displayWidth?: number;
+  displayHeight?: number;
+  playbackRate?: number;
+  activeComments?: Iterable<RendererCommentLike>;
+  settings: Record<string, unknown> & {
+    ngWords: string[];
+    ngRegexps: string[];
+    isCommentVisible?: boolean;
+    scrollDirection?: string;
+    shadowIntensity?: string;
+  };
+  draw(): void;
+  initialize(options: { video: HTMLVideoElement; container: HTMLElement }): void;
+  resize(width?: number, height?: number): void;
+  resetState(): void;
+  clearComments(): void;
+  addComment(text: string, vposMs: number, commands: string[]): void;
+  setCommentVisibility(visible: boolean): void;
+  destroy(): void;
+  getEffectiveCommentVpos?: (comment: RendererCommentLike) => number;
+};
+
+type OverlayModule = {
+  CommentRenderer: new (settings: unknown, options: unknown) => RendererLike;
+  cloneDefaultSettings: () => RendererLike["settings"];
+  configureDebugLogging?: (options: { enabled: boolean; maxLogsPerCategory: number }) => void;
+  debugLog?: DebugLogFn;
+};
+
+type FullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  mozFullScreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+};
+
+type CommentDataError = Error & {
+  details?: Array<{ source: string; error: unknown }>;
+};
+
+type ShadowIntensity = "none" | "light" | "medium" | "strong";
+type StageSize = "wide" | "theater" | "compact" | "mobile";
+
+declare global {
+  interface Window {
+    commentRenderer?: RendererLike;
+  }
+
+  interface Document {
+    webkitFullscreenElement?: Element | null;
+    mozFullScreenElement?: Element | null;
+    msFullscreenElement?: Element | null;
+  }
+}
+
+let debugLogFn: DebugLogFn | null = null;
 let isDebugOverlayEnabled = false;
+installOverlayProfiler();
 
-// ==== comment-overlay 専用プロファイラ ==========================
-const overlayDebugSamples = [];
-
-const pushOverlaySample = (sample) => {
-  overlayDebugSamples.push({
-    ts: performance.now(),
-    ...sample,
-  });
-};
-
-window.COOverlayProfiler = {
-  clear() {
-    overlayDebugSamples.length = 0;
-    console.log("[COOverlayProfiler] サンプルをクリアしました。");
-  },
-  getRaw() {
-    return overlayDebugSamples.slice();
-  },
-  getStats() {
-    const frames = overlayDebugSamples.filter((s) => s.kind === "frame");
-    const events = overlayDebugSamples.filter((s) => s.kind === "event");
-    return {
-      total: overlayDebugSamples.length,
-      frames: frames.length,
-      events: events.length,
-      firstTs: overlayDebugSamples[0]?.ts ?? 0,
-      lastTs: overlayDebugSamples[overlayDebugSamples.length - 1]?.ts ?? 0,
-    };
-  },
-  downloadRaw() {
-    const blob = new Blob(
-      [JSON.stringify(overlayDebugSamples, null, 2)],
-      { type: "application/json" },
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `comment-overlay-debug-raw-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    console.log(`[COOverlayProfiler] Raw JSON をダウンロードしました (${overlayDebugSamples.length} samples)`);
-  },
-  downloadCompact() {
-    const compact = overlayDebugSamples.map((s) => ({
-      k: s.kind,
-      t: Math.round(s.ts),
-      vt: Math.round(s.videoTimeMs ?? 0),
-      rt: Math.round(s.rendererTimeMs ?? 0),
-      ac: s.activeCount ?? 0,
-      tc: s.totalComments ?? 0,
-      ep: s.epochId ?? 0,
-      ev: s.event ?? null,
-      dw: s.displayWidth ?? 0,
-      dh: s.displayHeight ?? 0,
-      cw: s.canvasWidth ?? 0,
-      ch: s.canvasHeight ?? 0,
-      pr: s.playbackRate ?? 1,
-      ps: s.isPaused ?? false,
-      // activeComments の詳細情報
-      acMinVpos: s.acMinVpos !== null && s.acMinVpos !== undefined 
-        ? Math.round(s.acMinVpos) 
-        : null,
-      acMaxVpos: s.acMaxVpos !== null && s.acMaxVpos !== undefined 
-        ? Math.round(s.acMaxVpos) 
-        : null,
-      acMinLane: s.acMinLane ?? null,
-      acMaxLane: s.acMaxLane ?? null,
-      acHasScroll: s.acHasScrolling ?? false,
-    }));
-    const blob = new Blob(
-      [JSON.stringify(compact)],
-      { type: "application/json" },
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `comment-overlay-debug-compact-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    console.log(`[COOverlayProfiler] Compact JSON をダウンロードしました (${compact.length} samples)`);
-  },
-};
-
-console.log("[COOverlayProfiler] 初期化完了。使い方:");
-console.log("  COOverlayProfiler.getStats() - 統計情報を表示");
-console.log("  COOverlayProfiler.downloadCompact() - コンパクトJSON（分析用、ac/acMinVpos含む）");
-console.log("  COOverlayProfiler.downloadRaw() - 詳細JSON（調査用、sampleComments含む）");
-console.log("  COOverlayProfiler.clear() - サンプルをクリア");
-console.log("");
-console.log("📊 新規追加フィールド:");
-console.log("  ac: activeComments.size（実値）");
-console.log("  acMinVpos/acMaxVpos: アクティブコメントのvpos範囲");
-console.log("  acMinLane/acMaxLane: レーン範囲");
-console.log("  acHasScroll: スクロール系コメントの有無");
-
-const safeDebugLog = (category, payload) => {
+const safeDebugLog = (category: string, payload: unknown): void => {
   if (!isDebugOverlayEnabled) {
     return;
   }
@@ -140,7 +104,7 @@ const safeDebugLog = (category, payload) => {
   debugLogFn(category, payload);
 };
 
-const formatPreview = (text) => {
+const formatPreview = (text: unknown): string => {
   if (typeof text !== "string") {
     return "";
   }
@@ -149,28 +113,6 @@ const formatPreview = (text) => {
     return trimmed;
   }
   return `${trimmed.slice(0, 40)}…`;
-};
-
-const loadOverlayModule = async () => {
-  const failures = [];
-  for (const candidate of moduleCandidates) {
-    try {
-      return await import(candidate);
-    } catch (error) {
-      failures.push({ candidate, error });
-    }
-  }
-
-  failures.forEach(({ candidate, error }) => {
-    console.error(`Failed to import ${candidate}`, error);
-  });
-  const detail = failures
-    .map(
-      ({ candidate, error }) =>
-        `${candidate}: ${error instanceof Error ? error.message : String(error)}`,
-    )
-    .join("; ");
-  throw new Error(`Unable to load comment overlay module. Attempts: ${detail}`);
 };
 
 const statusEl = document.querySelector("#status");
@@ -182,6 +124,12 @@ const commentPresetSelect = document.querySelector("#comment-preset");
 const catMarioJumpButton = document.querySelector("#cat-mario-jump");
 const wingMonsterJumpButton = document.querySelector("#wing-monster-jump");
 const enderDragonJumpButton = document.querySelector("#ender-dragon-jump");
+const mediaPlayToggleButton = document.querySelector("#media-play-toggle");
+const mediaSeekEl = document.querySelector("#media-seek");
+const mediaTimeEl = document.querySelector("#media-time");
+const mediaMuteToggleButton = document.querySelector("#media-mute-toggle");
+const mediaVolumeEl = document.querySelector("#media-volume");
+const mediaFullscreenToggleButton = document.querySelector("#media-fullscreen-toggle");
 const reloadButton = document.querySelector("#reload-comments");
 const fullscreenButton = document.querySelector("#fullscreen-button");
 const stallEmulatorButton = document.querySelector("#stall-emulator");
@@ -197,56 +145,60 @@ const profilerDownloadCompactButton = document.querySelector("#profiler-download
 const profilerDownloadRawButton = document.querySelector("#profiler-download-raw");
 const profilerClearButton = document.querySelector("#profiler-clear");
 
-const reportStatus = (message) => {
+const reportStatus = (message: string): void => {
   if (statusEl) {
     statusEl.textContent = message;
   }
 };
 
-const sanitizeCommentEntry = (entry) => {
+const sanitizeCommentEntry = (entry: unknown): CommentEntry | null => {
   if (!entry || typeof entry !== "object") {
     safeDebugLog("overlay-sanitize-skip", { reason: "not-object" });
     return null;
   }
+  const candidate = entry as RawCommentEntry;
   const rawText =
-    typeof entry.text === "string"
-      ? entry.text
-      : typeof entry.body === "string"
-        ? entry.body
+    typeof candidate.text === "string"
+      ? candidate.text
+      : typeof candidate.body === "string"
+        ? candidate.body
         : "";
   // trim()を使わず、空文字列チェックのみ行う（全角スペースなどを保持するため）
   const text = rawText;
-  const vposMs = Number(entry.vposMs);
+  const vposMs = Number(candidate.vposMs);
   if (text.length === 0 || !Number.isFinite(vposMs) || vposMs < 0) {
     safeDebugLog("overlay-sanitize-skip", {
       reason: "invalid-values",
       preview: formatPreview(text),
-      vposMs: Number.isFinite(vposMs) ? vposMs : String(entry.vposMs),
+    vposMs: Number.isFinite(vposMs) ? vposMs : String(candidate.vposMs),
     });
     return null;
   }
-  const commands = Array.isArray(entry.commands)
-    ? entry.commands.filter((value) => typeof value === "string" && value.length > 0)
+  const commands = Array.isArray(candidate.commands)
+    ? candidate.commands.filter((value): value is string => typeof value === "string" && value.length > 0)
     : [];
   return { text, vposMs, commands };
 };
 
-const extractCommentEntries = (payload) => {
+const extractCommentEntries = (payload: unknown): RawCommentEntry[] => {
   if (Array.isArray(payload)) {
     return payload;
   }
   if (payload && typeof payload === "object") {
-    const entries = Array.isArray(payload.comments) ? payload.comments : [];
-    return entries.map((entry) => {
+    const entries = Array.isArray((payload as { comments?: unknown }).comments)
+      ? (payload as { comments: unknown[] }).comments
+      : [];
+    return entries.map((entry: unknown): RawCommentEntry => {
       if (!entry || typeof entry !== "object") {
-        return entry;
+        return {};
       }
-      if (typeof entry.text === "string") {
-        return entry;
+      const candidate = entry as RawCommentEntry;
+      if (typeof candidate.text === "string") {
+        return candidate;
       }
       return {
-        ...entry,
-        text: typeof entry.body === "string" ? entry.body : "",
+        ...candidate,
+        text: typeof candidate.body === "string" ? candidate.body : "",
       };
     });
   }
@@ -263,6 +215,12 @@ const setup = async () => {
     !(catMarioJumpButton instanceof HTMLButtonElement) ||
     !(wingMonsterJumpButton instanceof HTMLButtonElement) ||
     !(enderDragonJumpButton instanceof HTMLButtonElement) ||
+    !(mediaPlayToggleButton instanceof HTMLButtonElement) ||
+    !(mediaSeekEl instanceof HTMLInputElement) ||
+    !(mediaTimeEl instanceof HTMLElement) ||
+    !(mediaMuteToggleButton instanceof HTMLButtonElement) ||
+    !(mediaVolumeEl instanceof HTMLInputElement) ||
+    !(mediaFullscreenToggleButton instanceof HTMLButtonElement) ||
     !(reloadButton instanceof HTMLButtonElement) ||
     !(fullscreenButton instanceof HTMLButtonElement) ||
     !(stallEmulatorButton instanceof HTMLButtonElement) ||
@@ -281,19 +239,25 @@ const setup = async () => {
 
   reportStatus("Bootstrapping overlay module...");
   videoEl.volume = INITIAL_VIDEO_VOLUME;
+  videoEl.controls = false;
+  videoEl.setAttribute("controlsList", "nofullscreen nodownload noremoteplayback");
+  videoEl.setAttribute("disablePictureInPicture", "");
+  videoEl.setAttribute("playsinline", "");
 
   const {
     CommentRenderer,
     cloneDefaultSettings,
     configureDebugLogging,
     debugLog: exportedDebugLog,
-  } = await loadOverlayModule();
+  } = (await loadOverlayModule(reportStatus)) as OverlayModule;
 
   debugLogFn = typeof exportedDebugLog === "function" ? exportedDebugLog : null;
 
   const query = new URLSearchParams(window.location.search);
-  const initialPreset = COMMENT_PRESETS[query.get("preset")] ? query.get("preset") : "default";
-  let selectedPreset = initialPreset;
+  const presetParam = query.get("preset");
+  const initialPreset: CommentPresetName =
+    presetParam && presetParam in COMMENT_PRESETS ? (presetParam as CommentPresetName) : "default";
+  let selectedPreset: CommentPresetName = initialPreset;
   let selectedCommentSource = query.get("comments") || COMMENT_PRESETS[selectedPreset].comments;
   const videoOverride = query.get("video");
   if (typeof videoOverride === "string" && videoOverride.length > 0) {
@@ -320,10 +284,12 @@ const setup = async () => {
   window.commentRenderer = renderer;
 
   // ==== プロファイラーフック: renderer.draw をラップ ====
-  const captureRendererState = (options = { includeCommentDetails: false }) => {
+  const captureRendererState = (
+    options: { includeCommentDetails: boolean } = { includeCommentDetails: false },
+  ): OverlayDebugSample => {
     try {
       const canvas = renderer.canvas;
-      const baseState = {
+      const baseState: OverlayDebugSample = {
         videoTimeMs: videoEl.currentTime * 1000,
         rendererTimeMs: renderer.currentTime ?? 0,
         epochId: renderer.epochId ?? 0,
@@ -337,7 +303,7 @@ const setup = async () => {
       };
 
       // activeComments の詳細情報を取得
-      let activeCommentsArray = [];
+      let activeCommentsArray: RendererCommentLike[] = [];
       if (renderer.activeComments) {
         try {
           activeCommentsArray = Array.from(renderer.activeComments);
@@ -447,7 +413,7 @@ const setup = async () => {
   };
 
   // ==== プロファイラーフック: video イベント ====
-  const captureVideoEvent = (eventName) => {
+  const captureVideoEvent = (eventName: string): void => {
     pushOverlaySample({
       kind: "event",
       event: eventName,
@@ -461,11 +427,137 @@ const setup = async () => {
   videoEl.addEventListener("ratechange", () => captureVideoEvent("ratechange"));
   videoEl.addEventListener("waiting", () => captureVideoEvent("waiting"));
   videoEl.addEventListener("canplay", () => captureVideoEvent("canplay"));
+  videoEl.addEventListener("loadedmetadata", updateMediaControls);
+  videoEl.addEventListener("durationchange", updateMediaControls);
+  videoEl.addEventListener("timeupdate", updateMediaControls);
+  videoEl.addEventListener("play", updateMediaControls);
+  videoEl.addEventListener("pause", updateMediaControls);
+
+  mediaPlayToggleButton.addEventListener("click", () => {
+    if (videoEl.paused) {
+      void resumeVideo();
+      return;
+    }
+    void pauseVideo();
+  });
+
+  mediaSeekEl.addEventListener("input", () => {
+    const nextTime = Number.parseFloat(mediaSeekEl.value);
+    if (Number.isFinite(nextTime)) {
+      videoEl.currentTime = nextTime;
+      updateMediaControls();
+    }
+  });
+
+  mediaMuteToggleButton.addEventListener("click", () => {
+    videoEl.muted = !videoEl.muted;
+    updateMediaControls();
+  });
+
+  mediaVolumeEl.addEventListener("input", () => {
+    const nextVolume = Number.parseFloat(mediaVolumeEl.value);
+    if (Number.isFinite(nextVolume)) {
+      videoEl.volume = Math.min(1, Math.max(0, nextVolume));
+      videoEl.muted = videoEl.volume === 0;
+      updateMediaControls();
+    }
+  });
+
+  const shouldIgnoreKeyboardShortcut = (event: KeyboardEvent): boolean => {
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return true;
+    }
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    const tagName = target.tagName.toLowerCase();
+    return (
+      target.isContentEditable ||
+      tagName === "input" ||
+      tagName === "textarea" ||
+      tagName === "select"
+    );
+  };
+
+  const seekBy = (deltaSeconds: number): void => {
+    const duration = Number.isFinite(videoEl.duration) ? videoEl.duration : 0;
+    const upperBound = duration > 0 ? duration : Number.POSITIVE_INFINITY;
+    videoEl.currentTime = Math.min(upperBound, Math.max(0, videoEl.currentTime + deltaSeconds));
+    updateMediaControls();
+  };
+
+  const setVolumeBy = (delta: number): void => {
+    videoEl.volume = Math.min(1, Math.max(0, videoEl.volume + delta));
+    videoEl.muted = videoEl.volume === 0;
+    updateMediaControls();
+  };
+
+  document.addEventListener("keydown", (event) => {
+    if (shouldIgnoreKeyboardShortcut(event)) {
+      return;
+    }
+    switch (event.key) {
+      case " ":
+      case "k":
+      case "K":
+        event.preventDefault();
+        if (videoEl.paused) {
+          void resumeVideo();
+        } else {
+          void pauseVideo();
+        }
+        break;
+      case "ArrowLeft":
+        event.preventDefault();
+        seekBy(event.shiftKey ? -30 : -5);
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        seekBy(event.shiftKey ? 30 : 5);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        setVolumeBy(0.05);
+        break;
+      case "ArrowDown":
+        event.preventDefault();
+        setVolumeBy(-0.05);
+        break;
+      case "m":
+      case "M":
+        event.preventDefault();
+        videoEl.muted = !videoEl.muted;
+        updateMediaControls();
+        break;
+      case "f":
+      case "F":
+        event.preventDefault();
+        toggleOverlayFullscreen();
+        break;
+      case "Home":
+        event.preventDefault();
+        videoEl.currentTime = 0;
+        updateMediaControls();
+        break;
+      case "End":
+        if (Number.isFinite(videoEl.duration)) {
+          event.preventDefault();
+          videoEl.currentTime = videoEl.duration;
+          updateMediaControls();
+        }
+        break;
+      default:
+        break;
+    }
+  });
 
   // resize イベントは window から検出
-  let resizeTimeout = null;
+  let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
   window.addEventListener("resize", () => {
-    clearTimeout(resizeTimeout);
+    if (resizeTimeout) {
+      clearTimeout(resizeTimeout);
+    }
     resizeTimeout = setTimeout(() => {
       captureVideoEvent("resize");
     }, 100);
@@ -495,12 +587,18 @@ const setup = async () => {
     const ngWords = currentSettings.ngWords.length > 0 ? "オン" : "オフ";
     const ngRegex = currentSettings.ngRegexps.length > 0 ? "オン" : "オフ";
     const direction = currentSettings.scrollDirection === "ltr" ? "左→右" : "右→左";
-    const shadowLabel = {
+    const shadowLabels: Record<ShadowIntensity, string> = {
       none: "なし",
       light: "弱",
       medium: "中",
       strong: "強",
-    }[currentSettings.shadowIntensity] ?? currentSettings.shadowIntensity;
+    };
+    const shadowIntensity =
+      typeof currentSettings.shadowIntensity === "string" &&
+      currentSettings.shadowIntensity in shadowLabels
+        ? (currentSettings.shadowIntensity as ShadowIntensity)
+        : "medium";
+    const shadowLabel = shadowLabels[shadowIntensity];
     return `表示: ${visibility} / NGワード: ${ngWords} / NG正規表現: ${ngRegex} / 方向: ${direction} / 影: ${shadowLabel}`;
   };
 
@@ -510,13 +608,20 @@ const setup = async () => {
     }
   };
 
+  const getFullscreenElement = () =>
+    document.fullscreenElement ||
+    (document as FullscreenDocument).webkitFullscreenElement ||
+    (document as FullscreenDocument).mozFullScreenElement ||
+    (document as FullscreenDocument).msFullscreenElement ||
+    null;
+
   const updateViewportStatus = () => {
     if (!(viewportStatusEl instanceof HTMLElement)) {
       return;
     }
     const rect = containerEl.getBoundingClientRect();
     const canvas = renderer.canvas;
-    const fullscreen = document.fullscreenElement === containerEl ? "オン" : "オフ";
+    const fullscreen = getFullscreenElement() === containerEl ? "オン" : "オフ";
     viewportStatusEl.textContent =
       `表示領域: ${Math.round(rect.width)} x ${Math.round(rect.height)} / ` +
       `Canvas: ${canvas?.width ?? 0} x ${canvas?.height ?? 0} / ` +
@@ -530,7 +635,54 @@ const setup = async () => {
     });
   };
 
-  const updateRegexStatus = (message, isError = false) => {
+  const refreshFullscreenOverlaySoon = () => {
+    requestAnimationFrame(() => {
+      const rect = containerEl.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        renderer.resize(rect.width, rect.height);
+      } else {
+        renderer.resize();
+      }
+      renderer.draw();
+      updateViewportStatus();
+      captureVideoEvent("fullscreen-overlay-refresh");
+    });
+  };
+
+  function formatTime(seconds: number): string {
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return "00:00";
+    }
+    const rounded = Math.floor(seconds);
+    const minutes = Math.floor(rounded / 60);
+    const remainingSeconds = rounded % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  }
+
+  function updateMediaControls() {
+    const video = videoEl as HTMLVideoElement;
+    const seek = mediaSeekEl as HTMLInputElement;
+    const playToggle = mediaPlayToggleButton as HTMLButtonElement;
+    const time = mediaTimeEl as HTMLElement;
+    const muteToggle = mediaMuteToggleButton as HTMLButtonElement;
+    const volume = mediaVolumeEl as HTMLInputElement;
+    const mediaFullscreenToggle = mediaFullscreenToggleButton as HTMLButtonElement;
+    const duration = Number.isFinite(video.duration) ? video.duration : 0;
+    seek.max = String(Math.max(0, duration));
+    if (document.activeElement !== seek) {
+      seek.value = String(video.currentTime);
+    }
+    if (document.activeElement !== volume) {
+      volume.value = String(video.volume);
+    }
+    playToggle.textContent = video.paused ? "再生" : "停止";
+    muteToggle.textContent = video.muted || video.volume === 0 ? "消音中" : "音量";
+    mediaFullscreenToggle.textContent =
+      getFullscreenElement() === containerEl ? "全画面解除" : "全画面";
+    time.textContent = `${formatTime(video.currentTime)} / ${formatTime(duration)}`;
+  }
+
+  const updateRegexStatus = (message: string, isError = false): void => {
     if (!(regexStatusEl instanceof HTMLElement)) {
       return;
     }
@@ -538,7 +690,7 @@ const setup = async () => {
     regexStatusEl.style.color = isError ? "#fca5a5" : "#cbd5f5";
   };
 
-  const pushSettings = (nextSettings) => {
+  const pushSettings = (nextSettings: RendererLike["settings"]): void => {
     currentSettings = {
       ...nextSettings,
       ngWords: Array.isArray(nextSettings.ngWords) ? [...nextSettings.ngWords] : [],
@@ -548,13 +700,13 @@ const setup = async () => {
     updateSettingsStatus();
   };
 
-  const parseMultilineInput = (value) =>
+  const parseMultilineInput = (value: string): string[] =>
     value
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line, index, source) => line.length > 0 && source.indexOf(line) === index);
+      .map((line: string) => line.trim())
+      .filter((line: string, index: number, source: string[]) => line.length > 0 && source.indexOf(line) === index);
 
-  const areArraysEqual = (a, b) => {
+  const areArraysEqual = (a: unknown, b: unknown): boolean => {
     if (!Array.isArray(a) || !Array.isArray(b)) {
       return false;
     }
@@ -564,7 +716,7 @@ const setup = async () => {
     return a.every((item, index) => item === b[index]);
   };
 
-  const applyNgWords = (value) => {
+  const applyNgWords = (value: string): void => {
     const words = parseMultilineInput(value);
     if (areArraysEqual(words, currentSettings.ngWords)) {
       return;
@@ -573,7 +725,7 @@ const setup = async () => {
     reportStatus(words.length > 0 ? `NGワードを${words.length}件設定しました。` : "NGワードを全て解除しました。");
   };
 
-  const applyNgRegexps = (value) => {
+  const applyNgRegexps = (value: string): void => {
     if (!(ngRegexInput instanceof HTMLTextAreaElement)) {
       return;
     }
@@ -606,8 +758,12 @@ const setup = async () => {
   updateSettingsStatus();
   updateViewportStatus();
   commentPresetSelect.value = selectedPreset;
-  directionSelect.value = currentSettings.scrollDirection;
-  shadowIntensitySelect.value = currentSettings.shadowIntensity || "medium";
+  directionSelect.value = typeof currentSettings.scrollDirection === "string"
+    ? currentSettings.scrollDirection
+    : "rtl";
+  shadowIntensitySelect.value = typeof currentSettings.shadowIntensity === "string"
+    ? currentSettings.shadowIntensity
+    : "medium";
   ngWordsInput.value = currentSettings.ngWords.join("\n");
   ngRegexInput.value = currentSettings.ngRegexps.join("\n");
   updateRegexStatus(
@@ -616,8 +772,8 @@ const setup = async () => {
       : "正規表現フィルタは設定されていません。",
   );
 
-  const waitForEvent = (target, eventName) =>
-    new Promise((resolve) => {
+  const waitForEvent = (target: EventTarget, eventName: string): Promise<void> =>
+    new Promise<void>((resolve) => {
       const handler = () => {
         target.removeEventListener(eventName, handler);
         resolve();
@@ -632,7 +788,7 @@ const setup = async () => {
     await waitForEvent(videoEl, "loadedmetadata");
   };
 
-  const seekVideo = async (timeInSeconds) => {
+  const seekVideo = async (timeInSeconds: number): Promise<void> => {
     await ensureMetadata();
     const needsSeek = Math.abs(videoEl.currentTime - timeInSeconds) > 0.01;
     if (!needsSeek) {
@@ -684,7 +840,7 @@ const setup = async () => {
     const aggregateError = new Error(
       detail.length > 0 ? `コメントデータ取得失敗 (${detail})` : "コメントデータ取得失敗",
     );
-    aggregateError.details = failures;
+    (aggregateError as Error & { details?: typeof failures }).details = failures;
     throw aggregateError;
   };
 
@@ -693,7 +849,9 @@ const setup = async () => {
     try {
       const { payload, source } = await resolveCommentData();
       const rawEntries = extractCommentEntries(payload);
-      const cleaned = rawEntries.map(sanitizeCommentEntry).filter(Boolean);
+      const cleaned = rawEntries
+        .map(sanitizeCommentEntry)
+        .filter((entry): entry is CommentEntry => entry !== null);
 
       safeDebugLog("overlay-load-comments", { total: cleaned.length, source });
 
@@ -723,11 +881,11 @@ const setup = async () => {
       return cleaned.length;
     } catch (error) {
       const details =
-        error && typeof error === "object" && Array.isArray(error.details)
-          ? error.details
+        error && typeof error === "object" && Array.isArray((error as CommentDataError).details)
+          ? (error as CommentDataError).details ?? []
           : [];
       if (details.length > 0) {
-        details.forEach(({ source, error: itemError }) => {
+        details.forEach(({ source, error: itemError }: { source: string; error: unknown }) => {
           console.error("Failed to load comments source", source, itemError);
         });
       }
@@ -762,19 +920,20 @@ const setup = async () => {
 
   shadowIntensitySelect.addEventListener("change", () => {
     const intensity = shadowIntensitySelect.value;
-    const validIntensities = ["none", "light", "medium", "strong"];
-    if (!validIntensities.includes(intensity)) {
+    const validIntensities: ShadowIntensity[] = ["none", "light", "medium", "strong"];
+    if (!validIntensities.includes(intensity as ShadowIntensity)) {
       reportStatus(`不正な影の強さ: ${intensity}`);
       return;
     }
-    pushSettings({ ...currentSettings, shadowIntensity: intensity });
-    const labels = {
+    const nextIntensity = intensity as ShadowIntensity;
+    pushSettings({ ...currentSettings, shadowIntensity: nextIntensity });
+    const labels: Record<ShadowIntensity, string> = {
       none: "なし",
       light: "弱",
       medium: "中",
       strong: "強",
     };
-    reportStatus(`影の強さを「${labels[intensity]}」に設定しました。`);
+    reportStatus(`影の強さを「${labels[nextIntensity]}」に設定しました。`);
   });
 
   ngWordsInput.addEventListener("input", () => {
@@ -790,9 +949,14 @@ const setup = async () => {
     void loadComments();
   });
 
-  const applyCommentPreset = async (presetName) => {
-    const preset = COMMENT_PRESETS[presetName] ?? COMMENT_PRESETS.default;
-    selectedPreset = COMMENT_PRESETS[presetName] ? presetName : "default";
+  const isCommentPresetName = (value: string): value is CommentPresetName => value in COMMENT_PRESETS;
+
+  const applyCommentPreset = async (presetName: string): Promise<void> => {
+    const resolvedPresetName: CommentPresetName = isCommentPresetName(presetName)
+      ? presetName
+      : "default";
+    const preset = COMMENT_PRESETS[resolvedPresetName];
+    selectedPreset = resolvedPresetName;
     selectedCommentSource = preset.comments;
     commentPresetSelect.value = selectedPreset;
     if (!videoOverride && videoEl.getAttribute("src") !== preset.video) {
@@ -825,9 +989,11 @@ const setup = async () => {
     void applyCommentPreset("ender-dragon");
   });
 
-  const setStageSize = (size) => {
-    const validSizes = ["wide", "theater", "compact", "mobile"];
-    const nextSize = validSizes.includes(size) ? size : "wide";
+  const setStageSize = (size: string): void => {
+    const validSizes: StageSize[] = ["wide", "theater", "compact", "mobile"];
+    const nextSize: StageSize = validSizes.includes(size as StageSize)
+      ? (size as StageSize)
+      : "wide";
     stageEl.dataset.stageSize = nextSize;
     document.querySelectorAll(".stage-size-button").forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) {
@@ -850,11 +1016,11 @@ const setup = async () => {
     });
   });
 
-  fullscreenButton.addEventListener("click", () => {
+  function toggleOverlayFullscreen(): void {
     if (!(containerEl instanceof HTMLElement)) {
       return;
     }
-    if (document.fullscreenElement === containerEl) {
+    if (getFullscreenElement() === containerEl) {
       document.exitFullscreen().catch((err) => {
         reportStatus(`フルスクリーン解除に失敗しました: ${err.message}`);
       });
@@ -865,12 +1031,25 @@ const setup = async () => {
         reportStatus(`フルスクリーンへの移行に失敗しました: ${err.message}`);
       });
     }
-  });
+  }
+
+  fullscreenButton.addEventListener("click", toggleOverlayFullscreen);
+  mediaFullscreenToggleButton.addEventListener("click", toggleOverlayFullscreen);
 
   document.addEventListener("fullscreenchange", () => {
-    const isFullscreen = document.fullscreenElement === containerEl;
+    const fullscreenElement = getFullscreenElement();
+    const isVideoFullscreen = fullscreenElement === videoEl;
+    const isFullscreen = fullscreenElement === containerEl;
     fullscreenButton.textContent = isFullscreen ? "全画面解除" : "全画面";
+    mediaFullscreenToggleButton.textContent = isFullscreen ? "全画面解除" : "全画面";
     refreshViewportSoon();
+    if (isVideoFullscreen) {
+      reportStatus(
+        "動画要素単体の全画面ではコメントレイヤーを重ねられません。右側の「全画面」ボタンを使ってください。",
+      );
+      return;
+    }
+    refreshFullscreenOverlaySoon();
     reportStatus(
       isFullscreen ? "フルスクリーン表示に切り替えました。" : "フルスクリーンを解除しました。",
     );
@@ -945,11 +1124,11 @@ const setup = async () => {
 
   const videoSources =
     typeof videoOverride === "string" && videoOverride.length > 0
-      ? [videoOverride, "./video.mp4", "./video2.mp4"]
+      ? [videoOverride, "./fixtures/video.mp4", "./fixtures/video2.mp4"]
       : [
           COMMENT_PRESETS[selectedPreset].video,
-          "./video.mp4",
-          "./video2.mp4",
+          "./fixtures/video.mp4",
+          "./fixtures/video2.mp4",
         ].filter((source, index, sources) => source && sources.indexOf(source) === index);
   const resolveInitialIndex = () => {
     const currentSrc = videoEl.getAttribute("src") ?? "";
@@ -959,7 +1138,7 @@ const setup = async () => {
   };
   let currentSourceIndex = resolveInitialIndex();
 
-  const switchVideoSource = (nextIndex) => {
+  const switchVideoSource = (nextIndex: number): void => {
     const nextSource = videoSources[nextIndex];
     if (!nextSource) {
       return;

@@ -131,6 +131,8 @@ video.addEventListener("ended", () => {
 });
 ```
 
+フルスクリーン表示でもコメントを重ねる場合は、`video.requestFullscreen()` ではなく、`renderer.initialize({ video, container })` に渡したオーバーレイコンテナへ `container.requestFullscreen()` を呼び出してください。レンダラーはフルスクリーン変更時にキャンバスをコンテナへ追従させ、動画より前面に配置します。
+
 第2引数 `vposMs` はコメントを表示するミリ秒単位の再生位置です。
 
 対応コメントコマンドは以下の通りです。

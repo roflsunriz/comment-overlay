@@ -165,6 +165,10 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 - `destroy()`  
   内部タイマーや `ResizeObserver` を破棄し、DOM との紐付けを解除します。SPA などでは画面遷移時に呼び出してください。
 
+### フルスクリーン表示
+
+フルスクリーンでコメントを重ね続ける場合は、`video` 要素単体ではなく `initialize({ video, container })` に渡したオーバーレイコンテナを `requestFullscreen()` してください。`CommentRenderer` はフルスクリーン変更時にキャンバスをアクティブなコンテナへ追従させ、コンテナ矩形で即時リサイズします。キャンバスは動画より前面に配置されるため、ブラウザーの全画面レイヤーでコメントが動画の背面に隠れる問題を避けられます。
+
 ## ロガー
 
 `createLogger(namespace, options)` を利用すると名前空間付きのロガーを作成できます。`CommentRenderer` のコンストラクタに `loggerNamespace` を渡すと自動で利用されます。
