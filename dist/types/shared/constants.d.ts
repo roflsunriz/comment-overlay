@@ -12,7 +12,7 @@ export declare const FINAL_PHASE_MIN_GAP_MS = 120;
 export declare const FINAL_PHASE_MAX_GAP_MS = 800;
 export declare const FINAL_PHASE_ORDER_EPSILON_MS = 2;
 export declare const FINAL_PHASE_MIN_WINDOW_MS = 6000;
-export declare const STATIC_VISIBLE_DURATION_MS = 4000;
+export declare const STATIC_VISIBLE_DURATION_MS = 3000;
 export declare const ACTIVE_WINDOW_MS: number;
 export declare const VIRTUAL_CANVAS_EXTENSION_PX = 240;
 export declare const NICO_SCROLL_VPOS_LEAD_MS = 2000;

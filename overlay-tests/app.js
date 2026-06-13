@@ -18,6 +18,12 @@ const COMMENT_PRESETS = {
     video: "./sm6240144.mp4",
     seekSeconds: 100,
   },
+  "wing-monster": {
+    label: "sm6240144 羽モンスターCA",
+    comments: "./sm6240144-comments.json",
+    video: "./sm6240144.mp4",
+    seekSeconds: 313,
+  },
 };
 
 let debugLogFn = null;
@@ -167,6 +173,7 @@ const containerEl = document.querySelector(".overlay-container");
 const toggleEl = document.querySelector("#toggle-visibility");
 const commentPresetSelect = document.querySelector("#comment-preset");
 const catMarioJumpButton = document.querySelector("#cat-mario-jump");
+const wingMonsterJumpButton = document.querySelector("#wing-monster-jump");
 const reloadButton = document.querySelector("#reload-comments");
 const fullscreenButton = document.querySelector("#fullscreen-button");
 const stallEmulatorButton = document.querySelector("#stall-emulator");
@@ -244,6 +251,7 @@ const setup = async () => {
     !(toggleEl instanceof HTMLInputElement) ||
     !(commentPresetSelect instanceof HTMLSelectElement) ||
     !(catMarioJumpButton instanceof HTMLButtonElement) ||
+    !(wingMonsterJumpButton instanceof HTMLButtonElement) ||
     !(reloadButton instanceof HTMLButtonElement) ||
     !(fullscreenButton instanceof HTMLButtonElement) ||
     !(stallEmulatorButton instanceof HTMLButtonElement) ||
@@ -776,6 +784,10 @@ const setup = async () => {
     void applyCommentPreset("cat-mario");
   });
 
+  wingMonsterJumpButton.addEventListener("click", () => {
+    void applyCommentPreset("wing-monster");
+  });
+
   fullscreenButton.addEventListener("click", () => {
     if (!(containerEl instanceof HTMLElement)) {
       return;
@@ -901,8 +913,8 @@ const setup = async () => {
   });
 
   await loadComments();
-  if (selectedPreset === "cat-mario") {
-    await seekVideo(COMMENT_PRESETS["cat-mario"].seekSeconds);
+  if (selectedPreset === "cat-mario" || selectedPreset === "wing-monster") {
+    await seekVideo(COMMENT_PRESETS[selectedPreset].seekSeconds);
     await resumeVideo();
   }
 };

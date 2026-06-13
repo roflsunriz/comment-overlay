@@ -74,6 +74,13 @@ const getGlobalLaneIndexForBottomImpl = function (
   return Math.max(0, this.laneCount - 1 - localIndex);
 };
 
+const calculateStaticTexturePaddingY = (comment: Comment): number => {
+  const textureHeight = Math.ceil(
+    comment.lines.length > 1 ? comment.height : comment.height + comment.fontSize / 3,
+  );
+  return Math.max(0, (textureHeight - comment.height) / 2);
+};
+
 const resolveStaticCommentOffsetImpl = function (
   this: CommentRenderer,
   position: "ue" | "shita",
@@ -84,10 +91,12 @@ const resolveStaticCommentOffsetImpl = function (
   const effectiveHeight = Math.max(1, displayHeight);
   const commentHeight = Math.max(comment.height, comment.fontSize);
   const edgePadding = 5;
-  const stackPadding = 2;
+  const stackPadding = 0;
+  const topTexturePadding = calculateStaticTexturePaddingY(comment);
 
   if (position === "ue") {
-    let cumulativeY = edgePadding;
+    const minY = edgePadding + topTexturePadding;
+    let cumulativeY = minY;
     const reservations = this.getStaticReservations(position);
     const laneSortedReservations = reservations
       .filter((r) => r.lane < lane)
@@ -98,8 +107,8 @@ const resolveStaticCommentOffsetImpl = function (
       cumulativeY += reservedHeight + stackPadding;
     }
 
-    const maxY = Math.max(edgePadding, effectiveHeight - commentHeight - edgePadding);
-    return Math.max(edgePadding, Math.min(cumulativeY, maxY));
+    const maxY = Math.max(edgePadding, effectiveHeight * 2);
+    return Math.max(minY, Math.min(cumulativeY, maxY));
   }
 
   let cumulativeY = effectiveHeight - edgePadding;

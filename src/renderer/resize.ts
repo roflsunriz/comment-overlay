@@ -1,6 +1,8 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
 import { DEFAULT_LANE_COUNT, MIN_FONT_SIZE_PX, MIN_LANE_COUNT } from "@/shared/constants";
 
+const NICO_SCROLL_LANE_HEIGHT_RATIO = 2.525;
+
 const resizeImpl = function (this: CommentRenderer, width?: number, height?: number): void {
   const video = this.videoElement;
   const canvas = this.canvas;
@@ -109,7 +111,7 @@ const calculateLaneMetricsImpl = function (this: CommentRenderer): void {
   const effectiveHeight =
     this.displayHeight > 0 ? this.displayHeight : canvas.height / Math.max(this.canvasDpr, 1);
   const baseHeight = Math.max(MIN_FONT_SIZE_PX, Math.floor(effectiveHeight * (27 / 665)));
-  this.laneHeight = baseHeight * 2.2;
+  this.laneHeight = baseHeight * NICO_SCROLL_LANE_HEIGHT_RATIO;
   const availableLanes = Math.floor(effectiveHeight / Math.max(this.laneHeight, 1));
   if (this._settings.useFixedLaneCount) {
     const desired = Number.isFinite(this._settings.fixedLaneCount)

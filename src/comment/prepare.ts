@@ -1,10 +1,6 @@
 import type { CommentPrepareOptions } from "@/shared/types";
 import type { Comment } from "@/comment/comment";
-import {
-  STATIC_VISIBLE_DURATION_MS,
-  STATIC_COMMENT_SIDE_MARGIN_PX,
-  MIN_STATIC_FONT_SIZE_PX,
-} from "@/shared/constants";
+import { STATIC_VISIBLE_DURATION_MS } from "@/shared/constants";
 import { commentLogger as logger } from "@/comment/logger";
 import { measureTextWidth } from "@/comment/text-measure";
 
@@ -17,10 +13,15 @@ const NICO_BASE_FONT_SIZE_RATIO = 27 / 665;
 const MIN_SCROLL_FONT_SIZE_PX = 12;
 
 const NICO_TAB_REPLACEMENT = "\u2003\u2003";
+const NICO_STATIC_WIDE_ART_WIDTH_RATIO = 2300 / 665;
 const NICO_FULL_SMALL_WIDTH_BUCKETS = [366, 510, 1662] as const;
 const NICO_FULL_BIG_WIDTH_PX = 566;
 const NICO_FULL_SMALL_HEIGHT_RATIO = 806 / 665;
 const NICO_FULL_BIG_HEIGHT_RATIO = 808 / 665;
+const NICO_FULL_MINCHO_BIG_WIDTH_RATIO = 1176 / 665;
+const NICO_FULL_MINCHO_BIG_HEIGHT_RATIO = 900 / 665;
+const NICO_FULL_MINCHO_MEDIUM_WIDTH_RATIO = 1126 / 665;
+const NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO = 810 / 665;
 const NICO_FULL_SCROLL_X_OFFSET_RATIO = 0.25;
 const NICO_FULL_SCROLL_MIN_X_OFFSET_PX = 160;
 const NICO_FULL_SCROLL_MAX_X_OFFSET_PX = 420;
@@ -138,62 +139,40 @@ export const prepareComment = (
     comment.lines = ensureLines(comment.text);
     updateTextMetrics(comment, ctx);
     if (comment.isScrolling && comment.isFull) {
-      const fullHeightRatio =
-        comment.fontSize >= 35 ? NICO_FULL_BIG_HEIGHT_RATIO : NICO_FULL_SMALL_HEIGHT_RATIO;
-      comment.width = snapFullCommentWidth(comment);
-      comment.height = Math.max(comment.height, Math.round(canvasHeight * fullHeightRatio));
-    }
-
-    const isStaticTopOrBottom =
-      !comment.isScrolling && (comment.layout === "ue" || comment.layout === "shita");
-    if (isStaticTopOrBottom) {
-      const maxStaticWidth = Math.max(1, safeVisibleWidth - STATIC_COMMENT_SIDE_MARGIN_PX * 2);
-      if (comment.width > maxStaticWidth) {
-        const minimumFontSize = Math.max(
-          MIN_STATIC_FONT_SIZE_PX,
-          Math.min(comment.fontSize, Math.floor(baseFontSize * 0.6)),
+      const isMinchoFullArt =
+        comment.lines.length > 1 &&
+        (comment.fontFamily.includes("Yu Mincho") || comment.fontFamily.includes("游明朝"));
+      if (isMinchoFullArt && comment.fontSize >= 35) {
+        comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_WIDTH_RATIO);
+        comment.height = Math.max(
+          comment.height,
+          Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_HEIGHT_RATIO),
         );
-        const shrinkFactor = maxStaticWidth / Math.max(comment.width, 1);
-        const initialShrink = Math.max(
-          minimumFontSize,
-          Math.floor(comment.fontSize * Math.min(shrinkFactor, 1)),
+      } else if (isMinchoFullArt) {
+        comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_WIDTH_RATIO);
+        comment.height = Math.max(
+          comment.height,
+          Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO),
         );
-        if (initialShrink < comment.fontSize) {
-          comment.fontSize = initialShrink;
-          ctx.font = getCommentCanvasFont(comment);
-          updateTextMetrics(comment, ctx);
-        }
-        let iteration = 0;
-        while (
-          comment.width > maxStaticWidth &&
-          comment.fontSize > minimumFontSize &&
-          iteration < 5
-        ) {
-          const currentShrink = maxStaticWidth / Math.max(comment.width, 1);
-          const proposedSize = Math.max(
-            minimumFontSize,
-            Math.floor(comment.fontSize * Math.max(currentShrink, 0.7)),
-          );
-          if (proposedSize >= comment.fontSize) {
-            comment.fontSize = Math.max(minimumFontSize, comment.fontSize - 1);
-          } else {
-            comment.fontSize = proposedSize;
-          }
-          ctx.font = getCommentCanvasFont(comment);
-          updateTextMetrics(comment, ctx);
-          iteration += 1;
-        }
+      } else {
+        const fullHeightRatio =
+          comment.fontSize >= 35 ? NICO_FULL_BIG_HEIGHT_RATIO : NICO_FULL_SMALL_HEIGHT_RATIO;
+        comment.width = snapFullCommentWidth(comment);
+        comment.height = Math.max(comment.height, Math.round(canvasHeight * fullHeightRatio));
       }
     }
 
     if (!comment.isScrolling) {
+      const nicoStaticTextureWidth = safeVisibleWidth + baseFontSize * (8 / 3);
+      if (comment.width >= nicoStaticTextureWidth * 0.95 && comment.fontSize >= 35) {
+        comment.width = Math.round(canvasHeight * NICO_STATIC_WIDE_ART_WIDTH_RATIO);
+      } else {
+        comment.width = Math.min(comment.width, nicoStaticTextureWidth);
+      }
       comment.bufferWidth = 0;
-      const margin = isStaticTopOrBottom ? STATIC_COMMENT_SIDE_MARGIN_PX : 0;
-      const centeredX = Math.max((safeVisibleWidth - comment.width) / 2, margin);
-      const maxStart = Math.max(margin, safeVisibleWidth - comment.width - margin);
-      const clampedX = Math.min(centeredX, Math.max(maxStart, margin));
-      comment.virtualStartX = clampedX;
-      comment.x = clampedX;
+      const centeredX = (safeVisibleWidth - comment.width) / 2;
+      comment.virtualStartX = centeredX;
+      comment.x = centeredX;
       comment.baseSpeed = 0;
       comment.speed = 0;
       comment.speedPixelsPerMs = 0;

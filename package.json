@@ -1,6 +1,6 @@
 {
   "name": "comment-overlay",
-  "version": "3.1.2",
+  "version": "3.1.3",
   "description": "Reusable comment overlay renderer engine.",
   "repository": {
     "url": "https://github.com/roflsunriz/comment-overlay"

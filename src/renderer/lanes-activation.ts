@@ -8,8 +8,13 @@ import {
   SEEK_DIRECTION_EPSILON_MS,
   STATIC_VISIBLE_DURATION_MS,
 } from "@/shared/constants";
-import { calculateStaticCommentVerticalPadding } from "@/shared/settings";
 import { debugLog, formatCommentPreview, isDebugLoggingEnabled } from "@/shared/debug";
+
+const isWideStaticCommentArt = (comment: Comment): boolean =>
+  !comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35;
+
+const calculateStaticReservationHeight = (comment: Comment): number =>
+  Math.max(1, comment.fontSize * (isWideStaticCommentArt(comment) ? 0.46 : 5 / 9));
 
 const shouldActivateCommentAtTimeImpl = function (
   this: CommentRenderer,
@@ -183,7 +188,7 @@ const activateCommentImpl = function (
       displayHeight,
       comment,
     );
-    comment.x = Math.max(0, Math.min(displayWidth - comment.width, comment.virtualStartX));
+    comment.x = comment.virtualStartX;
     comment.y = verticalOffset;
     comment.lane =
       staticPosition === "ue" ? laneIndex : this.getGlobalLaneIndexForBottom(laneIndex);
@@ -228,16 +233,18 @@ const assignStaticLaneImpl = function (
   currentTime: number,
 ): number {
   const reservations = this.getStaticReservations(position);
-  const limit = this.getStaticLaneLimit(position);
-  const laneCount = limit >= 0 ? limit + 1 : 0;
+  const reservationHeight = calculateStaticReservationHeight(comment);
+  const estimatedStep = Math.max(1, reservationHeight);
+  const laneCount = Math.max(
+    this.laneCount,
+    Math.ceil(Math.max(1, displayHeight) / estimatedStep) + reservations.length + 1,
+  );
   const laneIndices = Array.from({ length: laneCount }, (_, index) => index);
 
   for (const lane of laneIndices) {
     const yOffset = this.resolveStaticCommentOffset(position, lane, displayHeight, comment);
-    const commentHeight = Math.max(comment.height, comment.fontSize);
-    const padding = calculateStaticCommentVerticalPadding(comment.fontSize, lane);
-    const yStart = yOffset - padding;
-    const yEnd = yOffset + commentHeight + padding;
+    const yStart = yOffset;
+    const yEnd = yOffset + reservationHeight;
 
     const hasConflict = reservations.some((reservation) => {
       const timeOverlap = reservation.releaseTime > currentTime;
@@ -272,10 +279,8 @@ const reserveStaticLaneImpl = function (
   releaseTime: number,
 ): void {
   const reservations = this.getStaticReservations(position);
-  const commentHeight = Math.max(comment.height, comment.fontSize);
-  const padding = calculateStaticCommentVerticalPadding(comment.fontSize, lane);
-  const yStart = comment.y - padding;
-  const yEnd = comment.y + commentHeight + padding;
+  const yStart = comment.y;
+  const yEnd = comment.y + calculateStaticReservationHeight(comment);
 
   reservations.push({
     comment,

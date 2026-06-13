@@ -29,6 +29,8 @@ export class Comment {
   readonly colorOverride: string | null;
   readonly isInvisible: boolean;
   readonly isFull: boolean;
+  readonly isEnder: boolean;
+  isEnderGroup = false;
 
   x = 0;
   y = 0;
@@ -102,6 +104,7 @@ export class Comment {
     this.colorOverride = parsedCommands.colorOverride;
     this.isInvisible = parsedCommands.isInvisible;
     this.isFull = parsedCommands.isFull;
+    this.isEnder = parsedCommands.isEnder;
     this.fontFamily = parsedCommands.fontFamily;
     this.fontWeight = parsedCommands.fontWeight;
     this.color = parsedCommands.resolvedColor;

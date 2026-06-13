@@ -89,10 +89,11 @@ const getEffectiveCommentVposImpl = function (this: CommentRenderer, comment: Co
   if (override !== undefined) {
     return override;
   }
-  return comment.isScrolling
-    ? Math.max(0, comment.vposMs - NICO_SCROLL_VPOS_LEAD_MS)
-    : comment.vposMs;
+  return getDefaultEffectiveVpos(comment);
 };
+
+const getDefaultEffectiveVpos = (comment: Comment): number =>
+  comment.isScrolling ? Math.max(0, comment.vposMs - NICO_SCROLL_VPOS_LEAD_MS) : comment.vposMs;
 
 const getFinalPhaseDisplayDurationImpl = function (
   this: CommentRenderer,
@@ -120,9 +121,7 @@ const getFinalPhaseDisplayDurationImpl = function (
 const resolveFinalPhaseVposImpl = function (this: CommentRenderer, comment: Comment): number {
   if (!this.finalPhaseActive || this.finalPhaseStartTime === null) {
     this.finalPhaseVposOverrides.delete(comment);
-    return comment.isScrolling
-      ? Math.max(0, comment.vposMs - NICO_SCROLL_VPOS_LEAD_MS)
-      : comment.vposMs;
+    return getDefaultEffectiveVpos(comment);
   }
   if (this.finalPhaseScheduleDirty) {
     this.recomputeFinalPhaseTimeline();

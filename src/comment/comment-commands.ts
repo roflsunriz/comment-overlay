@@ -19,7 +19,7 @@ const FONT_FAMILY_MAP: Record<CommentFontCommand, string> = {
   gothic:
     '"游ゴシック体","游ゴシック","Yu Gothic",YuGothic,yugothic,YuGo-Medium,"宋体",SimSun,Arial,"ＭＳ Ｐゴシック","MS PGothic",MSPGothic,MS-PGothic',
   mincho:
-    '"MS PMincho","MS Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","Noto Serif CJK JP","Noto Serif JP","Source Han Serif JP","Times New Roman","serif"',
+    '"游明朝体","游明朝","Yu Mincho",YuMincho,yumincho,YuMin-Medium,"宋体",SimSun,Arial,"ＭＳ Ｐゴシック","MS PGothic",MSPGothic,MS-PGothic',
 };
 
 const FONT_WEIGHT_MAP: Record<CommentFontCommand, string> = {
@@ -143,6 +143,7 @@ export const parseCommentCommands = (
   let opacityOverride: number | null = null;
   let isInvisible = false;
   let isFull = false;
+  let isEnder = false;
   let letterSpacing = 0;
   let lineHeight = 1;
 
@@ -198,6 +199,11 @@ export const parseCommentCommands = (
       continue;
     }
 
+    if (lower === "ender") {
+      isEnder = true;
+      continue;
+    }
+
     if (lower.startsWith("ls:") || lower.startsWith("letterspacing:")) {
       const separatorIndex = normalizedToken.indexOf(":");
       if (separatorIndex >= 0) {
@@ -239,6 +245,7 @@ export const parseCommentCommands = (
     opacityOverride: resolvedOpacityOverride,
     isInvisible,
     isFull,
+    isEnder,
     letterSpacing,
     lineHeight,
   };

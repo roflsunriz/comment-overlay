@@ -119,6 +119,7 @@ export interface CommentCommandParseResult {
   readonly opacityOverride: number | null;
   readonly isInvisible: boolean;
   readonly isFull: boolean;
+  readonly isEnder: boolean;
   readonly letterSpacing: number;
   readonly lineHeight: number;
 }

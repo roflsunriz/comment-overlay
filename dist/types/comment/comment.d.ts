@@ -12,6 +12,8 @@ export declare class Comment {
     readonly colorOverride: string | null;
     readonly isInvisible: boolean;
     readonly isFull: boolean;
+    readonly isEnder: boolean;
+    isEnderGroup: boolean;
     x: number;
     y: number;
     width: number;

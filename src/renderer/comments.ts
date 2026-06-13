@@ -3,6 +3,25 @@ import { Comment } from "@/comment/comment";
 import { formatCommentPreview, debugLog } from "@/shared/debug";
 import { EDGE_EPSILON, sanitizeVposMs } from "@/shared/constants";
 
+const isEnderFullArtGroupCandidate = (comment: Comment): boolean =>
+  comment.isScrolling &&
+  comment.isFull &&
+  comment.text.includes("\n") &&
+  comment.commands.some((command) => command.toLowerCase() === "mincho");
+
+const refreshEnderFullArtGroups = (comments: Comment[]): void => {
+  const enderGroupVposes = new Set<number>();
+  comments.forEach((comment) => {
+    if (comment.isEnder && isEnderFullArtGroupCandidate(comment)) {
+      enderGroupVposes.add(comment.vposMs);
+    }
+  });
+  comments.forEach((comment) => {
+    comment.isEnderGroup =
+      enderGroupVposes.has(comment.vposMs) && isEnderFullArtGroupCandidate(comment);
+  });
+};
+
 const addCommentsImpl = function (
   this: CommentRenderer,
   entries: ReadonlyArray<{ text: string; vposMs: number; commands?: string[] }>,
@@ -65,6 +84,7 @@ const addCommentsImpl = function (
   }
 
   this.comments.push(...addedComments);
+  refreshEnderFullArtGroups(this.comments);
   if (this.finalPhaseActive) {
     this.finalPhaseScheduleDirty = true;
   }

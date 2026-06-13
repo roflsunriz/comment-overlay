@@ -156,7 +156,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 - 字間: `ls:10` / `letterspacing:10` (px単位)
 - 行高: `lh:1.5` / `lineheight:150%` (倍率またはパーセント)
 
-`small` / `medium` / `big` のフォント比率と `gothic` のフォント候補は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
+`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ## ライフサイクル
 
@@ -274,7 +274,7 @@ bun run nico:overlay-trace -- --comments .calibration/sm6240144-comments.json --
 bun run nico:report -- --real .calibration/nico/VIDEO_ID/baseline/trace.jsonl --overlay overlay-trace.jsonl --out .calibration/nico/VIDEO_ID/baseline/report.html
 ```
 
-レポートは `fillText` / `strokeText` の本文一致、座標差分、フォント差分に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも比較します。コメントアートの調整では、`366x806` や `1662x806` のような大きなテクスチャ bucket が実プレイヤーと `comment-overlay` の双方に出ているか、さらに `x(t)` の速度・開始位置・終了位置が揃っているかを優先して確認してください。PNG同士の簡易差分も同じHTMLで確認したい場合は、`--real-image` と `--overlay-image` に比較対象のPNGを指定してください。
+レポートは `fillText` / `strokeText` の本文一致、座標差分、フォント差分に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも比較します。コメントアートの調整では、`246x794`、`366x806`、`1662x806` のようなテクスチャ bucket が実プレイヤーと `comment-overlay` の双方に出ているか、さらに `x(t)` の速度・開始位置・終了位置が揃っているかを優先して確認してください。PNG同士の簡易差分も同じHTMLで確認したい場合は、`--real-image` と `--overlay-image` に比較対象のPNGを指定してください。
 
 ライブラリ内部には `captureRendererCalibrationFrame(renderer, frameTimeMs, { collectTrace: true })` も用意しています。これは指定時刻の1フレームを描画し、その間に `comment-overlay` が発行した描画プリミティブとアクティブコメント状態を返す校正用デバッグ関数です。安定公開APIではなく、実プレイヤー計測との差分調整用途に限定してください。
 
@@ -300,7 +300,7 @@ const renderer = new CommentRenderer(settings, {
 
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v3.1.2`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v3.1.3`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";

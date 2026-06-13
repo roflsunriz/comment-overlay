@@ -57,7 +57,7 @@ bun run nico:overlay-trace -- --comments .calibration/sm6240144-comments.json --
 bun run nico:report -- --real .calibration/nico/VIDEO_ID/baseline/trace.jsonl --overlay overlay-trace.jsonl --out .calibration/nico/VIDEO_ID/baseline/report.html
 ```
 
-レポートには `fillText` / `strokeText` の本文一致に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも出力されます。`366x806` や `1662x806` のようなコメントアート由来の大きなテクスチャが、実プレイヤーと `comment-overlay` の双方に出ているか、また `x(t)` の速度が一致しているかを確認できます。PNG同士の簡易差分も同じHTML内で確認する場合は、`--real-image` と `--overlay-image` を追加してください。
+レポートには `fillText` / `strokeText` の本文一致に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも出力されます。`246x794`、`366x806`、`1662x806` のようなコメントアート由来のテクスチャが、実プレイヤーと `comment-overlay` の双方に出ているか、また `x(t)` の速度が一致しているかを確認できます。PNG同士の簡易差分も同じHTML内で確認する場合は、`--real-image` と `--overlay-image` を追加してください。
 
 ## パブリッシュ手順（メンテナー向け）
 
@@ -145,7 +145,7 @@ video.addEventListener("ended", () => {
 - 行高指定: `lh:1.5` や `lineheight:150%` (倍率またはパーセント)
 - コメントコマンドが未指定のときは`naka` `medium` `defont` `white` 相当の表示になります。
 
-`small` / `medium` / `big` のフォント比率と `gothic` のフォント候補は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
+`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ### RendererSettings のポイント
 
