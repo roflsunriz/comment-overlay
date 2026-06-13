@@ -15,18 +15,37 @@
     body {
       margin: 0;
       padding: 24px;
-      display: flex;
-      justify-content: center;
+      min-height: 100vh;
+      background: #0d0f14;
     }
 
     main {
+      margin: 0 auto;
+      width: min(1182px, 100%);
+      transition: width 160ms ease;
+    }
+
+    main[data-stage-size="wide"] {
       width: min(1182px, 100%);
     }
 
+    main[data-stage-size="theater"] {
+      width: min(960px, 100%);
+    }
+
+    main[data-stage-size="compact"] {
+      width: min(720px, 100%);
+    }
+
+    main[data-stage-size="mobile"] {
+      width: min(480px, 100%);
+    }
+
     h1 {
-      font-size: 1.8rem;
-      margin-bottom: 16px;
-      text-align: center;
+      font-size: 1.35rem;
+      margin: 0 0 14px;
+      text-align: left;
+      letter-spacing: 0;
     }
 
     .player {
@@ -38,9 +57,17 @@
     .video-wrapper {
       position: relative;
       aspect-ratio: 1182 / 665;
-      border-radius: 12px;
+      border-radius: 8px;
       overflow: hidden;
       box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
+      background: #000;
+    }
+
+    .video-wrapper:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      aspect-ratio: auto;
     }
 
     video {
@@ -54,12 +81,39 @@
     .controls {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
       background: rgba(20, 20, 20, 0.65);
       padding: 12px 16px;
       border-radius: 8px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.28);
+    }
+
+    .control-group-title {
+      flex: 0 0 100%;
+      margin: 0 0 2px;
+      color: #cbd5e1;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
     }
 
     .controls label {
@@ -118,19 +172,48 @@
       color: #cbd5f5;
     }
 
+    select {
+      min-height: 34px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.72);
+      color: inherit;
+      padding: 6px 28px 6px 10px;
+      font: inherit;
+    }
+
     button {
-      background: #2563eb;
+      min-height: 34px;
+      background: #1f6feb;
       color: #fff;
-      border: none;
-      padding: 8px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 7px 12px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: 600;
-      transition: background 0.2s ease;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     }
 
     button:hover {
-      background: #1d4ed8;
+      background: #2b7cff;
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .button-secondary {
+      background: rgba(30, 41, 59, 0.86);
+    }
+
+    .button-secondary:hover {
+      background: rgba(51, 65, 85, 0.96);
+    }
+
+    .button-active {
+      background: #0f766e;
+      border-color: rgba(45, 212, 191, 0.5);
     }
 
     .profiler-controls {
@@ -164,10 +247,37 @@
       word-break: break-word;
       min-height: 2.6rem;
     }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      .controls {
+        padding: 10px;
+      }
+
+      .control-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .controls label,
+      button,
+      select {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <main>
+  <main id="test-stage" data-stage-size="wide">
     <h1>Comment Overlay Engine Demo</h1>
     <section class="player">
       <div class="video-wrapper overlay-container">
@@ -186,40 +296,57 @@
         </video>
       </div>
 
-      <div class="controls">
-        <label>
-          コメントデータ
-          <select id="comment-preset">
-            <option value="default">Default sample</option>
-            <option value="cat-mario">sm6240144 猫マリオCA</option>
-            <option value="wing-monster">sm6240144 羽モンスターCA</option>
-          </select>
-        </label>
-        <button type="button" id="cat-mario-jump">01:40 猫マリオ</button>
-        <button type="button" id="wing-monster-jump">05:13 羽モンスター</button>
-        <label>
-          <input type="checkbox" id="toggle-visibility" checked />
-          コメント表示
-        </label>
-        <label>
-          コメント方向
-          <select id="scroll-direction">
-            <option value="rtl">右→左</option>
-            <option value="ltr">左→右</option>
-          </select>
-        </label>
-        <label>
-          影の強さ
-          <select id="shadow-intensity">
-            <option value="none">なし</option>
-            <option value="light">弱</option>
-            <option value="medium" selected>中</option>
-            <option value="strong">強</option>
-          </select>
-        </label>
-        <button type="button" id="reload-comments">コメント再読込</button>
-        <button type="button" id="fullscreen-button">フルスクリーン</button>
-        <button type="button" id="stall-emulator">ストールテスト</button>
+      <div class="toolbar">
+        <div class="controls control-group">
+          <p class="control-group-title">Case</p>
+          <label>
+            コメントデータ
+            <select id="comment-preset">
+              <option value="default">Default sample</option>
+              <option value="cat-mario">sm6240144 猫マリオCA</option>
+              <option value="wing-monster">sm6240144 羽モンスターCA</option>
+              <option value="ender-dragon">sm6240144 05:46 エンダーCA</option>
+            </select>
+          </label>
+          <button type="button" id="cat-mario-jump" class="button-secondary">01:40 猫</button>
+          <button type="button" id="wing-monster-jump" class="button-secondary">05:13 羽</button>
+          <button type="button" id="ender-dragon-jump" class="button-secondary">05:45 竜</button>
+          <button type="button" id="reload-comments">再読込</button>
+        </div>
+
+        <div class="controls control-group">
+          <p class="control-group-title">Render</p>
+          <label>
+            <input type="checkbox" id="toggle-visibility" checked />
+            コメント表示
+          </label>
+          <label>
+            方向
+            <select id="scroll-direction">
+              <option value="rtl">右→左</option>
+              <option value="ltr">左→右</option>
+            </select>
+          </label>
+          <label>
+            影
+            <select id="shadow-intensity">
+              <option value="none">なし</option>
+              <option value="light">弱</option>
+              <option value="medium" selected>中</option>
+              <option value="strong">強</option>
+            </select>
+          </label>
+          <button type="button" id="stall-emulator" class="button-secondary">ストール</button>
+        </div>
+
+        <div class="controls control-group">
+          <p class="control-group-title">Viewport</p>
+          <button type="button" class="stage-size-button button-active" data-stage-size="wide">100%</button>
+          <button type="button" class="stage-size-button button-secondary" data-stage-size="theater">960</button>
+          <button type="button" class="stage-size-button button-secondary" data-stage-size="compact">720</button>
+          <button type="button" class="stage-size-button button-secondary" data-stage-size="mobile">480</button>
+          <button type="button" id="fullscreen-button">全画面</button>
+        </div>
       </div>
 
       <div class="controls profiler-controls">
@@ -245,8 +372,11 @@
         <p id="ng-regex-status" class="input-hint" aria-live="polite"></p>
       </div>
 
-      <pre id="status" aria-live="polite"></pre>
-      <pre id="settings-status" aria-live="polite"></pre>
+      <div class="status-grid">
+        <pre id="status" aria-live="polite"></pre>
+        <pre id="settings-status" aria-live="polite"></pre>
+        <pre id="viewport-status" aria-live="polite"></pre>
+      </div>
     </section>
   </main>
   <script type="module" src="./app.js"></script>

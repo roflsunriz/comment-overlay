@@ -24,6 +24,12 @@ const COMMENT_PRESETS = {
     video: "./sm6240144.mp4",
     seekSeconds: 313,
   },
+  "ender-dragon": {
+    label: "sm6240144 05:46 エンダーCA",
+    comments: "./sm6240144-comments.json",
+    video: "./sm6240144.mp4",
+    seekSeconds: 344.9,
+  },
 };
 
 let debugLogFn = null;
@@ -168,16 +174,19 @@ const loadOverlayModule = async () => {
 };
 
 const statusEl = document.querySelector("#status");
+const stageEl = document.querySelector("#test-stage");
 const videoEl = document.querySelector("#test-video");
 const containerEl = document.querySelector(".overlay-container");
 const toggleEl = document.querySelector("#toggle-visibility");
 const commentPresetSelect = document.querySelector("#comment-preset");
 const catMarioJumpButton = document.querySelector("#cat-mario-jump");
 const wingMonsterJumpButton = document.querySelector("#wing-monster-jump");
+const enderDragonJumpButton = document.querySelector("#ender-dragon-jump");
 const reloadButton = document.querySelector("#reload-comments");
 const fullscreenButton = document.querySelector("#fullscreen-button");
 const stallEmulatorButton = document.querySelector("#stall-emulator");
 const settingsStatusEl = document.querySelector("#settings-status");
+const viewportStatusEl = document.querySelector("#viewport-status");
 const directionSelect = document.querySelector("#scroll-direction");
 const shadowIntensitySelect = document.querySelector("#shadow-intensity");
 const ngWordsInput = document.querySelector("#ng-words-input");
@@ -247,11 +256,13 @@ const extractCommentEntries = (payload) => {
 const setup = async () => {
   if (
     !(videoEl instanceof HTMLVideoElement) ||
+    !(stageEl instanceof HTMLElement) ||
     !(containerEl instanceof HTMLElement) ||
     !(toggleEl instanceof HTMLInputElement) ||
     !(commentPresetSelect instanceof HTMLSelectElement) ||
     !(catMarioJumpButton instanceof HTMLButtonElement) ||
     !(wingMonsterJumpButton instanceof HTMLButtonElement) ||
+    !(enderDragonJumpButton instanceof HTMLButtonElement) ||
     !(reloadButton instanceof HTMLButtonElement) ||
     !(fullscreenButton instanceof HTMLButtonElement) ||
     !(stallEmulatorButton instanceof HTMLButtonElement) ||
@@ -499,6 +510,26 @@ const setup = async () => {
     }
   };
 
+  const updateViewportStatus = () => {
+    if (!(viewportStatusEl instanceof HTMLElement)) {
+      return;
+    }
+    const rect = containerEl.getBoundingClientRect();
+    const canvas = renderer.canvas;
+    const fullscreen = document.fullscreenElement === containerEl ? "オン" : "オフ";
+    viewportStatusEl.textContent =
+      `表示領域: ${Math.round(rect.width)} x ${Math.round(rect.height)} / ` +
+      `Canvas: ${canvas?.width ?? 0} x ${canvas?.height ?? 0} / ` +
+      `DPR: ${window.devicePixelRatio.toFixed(2)} / 全画面: ${fullscreen}`;
+  };
+
+  const refreshViewportSoon = () => {
+    requestAnimationFrame(() => {
+      updateViewportStatus();
+      captureVideoEvent("viewport-check");
+    });
+  };
+
   const updateRegexStatus = (message, isError = false) => {
     if (!(regexStatusEl instanceof HTMLElement)) {
       return;
@@ -573,6 +604,7 @@ const setup = async () => {
   };
 
   updateSettingsStatus();
+  updateViewportStatus();
   commentPresetSelect.value = selectedPreset;
   directionSelect.value = currentSettings.scrollDirection;
   shadowIntensitySelect.value = currentSettings.shadowIntensity || "medium";
@@ -774,6 +806,7 @@ const setup = async () => {
       await resumeVideo();
       reportStatus(`${preset.label} を読み込み、${preset.seekSeconds.toFixed(0)}秒へ移動しました。`);
     }
+    refreshViewportSoon();
   };
 
   commentPresetSelect.addEventListener("change", () => {
@@ -788,8 +821,43 @@ const setup = async () => {
     void applyCommentPreset("wing-monster");
   });
 
+  enderDragonJumpButton.addEventListener("click", () => {
+    void applyCommentPreset("ender-dragon");
+  });
+
+  const setStageSize = (size) => {
+    const validSizes = ["wide", "theater", "compact", "mobile"];
+    const nextSize = validSizes.includes(size) ? size : "wide";
+    stageEl.dataset.stageSize = nextSize;
+    document.querySelectorAll(".stage-size-button").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+      const isActive = button.dataset.stageSize === nextSize;
+      button.classList.toggle("button-active", isActive);
+      button.classList.toggle("button-secondary", !isActive);
+    });
+    refreshViewportSoon();
+    reportStatus(`表示領域を ${nextSize} に切り替えました。`);
+  };
+
+  document.querySelectorAll(".stage-size-button").forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    button.addEventListener("click", () => {
+      setStageSize(button.dataset.stageSize || "wide");
+    });
+  });
+
   fullscreenButton.addEventListener("click", () => {
     if (!(containerEl instanceof HTMLElement)) {
+      return;
+    }
+    if (document.fullscreenElement === containerEl) {
+      document.exitFullscreen().catch((err) => {
+        reportStatus(`フルスクリーン解除に失敗しました: ${err.message}`);
+      });
       return;
     }
     if (typeof containerEl.requestFullscreen === "function") {
@@ -797,6 +865,15 @@ const setup = async () => {
         reportStatus(`フルスクリーンへの移行に失敗しました: ${err.message}`);
       });
     }
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    const isFullscreen = document.fullscreenElement === containerEl;
+    fullscreenButton.textContent = isFullscreen ? "全画面解除" : "全画面";
+    refreshViewportSoon();
+    reportStatus(
+      isFullscreen ? "フルスクリーン表示に切り替えました。" : "フルスクリーンを解除しました。",
+    );
   });
 
   /**
@@ -897,6 +974,7 @@ const setup = async () => {
     renderer.resetState();
     void loadComments();
     reportStatus(`動画ソースを${nextSource}に切り替えました。`);
+    refreshViewportSoon();
   };
 
   videoEl.addEventListener("ended", () => {
@@ -908,15 +986,22 @@ const setup = async () => {
     switchVideoSource(currentSourceIndex + 1);
   });
 
+  const viewportObserver = new ResizeObserver(() => {
+    updateViewportStatus();
+  });
+  viewportObserver.observe(containerEl);
+
   window.addEventListener("beforeunload", () => {
+    viewportObserver.disconnect();
     renderer.destroy();
   });
 
   await loadComments();
-  if (selectedPreset === "cat-mario" || selectedPreset === "wing-monster") {
+  if (selectedPreset === "cat-mario" || selectedPreset === "wing-monster" || selectedPreset === "ender-dragon") {
     await seekVideo(COMMENT_PRESETS[selectedPreset].seekSeconds);
     await resumeVideo();
   }
+  refreshViewportSoon();
 };
 
 void setup();
