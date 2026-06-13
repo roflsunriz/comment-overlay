@@ -57,7 +57,7 @@ export const createDefaultAnimationFrameProvider = (
   ) {
     return {
       request: (callback) => window.requestAnimationFrame(callback),
-      cancel: (handle) => window.cancelAnimationFrame(handle),
+      cancel: (handle) => window.cancelAnimationFrame(Number(handle)),
     };
   }
   return {

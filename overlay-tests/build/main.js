@@ -29,9 +29,6 @@ const videoEl = document.querySelector("#test-video");
 const containerEl = document.querySelector(".overlay-container");
 const toggleEl = document.querySelector("#toggle-visibility");
 const commentPresetSelect = document.querySelector("#comment-preset");
-const catMarioJumpButton = document.querySelector("#cat-mario-jump");
-const wingMonsterJumpButton = document.querySelector("#wing-monster-jump");
-const enderDragonJumpButton = document.querySelector("#ender-dragon-jump");
 const mediaPlayToggleButton = document.querySelector("#media-play-toggle");
 const mediaSeekEl = document.querySelector("#media-seek");
 const mediaTimeEl = document.querySelector("#media-time");
@@ -114,9 +111,6 @@ const setup = async () => {
         !(containerEl instanceof HTMLElement) ||
         !(toggleEl instanceof HTMLInputElement) ||
         !(commentPresetSelect instanceof HTMLSelectElement) ||
-        !(catMarioJumpButton instanceof HTMLButtonElement) ||
-        !(wingMonsterJumpButton instanceof HTMLButtonElement) ||
-        !(enderDragonJumpButton instanceof HTMLButtonElement) ||
         !(mediaPlayToggleButton instanceof HTMLButtonElement) ||
         !(mediaSeekEl instanceof HTMLInputElement) ||
         !(mediaTimeEl instanceof HTMLElement) ||
@@ -799,14 +793,17 @@ const setup = async () => {
     commentPresetSelect.addEventListener("change", () => {
         void applyCommentPreset(commentPresetSelect.value);
     });
-    catMarioJumpButton.addEventListener("click", () => {
-        void applyCommentPreset("cat-mario");
-    });
-    wingMonsterJumpButton.addEventListener("click", () => {
-        void applyCommentPreset("wing-monster");
-    });
-    enderDragonJumpButton.addEventListener("click", () => {
-        void applyCommentPreset("ender-dragon");
+    document.querySelectorAll("[data-comment-preset]").forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) {
+            return;
+        }
+        const presetName = button.dataset.commentPreset;
+        if (typeof presetName !== "string" || !isCommentPresetName(presetName)) {
+            return;
+        }
+        button.addEventListener("click", () => {
+            void applyCommentPreset(presetName);
+        });
     });
     const setStageSize = (size) => {
         const validSizes = ["wide", "theater", "compact", "mobile"];
@@ -971,7 +968,7 @@ const setup = async () => {
         renderer.destroy();
     });
     await loadComments();
-    if (selectedPreset === "cat-mario" || selectedPreset === "wing-monster" || selectedPreset === "ender-dragon") {
+    if (selectedPreset !== "default") {
         await seekVideo(COMMENT_PRESETS[selectedPreset].seekSeconds);
         await resumeVideo();
     }

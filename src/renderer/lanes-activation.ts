@@ -10,11 +10,11 @@ import {
 } from "@/shared/constants";
 import { debugLog, formatCommentPreview, isDebugLoggingEnabled } from "@/shared/debug";
 
-const isWideStaticCommentArt = (comment: Comment): boolean =>
+const isWideStaticComment = (comment: Comment): boolean =>
   !comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35;
 
 const calculateStaticReservationHeight = (comment: Comment): number =>
-  Math.max(1, comment.fontSize * (isWideStaticCommentArt(comment) ? 0.46 : 5 / 9));
+  Math.max(1, comment.fontSize * (isWideStaticComment(comment) ? 0.46 : 1));
 
 const shouldActivateCommentAtTimeImpl = function (
   this: CommentRenderer,

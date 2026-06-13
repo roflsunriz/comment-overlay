@@ -97,11 +97,18 @@ const NICO_FULL_BIG_FINAL_PADDING_X_PX = 11.4;
 const NICO_FULL_BIG_FINAL_BASELINE_Y_PX = 31.4;
 const NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX = 23.87692307692307;
 const NICO_FULL_DRAW_Y_OFFSET_PX = 2.4;
-const NICO_ENDER_FULL_ART_FONT_SIZE_PX = 20;
-const NICO_ENDER_FULL_ART_CANVAS_SCALE = 2;
-const NICO_ENDER_GROUP_BIG_PADDING_Y_PX = 66.9;
-const NICO_ENDER_GROUP_MEDIUM_PADDING_Y_PX = 55.6;
-const NICO_ENDER_GROUP_DRAW_OFFSET_X_PX = 46;
+const NICO_FULL_MINCHO_SYNC_FONT_SIZE_PX = 20;
+const NICO_FULL_MINCHO_SYNC_CANVAS_SCALE = 2;
+const NICO_FULL_MINCHO_SYNC_BIG_PADDING_Y_PX = 66.9;
+const NICO_FULL_MINCHO_SYNC_MEDIUM_PADDING_Y_PX = 55.6;
+const NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_X_PX = 46;
+const NICO_STATIC_WIDE_FINAL_FONT_SIZE_PX = 10;
+const NICO_STATIC_WIDE_FINAL_PADDING_X_PX = 6.75;
+const NICO_STATIC_WIDE_FINAL_BASELINE_Y_PX = 16.75;
+const NICO_STATIC_WIDE_FINAL_LINE_HEIGHT_PX = 12.11423203055002;
+const NICO_STATIC_WIDE_SCALE_CENTERING_RATIO = 0.5;
+const NICO_STATIC_WIDE_MINCHO_SCALE_X = 1.42;
+const NICO_STATIC_WIDE_MINCHO_TARGET_X_RATIO = 0.12;
 
 const isNearBlackColor = (color: string): boolean => {
   const normalized = color.trim().toLowerCase();
@@ -140,16 +147,16 @@ const getTexturePadding = (
 ): { paddingX: number; paddingY: number; textureWidth: number; textureHeight: number } => {
   const isFullScrolling = comment.isScrolling && comment.isFull;
   if (isFullScrolling) {
-    const enderGroupPaddingY =
-      comment.isEnderGroup && comment.isEnder
+    const synchronizedFullMinchoPaddingY =
+      comment.hasSameVposFullMinchoEnder && comment.isEnder
         ? comment.fontSize >= 35
-          ? NICO_ENDER_GROUP_BIG_PADDING_Y_PX
-          : NICO_ENDER_GROUP_MEDIUM_PADDING_Y_PX
+          ? NICO_FULL_MINCHO_SYNC_BIG_PADDING_Y_PX
+          : NICO_FULL_MINCHO_SYNC_MEDIUM_PADDING_Y_PX
         : null;
     return {
       paddingX: Math.max(10, comment.fontSize * 0.5),
       paddingY:
-        enderGroupPaddingY ??
+        synchronizedFullMinchoPaddingY ??
         (comment.fontSize >= 35 ? comment.fontSize * 0.5 : Math.max(18, comment.fontSize)) +
           NICO_FULL_DRAW_Y_OFFSET_PX,
       textureWidth: Math.ceil(comment.width),
@@ -207,15 +214,63 @@ const getTexturePadding = (
 
 const getTextureDrawScale = (comment: Comment): number => {
   if (!comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35) {
-    return 0.355;
+    return 0.8;
   }
   return 1;
 };
 
+const shouldUseStaticWideTexture = (comment: Comment): boolean =>
+  !comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35;
+
+const shouldUseStaticWideMinchoTextureLayout = (comment: Comment): boolean =>
+  shouldUseStaticWideTexture(comment) &&
+  (comment.fontFamily.includes("Yu Mincho") ||
+    comment.fontFamily.includes("YuMincho") ||
+    comment.fontFamily.includes("游明朝"));
+
+const getTextureDrawScaleX = (comment: Comment, drawScaleY: number): number =>
+  shouldUseStaticWideMinchoTextureLayout(comment) ? NICO_STATIC_WIDE_MINCHO_SCALE_X : drawScaleY;
+
+const getStaticWideVisibleWidth = (comment: Comment): number =>
+  Math.max(1, comment.width + comment.virtualStartX * 2);
+
 const getTextureDrawOffsetX = (comment: Comment): number =>
-  comment.isScrolling && comment.isFull && comment.isEnderGroup
-    ? NICO_ENDER_GROUP_DRAW_OFFSET_X_PX
+  comment.isScrolling && comment.isFull && comment.hasSameVposFullMinchoEnder
+    ? NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_X_PX
     : 0;
+
+type TextureDrawPlacement = {
+  x: number;
+  scaleX: number;
+  scaleY: number;
+};
+
+const resolveTextureDrawPlacement = (
+  comment: Comment,
+  texture: OffscreenCanvas,
+  drawX: number,
+  paddingX: number,
+  drawScaleY: number,
+): TextureDrawPlacement => {
+  const scaleX = getTextureDrawScaleX(comment, drawScaleY);
+  if (shouldUseStaticWideMinchoTextureLayout(comment)) {
+    return {
+      x: getStaticWideVisibleWidth(comment) * NICO_STATIC_WIDE_MINCHO_TARGET_X_RATIO,
+      scaleX,
+      scaleY: drawScaleY,
+    };
+  }
+
+  const staticScaleOffsetX =
+    !comment.isScrolling && scaleX !== 1
+      ? texture.width * (1 - scaleX) * NICO_STATIC_WIDE_SCALE_CENTERING_RATIO
+      : 0;
+  return {
+    x: drawX - paddingX + staticScaleOffsetX + getTextureDrawOffsetX(comment),
+    scaleX,
+    scaleY: drawScaleY,
+  };
+};
 
 const createSegmentDrawer = (
   comment: Comment,
@@ -285,52 +340,46 @@ const createSegmentDrawer = (
 };
 
 const generateTextureCacheKey = (comment: Comment): string => {
-  return `v5::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.fontWeight}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lineHeightPx}::${comment.lines.length}`;
+  return `v6::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.fontWeight}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lineHeightPx}::${comment.lines.length}`;
 };
 
-const shouldUseFullBigDownscaleTexture = (
-  comment: Comment,
-  textureWidth: number,
-  textureHeight: number,
-): boolean =>
-  comment.isScrolling &&
-  comment.isFull &&
-  comment.fontSize >= 35 &&
-  textureWidth === NICO_FULL_BIG_FINAL_WIDTH_PX &&
-  textureHeight === NICO_FULL_BIG_FINAL_HEIGHT_PX;
+type TexturePass = {
+  width: number;
+  height: number;
+  fontSize: number;
+  paddingX: number;
+  baselineY: number;
+  lineHeight: number;
+  canvasScale?: number;
+  sourceFont?: boolean;
+};
 
-const shouldUseEnderFullArtTexture = (
-  comment: Comment,
-  textureWidth: number,
-  textureHeight: number,
-): boolean =>
-  comment.isScrolling &&
-  comment.isFull &&
-  comment.isEnderGroup &&
-  !comment.isEnder &&
-  textureWidth >= 1_000 &&
-  textureHeight >= 800;
+type TextureProfile = {
+  output: TexturePass;
+  traces?: TexturePass[];
+};
 
-const createEnderFullArtTexture = (
+const createTexturePass = (
   comment: Comment,
   ctx: CanvasRenderingContext2D,
-  textureWidth: number,
-  textureHeight: number,
+  pass: TexturePass,
 ): OffscreenCanvas | null => {
-  const canvas = new OffscreenCanvas(textureWidth, textureHeight);
+  const canvas = new OffscreenCanvas(pass.width, pass.height);
   const targetCtx = canvas.getContext("2d");
   if (!targetCtx) {
     return null;
   }
 
   targetCtx.save();
-  targetCtx.font = getCanvasFont(comment, NICO_ENDER_FULL_ART_FONT_SIZE_PX);
+  targetCtx.font = pass.sourceFont
+    ? getCommentCanvasFont(comment)
+    : getCanvasFont(comment, pass.fontSize);
   const effectiveOpacity = clampOpacity(comment.opacity);
   const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);
   const shouldUseStrokeOutline = comment.renderStyle === "outline-only";
   const shadowParams = shouldUseStrokeOutline
     ? { blur: 0, alpha: 0 }
-    : getShadowParams(comment.shadowIntensity, NICO_ENDER_FULL_ART_FONT_SIZE_PX, effectiveOpacity);
+    : getShadowParams(comment.shadowIntensity, pass.fontSize, effectiveOpacity);
 
   targetCtx.shadowColor = `rgba(0, 0, 0, ${shadowParams.alpha})`;
   targetCtx.shadowBlur = shadowParams.blur;
@@ -340,141 +389,108 @@ const createEnderFullArtTexture = (
   targetCtx.lineWidth = getStrokeWidth();
   targetCtx.strokeStyle = getOutlineStrokeStyle(comment);
   targetCtx.fillStyle = resolvedFillStyle;
-  targetCtx.scale(NICO_ENDER_FULL_ART_CANVAS_SCALE, NICO_ENDER_FULL_ART_CANVAS_SCALE);
+  if (typeof pass.canvasScale === "number") {
+    targetCtx.scale(pass.canvasScale, pass.canvasScale);
+  }
 
   const linesToRender = comment.lines.length > 0 ? comment.lines : [comment.text];
-  const drawSegment = createSegmentDrawer(
-    comment,
-    targetCtx,
-    ctx,
-    "cache",
-    NICO_FULL_BIG_FINAL_PADDING_X_PX,
-  );
+  const drawSegment = createSegmentDrawer(comment, targetCtx, ctx, "cache", pass.paddingX);
 
   if (shouldUseStrokeOutline) {
     linesToRender.forEach((line: string, index: number) => {
-      drawSegment(
-        line,
-        NICO_FULL_BIG_FINAL_BASELINE_Y_PX + index * NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
-        "outline",
-      );
+      drawSegment(line, pass.baselineY + index * pass.lineHeight, "outline");
     });
   }
 
   linesToRender.forEach((line: string, index: number) => {
-    drawSegment(
-      line,
-      NICO_FULL_BIG_FINAL_BASELINE_Y_PX + index * NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
-      "fill",
-    );
+    drawSegment(line, pass.baselineY + index * pass.lineHeight, "fill");
   });
 
   targetCtx.restore();
   return canvas;
 };
 
-const createFullBigDownscaleTexture = (
+const createProfiledTexture = (
   comment: Comment,
   ctx: CanvasRenderingContext2D,
+  profile: TextureProfile,
 ): OffscreenCanvas | null => {
-  const finalCanvas = new OffscreenCanvas(
-    NICO_FULL_BIG_FINAL_WIDTH_PX,
-    NICO_FULL_BIG_FINAL_HEIGHT_PX,
-  );
-  const finalCtx = finalCanvas.getContext("2d");
-  if (!finalCtx) {
-    return null;
+  for (const tracePass of profile.traces ?? []) {
+    createTexturePass(comment, ctx, tracePass);
+  }
+  return createTexturePass(comment, ctx, profile.output);
+};
+
+const resolveTextureProfile = (
+  comment: Comment,
+  textureWidth: number,
+  textureHeight: number,
+): TextureProfile | null => {
+  if (
+    comment.isScrolling &&
+    comment.isFull &&
+    comment.fontSize >= 35 &&
+    textureWidth === NICO_FULL_BIG_FINAL_WIDTH_PX &&
+    textureHeight === NICO_FULL_BIG_FINAL_HEIGHT_PX
+  ) {
+    return {
+      traces: [
+        {
+          width: NICO_FULL_BIG_SOURCE_WIDTH_PX,
+          height: NICO_FULL_BIG_SOURCE_HEIGHT_PX,
+          fontSize: comment.fontSize,
+          paddingX: NICO_FULL_BIG_SOURCE_PADDING_X_PX,
+          baselineY: NICO_FULL_BIG_SOURCE_BASELINE_Y_PX,
+          lineHeight: comment.fontSize * NICO_FULL_BIG_SOURCE_LINE_HEIGHT_RATIO,
+          sourceFont: true,
+        },
+      ],
+      output: {
+        width: NICO_FULL_BIG_FINAL_WIDTH_PX,
+        height: NICO_FULL_BIG_FINAL_HEIGHT_PX,
+        fontSize: NICO_FULL_BIG_FINAL_FONT_SIZE_PX,
+        paddingX: NICO_FULL_BIG_FINAL_PADDING_X_PX,
+        baselineY: NICO_FULL_BIG_FINAL_BASELINE_Y_PX,
+        lineHeight: NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
+      },
+    };
   }
 
-  const sourceCanvas = new OffscreenCanvas(
-    NICO_FULL_BIG_SOURCE_WIDTH_PX,
-    NICO_FULL_BIG_SOURCE_HEIGHT_PX,
-  );
-  const sourceCtx = sourceCanvas.getContext("2d");
-  if (!sourceCtx) {
-    return null;
+  if (
+    comment.isScrolling &&
+    comment.isFull &&
+    comment.hasSameVposFullMinchoEnder &&
+    !comment.isEnder &&
+    textureWidth >= 1_000 &&
+    textureHeight >= 800
+  ) {
+    return {
+      output: {
+        width: textureWidth,
+        height: textureHeight,
+        fontSize: NICO_FULL_MINCHO_SYNC_FONT_SIZE_PX,
+        paddingX: NICO_FULL_BIG_FINAL_PADDING_X_PX,
+        baselineY: NICO_FULL_BIG_FINAL_BASELINE_Y_PX,
+        lineHeight: NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
+        canvasScale: NICO_FULL_MINCHO_SYNC_CANVAS_SCALE,
+      },
+    };
   }
 
-  sourceCtx.save();
-  sourceCtx.font = getCommentCanvasFont(comment);
-  const effectiveOpacity = clampOpacity(comment.opacity);
-  const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);
-  const shouldUseStrokeOutline = comment.renderStyle === "outline-only";
-  const shadowParams = shouldUseStrokeOutline
-    ? { blur: 0, alpha: 0 }
-    : getShadowParams(comment.shadowIntensity, comment.fontSize, effectiveOpacity);
-
-  sourceCtx.shadowColor = `rgba(0, 0, 0, ${shadowParams.alpha})`;
-  sourceCtx.shadowBlur = shadowParams.blur;
-  sourceCtx.shadowOffsetX = 0;
-  sourceCtx.shadowOffsetY = 0;
-  sourceCtx.lineJoin = "round";
-  sourceCtx.lineWidth = getStrokeWidth();
-  sourceCtx.strokeStyle = getOutlineStrokeStyle(comment);
-  sourceCtx.fillStyle = resolvedFillStyle;
-
-  const linesToRender = comment.lines.length > 0 ? comment.lines : [comment.text];
-  const lineAdvance = comment.fontSize * NICO_FULL_BIG_SOURCE_LINE_HEIGHT_RATIO;
-  const drawSegment = createSegmentDrawer(
-    comment,
-    sourceCtx,
-    ctx,
-    "cache",
-    NICO_FULL_BIG_SOURCE_PADDING_X_PX,
-  );
-
-  if (shouldUseStrokeOutline) {
-    linesToRender.forEach((line: string, index: number) => {
-      drawSegment(line, NICO_FULL_BIG_SOURCE_BASELINE_Y_PX + index * lineAdvance, "outline");
-    });
+  if (shouldUseStaticWideTexture(comment)) {
+    return {
+      output: {
+        width: textureWidth,
+        height: textureHeight,
+        fontSize: NICO_STATIC_WIDE_FINAL_FONT_SIZE_PX,
+        paddingX: NICO_STATIC_WIDE_FINAL_PADDING_X_PX,
+        baselineY: NICO_STATIC_WIDE_FINAL_BASELINE_Y_PX,
+        lineHeight: NICO_STATIC_WIDE_FINAL_LINE_HEIGHT_PX,
+      },
+    };
   }
 
-  linesToRender.forEach((line: string, index: number) => {
-    drawSegment(line, NICO_FULL_BIG_SOURCE_BASELINE_Y_PX + index * lineAdvance, "fill");
-  });
-
-  sourceCtx.restore();
-
-  finalCtx.save();
-  finalCtx.font = getCanvasFont(comment, NICO_FULL_BIG_FINAL_FONT_SIZE_PX);
-  finalCtx.shadowColor = `rgba(0, 0, 0, ${shadowParams.alpha})`;
-  finalCtx.shadowBlur = shadowParams.blur;
-  finalCtx.shadowOffsetX = 0;
-  finalCtx.shadowOffsetY = 0;
-  finalCtx.lineJoin = "round";
-  finalCtx.lineWidth = getStrokeWidth();
-  finalCtx.strokeStyle = getOutlineStrokeStyle(comment);
-  finalCtx.fillStyle = resolvedFillStyle;
-
-  const finalDrawSegment = createSegmentDrawer(
-    comment,
-    finalCtx,
-    ctx,
-    "cache",
-    NICO_FULL_BIG_FINAL_PADDING_X_PX,
-  );
-
-  if (shouldUseStrokeOutline) {
-    linesToRender.forEach((line: string, index: number) => {
-      finalDrawSegment(
-        line,
-        NICO_FULL_BIG_FINAL_BASELINE_Y_PX + index * NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
-        "outline",
-      );
-    });
-  }
-
-  linesToRender.forEach((line: string, index: number) => {
-    finalDrawSegment(
-      line,
-      NICO_FULL_BIG_FINAL_BASELINE_Y_PX + index * NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
-      "fill",
-    );
-  });
-
-  finalCtx.restore();
-
-  return finalCanvas;
+  return null;
 };
 
 const createTextureCanvas = (
@@ -499,13 +515,9 @@ const createTextureCanvas = (
   cacheStats.totalCharactersDrawn += comment.text.length;
 
   const { paddingX, paddingY, textureWidth, textureHeight } = getTexturePadding(comment);
-
-  if (shouldUseFullBigDownscaleTexture(comment, textureWidth, textureHeight)) {
-    return createFullBigDownscaleTexture(comment, ctx);
-  }
-
-  if (shouldUseEnderFullArtTexture(comment, textureWidth, textureHeight)) {
-    return createEnderFullArtTexture(comment, ctx, textureWidth, textureHeight);
+  const textureProfile = resolveTextureProfile(comment, textureWidth, textureHeight);
+  if (textureProfile) {
+    return createProfiledTexture(comment, ctx, textureProfile);
   }
 
   const offscreen = new OffscreenCanvas(textureWidth, textureHeight);
@@ -552,9 +564,6 @@ const createTextureCanvas = (
   offscreenCtx.lineWidth = getStrokeWidth();
   offscreenCtx.strokeStyle = getOutlineStrokeStyle(comment);
   offscreenCtx.fillStyle = resolvedFillStyle;
-  if (comment.isScrolling && comment.isFull && comment.isEnderGroup) {
-    offscreenCtx.scale(NICO_ENDER_FULL_ART_CANVAS_SCALE, NICO_ENDER_FULL_ART_CANVAS_SCALE);
-  }
 
   if (shouldUseStrokeOutline) {
     linesToRender.forEach((line: string, index: number) => {
@@ -662,27 +671,35 @@ export const drawComment = (
       const drawX = interpolatedX ?? comment.x;
       const { paddingX, paddingY } = getTexturePadding(comment);
       const drawScale = getTextureDrawScale(comment);
-      const staticScaleOffsetX =
-        !comment.isScrolling && drawScale !== 1 ? texture.width * (1 - drawScale) * 0.455 : 0;
-      const targetX = drawX - paddingX + staticScaleOffsetX + getTextureDrawOffsetX(comment);
+      const placement = resolveTextureDrawPlacement(comment, texture, drawX, paddingX, drawScale);
+      const targetX = placement.x;
       const targetY = comment.y - paddingY;
-      if (drawScale === 1) {
+      if (placement.scaleX === 1 && placement.scaleY === 1) {
         ctx.drawImage(texture, targetX, targetY);
       } else {
         ctx.drawImage(
           texture,
           targetX,
           targetY,
-          texture.width * drawScale,
-          texture.height * drawScale,
+          texture.width * placement.scaleX,
+          texture.height * placement.scaleY,
         );
       }
       emitCalibrationTrace("drawImage", ctx, comment, {
         x: targetX,
         y: targetY,
-        width: texture.width * drawScale,
-        height: texture.height * drawScale,
-        meta: { statsTarget: "cache", paddingX, paddingY, drawScale },
+        width: texture.width * placement.scaleX,
+        height: texture.height * placement.scaleY,
+        sourceWidth: texture.width,
+        sourceHeight: texture.height,
+        meta: {
+          statsTarget: "cache",
+          paddingX,
+          paddingY,
+          drawScale,
+          drawScaleX: placement.scaleX,
+          drawScaleY: placement.scaleY,
+        },
       });
       reportCacheStats();
       return;

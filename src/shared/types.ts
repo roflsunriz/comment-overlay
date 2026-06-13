@@ -181,9 +181,11 @@ export interface CommentRendererInitializeOptions {
   container?: HTMLElement | null;
 }
 
+export type AnimationFrameHandle = number | ReturnType<typeof setTimeout>;
+
 export interface AnimationFrameProvider {
-  request(callback: FrameRequestCallback): ReturnType<typeof setTimeout>;
-  cancel(handle: ReturnType<typeof setTimeout>): void;
+  request(callback: FrameRequestCallback): AnimationFrameHandle;
+  cancel(handle: AnimationFrameHandle): void;
 }
 
 export type VideoFrameCallbackMetadataLike = {

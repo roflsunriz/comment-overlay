@@ -63,10 +63,14 @@ const buildCanvasHookScript = () => String.raw`
   globalThis.__NICO_CANVAS_TRACE_INSTALLED__ = true;
   globalThis.__NICO_CANVAS_TRACE_VERSION__ = traceHookVersion;
   const buffer = [];
+  const responseBuffer = [];
   const canvasIds = new WeakMap();
   let nextCanvasId = 1;
   let sequence = 0;
+  let responseSequence = 0;
   const maxBufferedRecords = 200000;
+  const maxBufferedResponses = 500;
+  const maxCapturedBodyLength = 5_000_000;
   let cachedVideoInfo = null;
   let cachedVideoInfoAt = -Infinity;
 
@@ -268,18 +272,181 @@ const buildCanvasHookScript = () => String.raw`
     }
   };
 
+  const shouldCaptureResponseBody = (url, contentType) => {
+    const lowerUrl = String(url || "").toLowerCase();
+    const lowerType = String(contentType || "").toLowerCase();
+    return (
+      lowerUrl.includes("nvcomment") ||
+      lowerUrl.includes("comment") ||
+      lowerUrl.includes("watch") ||
+      lowerType.includes("json")
+    );
+  };
+
+  const normalizeResponseBody = (body) => {
+    if (typeof body !== "string") {
+      return { body: null, parsed: null, truncated: false };
+    }
+    const truncated = body.length > maxCapturedBodyLength;
+    const clipped = truncated ? body.slice(0, maxCapturedBodyLength) : body;
+    let parsed = null;
+    try {
+      parsed = JSON.parse(clipped);
+    } catch {
+      parsed = null;
+    }
+    return { body: parsed ?? clipped, parsed: parsed !== null, truncated };
+  };
+
+  const pushResponseRecord = (record) => {
+    responseBuffer.push({
+      source: "niconico-player-page",
+      sequence: responseSequence++,
+      timestampMs: now(),
+      pageUrl: location.href,
+      ...record,
+    });
+    if (responseBuffer.length > maxBufferedResponses) {
+      responseBuffer.splice(0, responseBuffer.length - maxBufferedResponses);
+    }
+  };
+
+  const patchFetch = () => {
+    if (typeof globalThis.fetch !== "function" || globalThis.fetch.__nicoTracePatchedFetch) {
+      return;
+    }
+    const originalFetch = globalThis.fetch;
+    const patchedFetch = async function patchedNicoTraceFetch(input, init) {
+      const response = await originalFetch.apply(this, arguments);
+      try {
+        const url =
+          typeof input === "string"
+            ? input
+            : input && typeof input.url === "string"
+              ? input.url
+              : response.url;
+        const contentType = response.headers && typeof response.headers.get === "function"
+          ? response.headers.get("content-type")
+          : "";
+        if (shouldCaptureResponseBody(url, contentType)) {
+          const cloned = response.clone();
+          cloned.text().then((bodyText) => {
+            const normalized = normalizeResponseBody(bodyText);
+            pushResponseRecord({
+              transport: "fetch",
+              url,
+              status: response.status,
+              statusText: response.statusText,
+              mimeType: contentType,
+              body: normalized.body,
+              parsedJson: normalized.parsed,
+              truncated: normalized.truncated,
+            });
+          }).catch((error) => {
+            pushResponseRecord({
+              transport: "fetch",
+              url,
+              status: response.status,
+              statusText: response.statusText,
+              mimeType: contentType,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }
+      } catch (error) {
+        pushResponseRecord({
+          transport: "fetch",
+          url: null,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return response;
+    };
+    Object.defineProperty(patchedFetch, "__nicoTracePatchedFetch", { value: true });
+    globalThis.fetch = patchedFetch;
+  };
+
+  const patchXhr = () => {
+    const XhrCtor = globalThis.XMLHttpRequest;
+    if (!XhrCtor || !XhrCtor.prototype || XhrCtor.prototype.__nicoTracePatchedXhr) {
+      return;
+    }
+    const originalOpen = XhrCtor.prototype.open;
+    const originalSend = XhrCtor.prototype.send;
+    XhrCtor.prototype.open = function patchedNicoTraceOpen(method, url) {
+      this.__nicoTraceRequest = {
+        method: String(method || ""),
+        url: String(url || ""),
+      };
+      return originalOpen.apply(this, arguments);
+    };
+    XhrCtor.prototype.send = function patchedNicoTraceSend() {
+      try {
+        this.addEventListener("loadend", () => {
+          try {
+            const request = this.__nicoTraceRequest || {};
+            const url = request.url || this.responseURL || "";
+            const contentType =
+              typeof this.getResponseHeader === "function"
+                ? this.getResponseHeader("content-type")
+                : "";
+            if (!shouldCaptureResponseBody(url, contentType)) {
+              return;
+            }
+            const bodyText =
+              typeof this.responseText === "string"
+                ? this.responseText
+                : typeof this.response === "string"
+                  ? this.response
+                  : "";
+            const normalized = normalizeResponseBody(bodyText);
+            pushResponseRecord({
+              transport: "xhr",
+              method: request.method || null,
+              url,
+              status: this.status,
+              statusText: this.statusText,
+              mimeType: contentType,
+              body: normalized.body,
+              parsedJson: normalized.parsed,
+              truncated: normalized.truncated,
+            });
+          } catch (error) {
+            pushResponseRecord({
+              transport: "xhr",
+              url: this.responseURL || null,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        });
+      } catch {
+        // Ignore pages that prevent adding listeners on XHR instances.
+      }
+      return originalSend.apply(this, arguments);
+    };
+    Object.defineProperty(XhrCtor.prototype, "__nicoTracePatchedXhr", { value: true });
+  };
+
   patchContext(globalThis.CanvasRenderingContext2D);
   patchContext(globalThis.OffscreenCanvasRenderingContext2D);
+  patchFetch();
+  patchXhr();
 
   globalThis.__NICO_TRACE_DRAIN__ = () => {
     const drained = buffer.splice(0, buffer.length);
     return drained;
   };
+  globalThis.__NICO_RESPONSE_DRAIN__ = () => {
+    const drained = responseBuffer.splice(0, responseBuffer.length);
+    return drained;
+  };
   globalThis.__NICO_TRACE_STATUS__ = () => ({
     installed: true,
     buffered: buffer.length,
+    bufferedResponses: responseBuffer.length,
     nextCanvasId,
     sequence,
+    responseSequence,
   });
   return "installed";
 })();
@@ -591,14 +758,26 @@ const main = async () => {
       }
     });
 
+    const drainPageResponses = async () => {
+      const drained = await evaluate(
+        Runtime,
+        "globalThis.__NICO_RESPONSE_DRAIN__ ? globalThis.__NICO_RESPONSE_DRAIN__() : []",
+      );
+      for (const record of drained || []) {
+        networkRecords.push(record);
+      }
+    };
+
     if (args.url && target.url !== args.url) {
       await Page.navigate({ url: args.url });
       await sleep(2500);
       await evaluate(Runtime, buildCanvasHookScript());
+      await drainPageResponses();
     } else if (args.reload === "true") {
       await Page.reload({ ignoreCache: true });
       await sleep(2500);
       await evaluate(Runtime, buildCanvasHookScript());
+      await drainPageResponses();
     }
 
     if (startMs !== null) {
@@ -628,14 +807,22 @@ const main = async () => {
     const startWallClock = Date.now();
     const metaSamples = [];
     let frameIndex = 0;
+    let invalidVideoRectSince = null;
 
     while (Date.now() - startWallClock <= durationMs) {
       const state = await evaluate(Runtime, getVideoStateExpression());
       metaSamples.push({ sampledAtMs: Date.now(), state });
       const rect = state.selected?.rect;
       if (!rect || rect.width <= 0 || rect.height <= 0) {
-        throw new Error("Largest video element has an invalid rectangle.");
+        invalidVideoRectSince ??= Date.now();
+        if (Date.now() - invalidVideoRectSince > 8000) {
+          throw new Error("Largest video element has an invalid rectangle for more than 8 seconds.");
+        }
+        await drainPageResponses();
+        await sleep(intervalMs);
+        continue;
       }
+      invalidVideoRectSince = null;
       const clip = {
         x: Math.max(0, rect.x),
         y: Math.max(0, rect.y),
@@ -652,6 +839,7 @@ const main = async () => {
       for (const record of drained || []) {
         traceStream.write(jsonLine(record));
       }
+      await drainPageResponses();
       frameIndex += 1;
       await sleep(intervalMs);
     }
@@ -663,6 +851,7 @@ const main = async () => {
     for (const record of finalDrain || []) {
       traceStream.write(jsonLine(record));
     }
+    await drainPageResponses();
 
     traceStream.end();
     await once(traceStream, "finish");
@@ -683,6 +872,16 @@ const main = async () => {
           prerollMs,
           startMs,
           frameCount: frameIndex,
+          networkCapture: {
+            cdpNetworkRecords: networkRecords.filter(
+              (record) => record.source !== "niconico-player-page",
+            ).length,
+            pageHookRecords: networkRecords.filter(
+              (record) => record.source === "niconico-player-page",
+            ).length,
+            note:
+              "network-comments.json contains responses observed after CDP attach and page fetch/XHR hook installation. It does not include data already received before attach.",
+          },
           samples: metaSamples,
         },
         null,

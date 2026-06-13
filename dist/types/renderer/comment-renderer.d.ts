@@ -2,7 +2,7 @@ import type { RendererSettings, CommentRendererEventHooks, CommentDependencies, 
 import { Comment } from "@/comment/comment";
 import type { Logger } from "@/shared/types";
 export { createDefaultAnimationFrameProvider } from "@/shared/settings";
-import type { AnimationFrameProvider, CommentRendererConfig, CommentRendererInitializeOptions, LaneReservation, StaticLaneReservation, VideoFrameCallbackMetadataLike } from "@/shared/types";
+import type { AnimationFrameHandle, AnimationFrameProvider, CommentRendererConfig, CommentRendererInitializeOptions, LaneReservation, StaticLaneReservation, VideoFrameCallbackMetadataLike } from "@/shared/types";
 export type { CommentRendererConfig, CommentRendererInitializeOptions, AnimationFrameProvider };
 export declare class CommentRenderer {
     _settings: RendererSettings;
@@ -42,7 +42,7 @@ export declare class CommentRenderer {
     skipDrawingForCurrentFrame: boolean;
     pendingInitialSync: boolean;
     readonly finalPhaseVposOverrides: Map<Comment, number>;
-    frameId: ReturnType<typeof setTimeout> | null;
+    frameId: AnimationFrameHandle | null;
     videoFrameHandle: number | null;
     resizeObserver: ResizeObserver | null;
     resizeObserverTarget: Element | null;

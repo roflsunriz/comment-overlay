@@ -9,6 +9,8 @@ export interface CalibrationTraceRecord {
     readonly y?: number;
     readonly width?: number;
     readonly height?: number;
+    readonly sourceWidth?: number;
+    readonly sourceHeight?: number;
     readonly canvasWidth?: number;
     readonly canvasHeight?: number;
     readonly font?: string;

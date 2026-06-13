@@ -19,6 +19,7 @@ import {
 } from "@/shared/settings";
 export { createDefaultAnimationFrameProvider } from "@/shared/settings";
 import type {
+  AnimationFrameHandle,
   AnimationFrameProvider,
   CommentRendererConfig,
   CommentRendererInitializeOptions,
@@ -84,7 +85,7 @@ export class CommentRenderer {
   public skipDrawingForCurrentFrame = false;
   public pendingInitialSync = false;
   public readonly finalPhaseVposOverrides = new Map<Comment, number>();
-  public frameId: ReturnType<typeof setTimeout> | null = null;
+  public frameId: AnimationFrameHandle | null = null;
   public videoFrameHandle: number | null = null;
   public resizeObserver: ResizeObserver | null = null;
   public resizeObserverTarget: Element | null = null;

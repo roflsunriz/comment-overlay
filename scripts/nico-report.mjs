@@ -186,16 +186,37 @@ const normalizeDrawImageRecord = (record, index) => {
     return null;
   }
 
+  const toVideoLocal = (x, y) => {
+    const rect = record.videoRect;
+    if (
+      rect &&
+      Number.isFinite(Number(rect.left)) &&
+      Number.isFinite(Number(rect.top)) &&
+      record.source === "niconico-player"
+    ) {
+      return {
+        x: x - Number(rect.left),
+        y: y - Number(rect.top),
+      };
+    }
+    return { x, y };
+  };
+
   if (
     Number.isFinite(Number(record.x)) &&
     Number.isFinite(Number(record.y)) &&
     Number.isFinite(Number(record.width)) &&
     Number.isFinite(Number(record.height))
   ) {
+    const local = toVideoLocal(Number(record.x), Number(record.y));
+    const paddingX = Number(record.meta?.paddingX ?? 0);
+    const paddingY = Number(record.meta?.paddingY ?? 0);
     return {
       index,
-      x: Number(record.x),
-      y: Number(record.y),
+      x: local.x,
+      y: local.y,
+      contentX: local.x + (Number.isFinite(paddingX) ? paddingX : 0),
+      contentY: local.y + (Number.isFinite(paddingY) ? paddingY : 0),
       width: Number(record.width),
       height: Number(record.height),
       timeMs: Number(record.videoCurrentTimeMs ?? record.frameTimeMs ?? record.timestampMs),
@@ -239,10 +260,16 @@ const normalizeDrawImageRecord = (record, index) => {
   const translateX = Number.isFinite(transform[4]) ? transform[4] : 0;
   const translateY = Number.isFinite(transform[5]) ? transform[5] : 0;
 
+  const local = toVideoLocal(dx * scaleX + translateX, dy * scaleY + translateY);
+
+  const paddingX = Number(record.meta?.paddingX ?? 0);
+  const paddingY = Number(record.meta?.paddingY ?? 0);
   return {
     index,
-    x: dx * scaleX + translateX,
-    y: dy * scaleY + translateY,
+    x: local.x,
+    y: local.y,
+    contentX: local.x + (Number.isFinite(paddingX) ? paddingX : 0),
+    contentY: local.y + (Number.isFinite(paddingY) ? paddingY : 0),
     width: width * scaleX,
     height: height * scaleY,
     timeMs: Number(record.videoCurrentTimeMs ?? record.frameTimeMs ?? record.timestampMs),
@@ -258,6 +285,26 @@ const getComparableDrawImageRecords = (records) =>
   records.map(normalizeDrawImageRecord).filter(Boolean);
 
 const dimensionKey = (record) => `${Math.round(record.sourceWidth)}x${Math.round(record.sourceHeight)}`;
+
+const isSingleLineText = (value) => typeof value === "string" && value.length > 0 && !value.includes("\n");
+
+const isOverlayOrdinaryDrawImage = (record) => {
+  const comment = record.raw.comment;
+  if (!comment || !isSingleLineText(comment.text)) {
+    return false;
+  }
+  if (record.sourceWidth > 900 || record.sourceHeight > 220) {
+    return false;
+  }
+  return comment.layout === "naka" || comment.layout === "ue" || comment.layout === "shita";
+};
+
+const isRealSmallDrawImage = (record) =>
+  record.raw.source === "niconico-player" &&
+  record.sourceWidth >= 40 &&
+  record.sourceWidth <= 900 &&
+  record.sourceHeight >= 60 &&
+  record.sourceHeight <= 220;
 
 const summarizeTopDimensions = (records, limit = 30) => {
   const buckets = new Map();
@@ -289,6 +336,31 @@ const summarizeTopDimensions = (records, limit = 30) => {
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
+};
+
+const summarizeDrawImagePopulation = (records, source) => {
+  const trajectories = fitDrawImageTrajectories(records, source);
+  const trajectoryVelocities = trajectories.map((trajectory) =>
+    Math.abs(trajectory.velocityPxPerSec),
+  );
+  const contentXValues = records.map((record) => record.contentX ?? record.x);
+  const contentYValues = records.map((record) => record.contentY ?? record.y);
+  return {
+    count: records.length,
+    avgSourceWidth: average(records.map((record) => record.sourceWidth)),
+    avgSourceHeight: average(records.map((record) => record.sourceHeight)),
+    p50SourceWidth: percentile(records.map((record) => record.sourceWidth), 0.5),
+    p95SourceWidth: percentile(records.map((record) => record.sourceWidth), 0.95),
+    avgDrawWidth: average(records.map((record) => record.width)),
+    avgDrawHeight: average(records.map((record) => record.height)),
+    avgX: average(contentXValues),
+    avgY: average(contentYValues),
+    p05Y: percentile(contentYValues, 0.05),
+    p95Y: percentile(contentYValues, 0.95),
+    trajectoryCount: trajectories.length,
+    avgVelocityPxPerSec: average(trajectoryVelocities),
+    p95VelocityPxPerSec: percentile(trajectoryVelocities, 0.95),
+  };
 };
 
 const matchDrawImageRecords = (realRecords, overlayRecords) => {
@@ -642,6 +714,158 @@ const renderDrawImageTrajectoryComparison = (realDrawImages, overlayDrawImages) 
   `;
 };
 
+const summarizeTopContentDimensions = (records, limit = 12) => {
+  const buckets = new Map();
+  for (const record of records) {
+    const key = dimensionKey(record);
+    const bucket = buckets.get(key) || {
+      key,
+      count: 0,
+      avgX: 0,
+      avgY: 0,
+      avgWidth: 0,
+      avgHeight: 0,
+    };
+    bucket.count += 1;
+    bucket.avgX += record.contentX ?? record.x;
+    bucket.avgY += record.contentY ?? record.y;
+    bucket.avgWidth += record.width;
+    bucket.avgHeight += record.height;
+    buckets.set(key, bucket);
+  }
+
+  return Array.from(buckets.values())
+    .map((bucket) => ({
+      ...bucket,
+      avgX: bucket.avgX / bucket.count,
+      avgY: bucket.avgY / bucket.count,
+      avgWidth: bucket.avgWidth / bucket.count,
+      avgHeight: bucket.avgHeight / bucket.count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+};
+
+const renderContentDimensionBucketRows = (records, limit = 12) =>
+  summarizeTopContentDimensions(records, limit)
+    .map(
+      (bucket) => `
+        <tr>
+          <td><code>${escapeHtml(bucket.key)}</code></td>
+          <td>${bucket.count}</td>
+          <td>${formatNumber(bucket.avgX)}</td>
+          <td>${formatNumber(bucket.avgY)}</td>
+          <td>${formatNumber(bucket.avgWidth)}</td>
+          <td>${formatNumber(bucket.avgHeight)}</td>
+        </tr>`,
+    )
+    .join("\n");
+
+const renderPopulationSummaryRow = (label, summary) => `
+  <tr>
+    <td>${escapeHtml(label)}</td>
+    <td>${summary.count}</td>
+    <td>${formatNumber(summary.avgSourceWidth)}</td>
+    <td>${formatNumber(summary.avgSourceHeight)}</td>
+    <td>${formatNumber(summary.p50SourceWidth)}</td>
+    <td>${formatNumber(summary.p95SourceWidth)}</td>
+    <td>${formatNumber(summary.avgDrawWidth)}</td>
+    <td>${formatNumber(summary.avgDrawHeight)}</td>
+    <td>${formatNumber(summary.avgX)}</td>
+    <td>${formatNumber(summary.avgY)}</td>
+    <td>${formatNumber(summary.p05Y)}</td>
+    <td>${formatNumber(summary.p95Y)}</td>
+    <td>${summary.trajectoryCount}</td>
+    <td>${formatNumber(summary.avgVelocityPxPerSec)}</td>
+    <td>${formatNumber(summary.p95VelocityPxPerSec)}</td>
+  </tr>`;
+
+const renderOrdinaryCommentCalibrationSection = (realDrawImages, overlayDrawImages) => {
+  const realSmallDrawImages = realDrawImages.filter(isRealSmallDrawImage);
+  const realMovingTrajectoryIds = new Set(
+    fitDrawImageTrajectories(realSmallDrawImages, "real")
+      .filter((trajectory) => Math.abs(trajectory.velocityPxPerSec) >= 20)
+      .map((trajectory) => trajectory.id),
+  );
+  const realOrdinaryLike = realSmallDrawImages.filter((record) =>
+    realMovingTrajectoryIds.has(getDrawImageTrajectoryId(record, "real")),
+  );
+  const overlayOrdinary = overlayDrawImages.filter(isOverlayOrdinaryDrawImage);
+  const overlayOrdinaryScroll = overlayOrdinary.filter((record) => record.raw.comment?.layout === "naka");
+  const overlayOrdinaryStatic = overlayOrdinary.filter((record) => record.raw.comment?.layout !== "naka");
+
+  const populationRows = [
+    renderPopulationSummaryRow(
+      "real ordinary-like small drawImage",
+      summarizeDrawImagePopulation(realOrdinaryLike, "real"),
+    ),
+    renderPopulationSummaryRow(
+      "overlay ordinary naka",
+      summarizeDrawImagePopulation(overlayOrdinaryScroll, "overlay"),
+    ),
+    renderPopulationSummaryRow(
+      "overlay ordinary ue/shita",
+      summarizeDrawImagePopulation(overlayOrdinaryStatic, "overlay"),
+    ),
+  ].join("\n");
+
+  return `
+    <section>
+      <h2>ordinary comment calibration</h2>
+      <p>
+        This section keeps normal comments separate from large comment-art textures. The real-player
+        group is inferred from moving small <code>drawImage</code> source canvases because the
+        official player trace does not always expose the comment object for each draw call. Fixed
+        small layers are excluded so game/video layers are not accidentally treated as comments.
+      </p>
+      <p>
+        real small drawImage candidates: ${realSmallDrawImages.length}, moving candidates:
+        ${realOrdinaryLike.length}
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>population</th>
+            <th>records</th>
+            <th>avg source w</th>
+            <th>avg source h</th>
+            <th>p50 source w</th>
+            <th>p95 source w</th>
+            <th>avg draw w</th>
+            <th>avg draw h</th>
+            <th>avg content x</th>
+            <th>avg content y</th>
+            <th>p05 content y</th>
+            <th>p95 content y</th>
+            <th>trajectories</th>
+            <th>avg |velocity|</th>
+            <th>p95 |velocity|</th>
+          </tr>
+        </thead>
+        <tbody>${populationRows}</tbody>
+      </table>
+
+      <h3>real ordinary-like source buckets</h3>
+      <table>
+        <thead><tr><th>source size</th><th>count</th><th>avg content x</th><th>avg content y</th><th>avg width</th><th>avg height</th></tr></thead>
+        <tbody>${renderContentDimensionBucketRows(realOrdinaryLike)}</tbody>
+      </table>
+
+      <h3>overlay ordinary naka source buckets</h3>
+      <table>
+        <thead><tr><th>source size</th><th>count</th><th>avg content x</th><th>avg content y</th><th>avg width</th><th>avg height</th></tr></thead>
+        <tbody>${renderContentDimensionBucketRows(overlayOrdinaryScroll)}</tbody>
+      </table>
+
+      <h3>overlay ordinary ue/shita source buckets</h3>
+      <table>
+        <thead><tr><th>source size</th><th>count</th><th>avg content x</th><th>avg content y</th><th>avg width</th><th>avg height</th></tr></thead>
+        <tbody>${renderContentDimensionBucketRows(overlayOrdinaryStatic)}</tbody>
+      </table>
+    </section>
+  `;
+};
+
 const renderImageDiffSection = ({ realImageDataUrl, overlayImageDataUrl }) => {
   if (!realImageDataUrl || !overlayImageDataUrl) {
     return `
@@ -790,6 +1014,7 @@ const renderHtml = ({
   ${renderSummaryTable("Real op summary", summarizeByOp(realRecords))}
   ${renderSummaryTable("Overlay op summary", summarizeByOp(overlayRecords))}
   ${renderDrawImageDimensionComparison(realDrawImages, overlayDrawImages)}
+  ${renderOrdinaryCommentCalibrationSection(realDrawImages, overlayDrawImages)}
   ${renderDrawImageMatchSummary(drawImageMatchResult)}
   ${renderDrawImageTrajectoryComparison(realDrawImages, overlayDrawImages)}
   ${renderTopDeltas(matchResult.matches)}

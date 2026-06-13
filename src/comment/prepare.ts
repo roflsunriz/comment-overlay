@@ -13,7 +13,7 @@ const NICO_BASE_FONT_SIZE_RATIO = 27 / 665;
 const MIN_SCROLL_FONT_SIZE_PX = 12;
 
 const NICO_TAB_REPLACEMENT = "\u2003\u2003";
-const NICO_STATIC_WIDE_ART_WIDTH_RATIO = 2300 / 665;
+const NICO_STATIC_WIDE_TEXTURE_WIDTH_RATIO = 1252 / 597.38330078125;
 const NICO_FULL_SMALL_WIDTH_BUCKETS = [366, 510, 1662] as const;
 const NICO_FULL_BIG_WIDTH_PX = 566;
 const NICO_FULL_SMALL_HEIGHT_RATIO = 806 / 665;
@@ -22,11 +22,11 @@ const NICO_FULL_MINCHO_BIG_WIDTH_RATIO = 1176 / 665;
 const NICO_FULL_MINCHO_BIG_HEIGHT_RATIO = 900 / 665;
 const NICO_FULL_MINCHO_MEDIUM_WIDTH_RATIO = 1126 / 665;
 const NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO = 810 / 665;
-const NICO_ENDER_MINCHO_BIG_EYE_WIDTH_RATIO = 1254 / 665;
-const NICO_ENDER_GROUP_MINCHO_BODY_WIDTH_RATIO = 1126 / 665;
-const NICO_ENDER_GROUP_MINCHO_EYE_WIDTH_RATIO = 1046 / 665;
-const NICO_ENDER_GROUP_MINCHO_MEDIUM_WIDTH_RATIO = 1140 / 665;
-const NICO_ENDER_GROUP_MINCHO_MEDIUM_HEIGHT_RATIO = 878 / 665;
+const NICO_FULL_MINCHO_CLUSTER_MEMBER_BIG_WIDTH_RATIO = 1126 / 665;
+const NICO_FULL_MINCHO_SYNC_SPARSE_MEMBER_WIDTH_RATIO = 1046 / 665;
+const NICO_FULL_MINCHO_SYNC_SPARSE_ENDER_WIDTH_RATIO = 1254 / 665;
+const NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_WIDTH_RATIO = 1140 / 665;
+const NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_HEIGHT_RATIO = 878 / 665;
 const NICO_FULL_SCROLL_X_OFFSET_RATIO = 0.25;
 const NICO_FULL_SCROLL_MIN_X_OFFSET_PX = 160;
 const NICO_FULL_SCROLL_MAX_X_OFFSET_PX = 420;
@@ -44,7 +44,7 @@ const NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO = 0.045;
 const normalizeCommentTextForCanvas = (text: string): string =>
   text.replaceAll("\t", NICO_TAB_REPLACEMENT);
 
-const NICO_ART_BLANK_CHARS_PATTERN = /[\s\u00a0\u2000-\u200f\u202f\u205f\u3000]/g;
+const NICO_LAYOUT_BLANK_CHARS_PATTERN = /[\s\u00a0\u2000-\u200f\u202f\u205f\u3000]/g;
 
 const ensureLines = (text: string): string[] => {
   const normalizedText = normalizeCommentTextForCanvas(text);
@@ -63,6 +63,10 @@ const snapFullCommentWidth = (comment: Comment): number => {
     return NICO_FULL_BIG_WIDTH_PX;
   }
   const rawLines = comment.text.split(/\r?\n/);
+  const maxRawLineLength = Math.max(0, ...rawLines.map((line) => line.length));
+  if (comment.isEnder && maxRawLineLength >= 25) {
+    return NICO_FULL_SMALL_WIDTH_BUCKETS[2];
+  }
   const maxRawTabCount = Math.max(0, ...rawLines.map((line) => (line.match(/\t/g) || []).length));
   if (maxRawTabCount >= 12) {
     return NICO_FULL_SMALL_WIDTH_BUCKETS[2];
@@ -99,20 +103,11 @@ const getScrollExitExtension = (comment: Comment): number =>
   );
 
 const getNonEmptyLineCount = (comment: Comment): number =>
-  comment.lines.filter((line) => line.replace(NICO_ART_BLANK_CHARS_PATTERN, "").length > 0).length;
+  comment.lines.filter((line) => line.replace(NICO_LAYOUT_BLANK_CHARS_PATTERN, "").length > 0)
+    .length;
 
-const isSparseEyeLayer = (comment: Comment): boolean => {
-  if (getNonEmptyLineCount(comment) !== 1) {
-    return false;
-  }
-  const compactText = comment.text.replace(NICO_ART_BLANK_CHARS_PATTERN, "");
-  return (
-    compactText === "●" ||
-    compactText.includes("●●") ||
-    compactText.includes("○○") ||
-    compactText.includes("◉")
-  );
-};
+const isSparseMultilineLayer = (comment: Comment): boolean =>
+  comment.lines.length > 1 && getNonEmptyLineCount(comment) === 1;
 
 const updateTextMetrics = (comment: Comment, ctx: CanvasRenderingContext2D): void => {
   let maxLineWidth = 0;
@@ -162,49 +157,56 @@ export const prepareComment = (
     comment.lines = ensureLines(comment.text);
     updateTextMetrics(comment, ctx);
     if (comment.isScrolling && comment.isFull) {
-      const isMinchoFullArt =
+      const isFullMinchoMultiline =
         comment.lines.length > 1 &&
         (comment.fontFamily.includes("Yu Mincho") || comment.fontFamily.includes("游明朝"));
-      if (isMinchoFullArt && comment.isEnderGroup && !comment.isEnder && comment.fontSize >= 35) {
+      if (
+        isFullMinchoMultiline &&
+        comment.hasSameVposFullMinchoEnder &&
+        !comment.isEnder &&
+        comment.fontSize >= 35
+      ) {
         comment.width = Math.round(
           canvasHeight *
-            (isSparseEyeLayer(comment)
-              ? NICO_ENDER_GROUP_MINCHO_EYE_WIDTH_RATIO
-              : NICO_ENDER_GROUP_MINCHO_BODY_WIDTH_RATIO),
+            (isSparseMultilineLayer(comment)
+              ? NICO_FULL_MINCHO_SYNC_SPARSE_MEMBER_WIDTH_RATIO
+              : NICO_FULL_MINCHO_CLUSTER_MEMBER_BIG_WIDTH_RATIO),
         );
         comment.height = Math.max(
           comment.height,
           Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO),
         );
       } else if (
-        isMinchoFullArt &&
-        comment.isEnderGroup &&
+        isFullMinchoMultiline &&
+        comment.hasSameVposFullMinchoEnder &&
         comment.isEnder &&
         comment.fontSize >= 35
       ) {
         comment.width = Math.round(
           canvasHeight *
-            (isSparseEyeLayer(comment)
-              ? NICO_ENDER_MINCHO_BIG_EYE_WIDTH_RATIO
+            (isSparseMultilineLayer(comment)
+              ? NICO_FULL_MINCHO_SYNC_SPARSE_ENDER_WIDTH_RATIO
               : NICO_FULL_MINCHO_BIG_WIDTH_RATIO),
         );
         comment.height = Math.max(
           comment.height,
           Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_HEIGHT_RATIO),
         );
-      } else if (isMinchoFullArt && comment.isEnderGroup && comment.isEnder) {
-        comment.width = Math.round(canvasHeight * NICO_ENDER_GROUP_MINCHO_MEDIUM_WIDTH_RATIO);
+      } else if (isFullMinchoMultiline && comment.hasSameVposFullMinchoEnder && comment.isEnder) {
+        comment.width = Math.round(
+          canvasHeight * NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_WIDTH_RATIO,
+        );
         comment.height = Math.max(
           comment.height,
-          Math.round(canvasHeight * NICO_ENDER_GROUP_MINCHO_MEDIUM_HEIGHT_RATIO),
+          Math.round(canvasHeight * NICO_FULL_MINCHO_CLUSTER_MEMBER_MEDIUM_HEIGHT_RATIO),
         );
-      } else if (isMinchoFullArt && comment.fontSize >= 35) {
+      } else if (isFullMinchoMultiline && comment.fontSize >= 35) {
         comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_WIDTH_RATIO);
         comment.height = Math.max(
           comment.height,
           Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_HEIGHT_RATIO),
         );
-      } else if (isMinchoFullArt) {
+      } else if (isFullMinchoMultiline) {
         comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_WIDTH_RATIO);
         comment.height = Math.max(
           comment.height,
@@ -221,7 +223,7 @@ export const prepareComment = (
     if (!comment.isScrolling) {
       const nicoStaticTextureWidth = safeVisibleWidth + baseFontSize * (8 / 3);
       if (comment.width >= nicoStaticTextureWidth * 0.95 && comment.fontSize >= 35) {
-        comment.width = Math.round(canvasHeight * NICO_STATIC_WIDE_ART_WIDTH_RATIO);
+        comment.width = Math.round(canvasHeight * NICO_STATIC_WIDE_TEXTURE_WIDTH_RATIO);
       } else {
         comment.width = Math.min(comment.width, nicoStaticTextureWidth);
       }

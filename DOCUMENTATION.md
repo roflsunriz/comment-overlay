@@ -258,6 +258,12 @@ bun run nico:trace -- --url "https://www.nicovideo.jp/watch/VIDEO_ID" --video-id
 
 Chrome は `--remote-debugging-port=9222` 付きで起動してください。採取結果は `.calibration/nico/<videoId>/<case>/` に保存されます。`trace.jsonl` の各 Canvas レコードには、可能な場合 `videoCurrentTimeMs` と `videoRect` も含まれるため、`drawImage` の `x(t)` を実再生時刻に対してフィットできます。
 
+Chrome CDP でプレイヤーDOMやCanvasを取得できない場合は、Firefox DevTools RDP を使えます。Firefox をRDP待ち受け状態にしたうえで、既存タブへ `127.0.0.1:6000` 経由で接続します。
+
+```bash
+bun run nico:rdp-trace -- --video-id sm6240144 --case spell-178s-12s-rdp --reload true --start-ms 178000 --duration-ms 12000
+```
+
 `.calibration/` は校正用の一時成果物ディレクトリで、git 管理対象外です。実プレイヤーのトレース、スクリーンショット、HTMLレポート、取得済みコメントJSONはローカルで再採取・再生成してください。
 
 `comment-overlay` 側にも同じ目的の内部トレースフックがあります。ブラウザー上で次のように設定すると、描画プリミティブ単位のログを受け取れます。
@@ -304,7 +310,7 @@ const renderer = new CommentRenderer(settings, {
 
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v3.1.3`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v3.1.9`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";

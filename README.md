@@ -57,7 +57,7 @@ bun run nico:overlay-trace -- --comments .calibration/sm6240144-comments.json --
 bun run nico:report -- --real .calibration/nico/VIDEO_ID/baseline/trace.jsonl --overlay overlay-trace.jsonl --out .calibration/nico/VIDEO_ID/baseline/report.html
 ```
 
-レポートには `fillText` / `strokeText` の本文一致に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも出力されます。`246x794`、`366x806`、`1662x806` のようなコメントアート由来のテクスチャが、実プレイヤーと `comment-overlay` の双方に出ているか、また `x(t)` の速度が一致しているかを確認できます。PNG同士の簡易差分も同じHTML内で確認する場合は、`--real-image` と `--overlay-image` を追加してください。
+レポートには `fillText` / `strokeText` の本文一致に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも出力されます。`246x794`、`366x806`、`1662x806` のようなコメントアート由来のテクスチャが、実プレイヤーと `comment-overlay` の双方に出ているか、また `x(t)` の速度が一致しているかを確認できます。通常コメントについては `ordinary comment calibration` セクションで、通常 `naka` と通常 `ue` / `shita` のテクスチャ寸法、Y位置、速度をコメントアートとは分けて確認できます。PNG同士の簡易差分も同じHTML内で確認する場合は、`--real-image` と `--overlay-image` を追加してください。
 
 ## パブリッシュ手順（メンテナー向け）
 
@@ -228,7 +228,15 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 2. サンプルサーバーを起動します: `bun run serve`
 3. ブラウザーで表示される URL を開き、`overlay-tests` 内のテスト UI でコメント描画を確認できます。
 
-サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータは `overlay-tests/so45409498-comments.json` を編集して調整できます。動画データは `overlay-tests/video.mp4` と `overlay-tests/video2.mp4` に配置してください。`overlay-tests/sm6240144.mp4` と `overlay-tests/sm6240144-comments.json` がローカルにある場合は、`http://127.0.0.1:4173/?preset=cat-mario` または UI の `sm6240144 猫マリオCA` preset で 01:40 付近のコメントアート確認を開始できます。これらの `sm6240144` 用アセットはgit管理対象外です。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
+サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータと動画データは `overlay-tests/fixtures/` に配置してください。`overlay-tests/fixtures/sm6240144.mp4` と `overlay-tests/fixtures/sm6240144-comments.json` がローカルにある場合は、`http://127.0.0.1:4173/?preset=cat-mario` または UI の `sm6240144 猫マリオCA` preset で 01:40 付近のコメントアート確認を開始できます。これらの `sm6240144` 用アセットはgit管理対象外です。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
+
+v3.1.6 では、ニコニコ互換の `full` 横流れコメントについて、横長 `ender full` ロゴの幅スナップと表示開始 lead を調整しました。GRADIUS / XEVIOUS のような横長コメントアートで、行ごとのキャッシュ幅不足によって右端が切れる問題を抑制しています。また、同時刻に複数行の `ue` コメントが出る場合の上固定コメントの縦積みを改善しました。
+
+v3.1.7 では、内部キャリブレーションtraceの `drawImage` レコードに `sourceWidth` / `sourceHeight` を追加し、通常コメントのテクスチャ寸法をコメントアートとは分けて追えるようにしました。
+
+v3.1.8 では、Firefox DevTools RDP による実プレイヤー採取を追加し、固定 `ue` の横長コメントで実測された `1252x52` レイヤーと `0.8` 描画スケールに合わせて、横長固定コメントの幅と縮小率を調整しました。
+
+v3.1.9 では、明朝系の横長固定 `ue` コメントで実測された最終 `10px` テクスチャ描画段階を追加し、横長固定コメントが縦に潰れてクロップされる問題を軽減しました。明朝系の横長固定コメントでは横方向の描画スケールを分離し、中央寄せと見かけ幅も調整しています。
 
 より詳細なセットアップや API の使い方は [DOCUMENTATION.md](./DOCUMENTATION.md) を参照してください。
 

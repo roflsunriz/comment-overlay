@@ -13,7 +13,7 @@ export declare class Comment {
     readonly isInvisible: boolean;
     readonly isFull: boolean;
     readonly isEnder: boolean;
-    isEnderGroup: boolean;
+    hasSameVposFullMinchoEnder: boolean;
     x: number;
     y: number;
     width: number;

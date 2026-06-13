@@ -9,6 +9,7 @@ import {
   FINAL_PHASE_MIN_WINDOW_MS,
   MAX_VISIBLE_DURATION_MS,
   NICO_SCROLL_VPOS_LEAD_MS,
+  NICO_FULL_SCROLL_VPOS_LEAD_MS,
   STATIC_VISIBLE_DURATION_MS,
 } from "@/shared/constants";
 import { dumpRendererState, logEpochChange } from "@/shared/debug";
@@ -92,8 +93,13 @@ const getEffectiveCommentVposImpl = function (this: CommentRenderer, comment: Co
   return getDefaultEffectiveVpos(comment);
 };
 
-const getDefaultEffectiveVpos = (comment: Comment): number =>
-  comment.isScrolling ? Math.max(0, comment.vposMs - NICO_SCROLL_VPOS_LEAD_MS) : comment.vposMs;
+const getDefaultEffectiveVpos = (comment: Comment): number => {
+  if (!comment.isScrolling) {
+    return comment.vposMs;
+  }
+  const leadMs = comment.isFull ? NICO_FULL_SCROLL_VPOS_LEAD_MS : NICO_SCROLL_VPOS_LEAD_MS;
+  return Math.max(0, comment.vposMs - leadMs);
+};
 
 const getFinalPhaseDisplayDurationImpl = function (
   this: CommentRenderer,

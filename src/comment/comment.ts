@@ -30,7 +30,7 @@ export class Comment {
   readonly isInvisible: boolean;
   readonly isFull: boolean;
   readonly isEnder: boolean;
-  isEnderGroup = false;
+  hasSameVposFullMinchoEnder = false;
 
   x = 0;
   y = 0;

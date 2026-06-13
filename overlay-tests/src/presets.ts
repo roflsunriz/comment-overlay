@@ -20,6 +20,36 @@ export const COMMENT_PRESETS = {
     video: "./fixtures/sm6240144.mp4",
     seekSeconds: 100,
   },
+  gradius: {
+    label: "sm6240144 00:22 GRADIUS",
+    comments: "./fixtures/sm6240144-comments.json",
+    video: "./fixtures/sm6240144.mp4",
+    seekSeconds: 22,
+  },
+  xevious: {
+    label: "sm6240144 00:59 XEVIOUS",
+    comments: "./fixtures/sm6240144-comments.json",
+    video: "./fixtures/sm6240144.mp4",
+    seekSeconds: 59,
+  },
+  spelunker: {
+    label: "sm6240144 01:21 スペランカー",
+    comments: "./fixtures/sm6240144-comments.json",
+    video: "./fixtures/sm6240144.mp4",
+    seekSeconds: 81,
+  },
+  "half-fish": {
+    label: "sm6240144 01:23 半魚人",
+    comments: "./fixtures/sm6240144-comments.json",
+    video: "./fixtures/sm6240144.mp4",
+    seekSeconds: 83,
+  },
+  spell: {
+    label: "sm6240144 03:02 呪文",
+    comments: "./fixtures/sm6240144-comments.json",
+    video: "./fixtures/sm6240144.mp4",
+    seekSeconds: 182,
+  },
   "wing-monster": {
     label: "sm6240144 羽モンスターCA",
     comments: "./fixtures/sm6240144-comments.json",

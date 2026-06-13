@@ -534,14 +534,24 @@
             コメントデータ
             <select id="comment-preset">
               <option value="default">Default sample</option>
+              <option value="gradius">sm6240144 00:22 GRADIUS</option>
+              <option value="xevious">sm6240144 00:59 XEVIOUS</option>
+              <option value="spelunker">sm6240144 01:21 スペランカー</option>
+              <option value="half-fish">sm6240144 01:23 半魚人</option>
               <option value="cat-mario">sm6240144 猫マリオCA</option>
+              <option value="spell">sm6240144 03:02 呪文</option>
               <option value="wing-monster">sm6240144 羽モンスターCA</option>
               <option value="ender-dragon">sm6240144 05:46 エンダーCA</option>
             </select>
           </label>
-          <button type="button" id="cat-mario-jump" class="button-secondary">01:40 猫</button>
-          <button type="button" id="wing-monster-jump" class="button-secondary">05:13 羽</button>
-          <button type="button" id="ender-dragon-jump" class="button-secondary">05:45 竜</button>
+          <button type="button" class="button-secondary" data-comment-preset="gradius">00:22 GRADIUS</button>
+          <button type="button" class="button-secondary" data-comment-preset="xevious">00:59 XEVIOUS</button>
+          <button type="button" class="button-secondary" data-comment-preset="spelunker">01:21 探検</button>
+          <button type="button" class="button-secondary" data-comment-preset="half-fish">01:23 半魚</button>
+          <button type="button" class="button-secondary" data-comment-preset="cat-mario">01:40 猫</button>
+          <button type="button" class="button-secondary" data-comment-preset="spell">03:02 呪文</button>
+          <button type="button" class="button-secondary" data-comment-preset="wing-monster">05:13 羽</button>
+          <button type="button" class="button-secondary" data-comment-preset="ender-dragon">05:45 竜</button>
           <button type="button" id="reload-comments">再読込</button>
         </div>
 
