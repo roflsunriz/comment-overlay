@@ -7,22 +7,32 @@
   <style>
     :root {
       color-scheme: light dark;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #111;
-      color: #f5f5f5;
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background: #080a0f;
+      color: #eef4ff;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      padding: 24px;
+      padding: 22px;
       min-height: 100vh;
-      background: #0d0f14;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(40, 93, 170, 0.22), transparent 30rem),
+        radial-gradient(circle at 90% 8%, rgba(20, 184, 166, 0.14), transparent 26rem),
+        linear-gradient(180deg, #0b0f17 0%, #080a0f 46%, #0a0c11 100%);
     }
 
     main {
       margin: 0 auto;
       width: min(1182px, 100%);
-      transition: width 160ms ease;
     }
 
     main[data-stage-size="wide"] {
@@ -42,24 +52,65 @@
     }
 
     h1 {
-      font-size: 1.35rem;
-      margin: 0 0 14px;
+      font-size: clamp(1.08rem, 1.8vw, 1.42rem);
+      margin: 0;
       text-align: left;
       letter-spacing: 0;
+      font-weight: 720;
+      line-height: 1.15;
     }
 
     .player {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .app-kicker {
+      margin: 0 0 5px;
+      color: #7dd3fc;
+      font-size: 0.72rem;
+      font-weight: 760;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      border-radius: 999px;
+      background: rgba(8, 14, 24, 0.66);
+      color: #b9c8da;
+      font-size: 0.78rem;
+      font-weight: 680;
     }
 
     .video-wrapper {
       position: relative;
       aspect-ratio: 1182 / 665;
-      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 10px;
       overflow: hidden;
-      box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
+      box-shadow:
+        0 22px 70px rgba(0, 0, 0, 0.46),
+        0 1px 0 rgba(255, 255, 255, 0.05) inset;
       background: #000;
     }
 
@@ -81,18 +132,15 @@
     .controls {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
       justify-content: flex-start;
-      background: rgba(20, 20, 20, 0.65);
-      padding: 12px 16px;
-      border-radius: 8px;
     }
 
     .toolbar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 10px;
+      grid-template-columns: 1.25fr 1fr 0.95fr;
+      gap: 12px;
     }
 
     .control-group {
@@ -101,18 +149,25 @@
       gap: 8px;
       align-items: center;
       min-width: 0;
-      padding: 10px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 8px;
-      background: rgba(15, 23, 42, 0.28);
+      padding: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(20, 30, 45, 0.78), rgba(10, 15, 23, 0.82)),
+        rgba(15, 23, 42, 0.4);
+      box-shadow:
+        0 12px 34px rgba(0, 0, 0, 0.24),
+        0 1px 0 rgba(255, 255, 255, 0.04) inset;
+      backdrop-filter: blur(14px);
     }
 
     .control-group-title {
       flex: 0 0 100%;
-      margin: 0 0 2px;
-      color: #cbd5e1;
-      font-size: 0.78rem;
-      font-weight: 700;
+      margin: 0 0 4px;
+      color: #8fb3d9;
+      font-size: 0.68rem;
+      font-weight: 780;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
     }
 
@@ -120,16 +175,19 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-weight: 600;
+      color: #d7e3f2;
+      font-size: 0.86rem;
+      font-weight: 650;
     }
 
     .field-group {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      background: rgba(20, 20, 20, 0.35);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      background: rgba(8, 13, 21, 0.62);
       padding: 16px;
-      border-radius: 8px;
+      border-radius: 10px;
     }
 
     .field {
@@ -146,9 +204,9 @@
       resize: vertical;
       min-height: 80px;
       padding: 8px 10px;
-      border-radius: 6px;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      background: rgba(15, 23, 42, 0.4);
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      background: rgba(2, 6, 14, 0.62);
       color: inherit;
       font-family: inherit;
       font-size: 0.95rem;
@@ -174,9 +232,9 @@
 
     select {
       min-height: 34px;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      border-radius: 6px;
-      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      border-radius: 8px;
+      background: rgba(2, 6, 14, 0.68);
       color: inherit;
       padding: 6px 28px 6px 10px;
       font: inherit;
@@ -184,19 +242,30 @@
 
     button {
       min-height: 34px;
-      background: #1f6feb;
+      background: linear-gradient(180deg, #2b7cff, #175bd7);
       color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 7px 12px;
-      border-radius: 6px;
+      border: 1px solid rgba(125, 211, 252, 0.2);
+      padding: 7px 13px;
+      border-radius: 999px;
       cursor: pointer;
-      font-weight: 600;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+      font-weight: 720;
+      line-height: 1;
+      box-shadow:
+        0 8px 22px rgba(31, 111, 235, 0.24),
+        0 1px 0 rgba(255, 255, 255, 0.18) inset;
+      transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
     }
 
     button:hover {
-      background: #2b7cff;
-      border-color: rgba(255, 255, 255, 0.24);
+      background: linear-gradient(180deg, #3b86ff, #1f6feb);
+      border-color: rgba(125, 211, 252, 0.44);
+      box-shadow:
+        0 10px 26px rgba(31, 111, 235, 0.32),
+        0 1px 0 rgba(255, 255, 255, 0.22) inset;
     }
 
     button:active {
@@ -204,25 +273,48 @@
     }
 
     .button-secondary {
-      background: rgba(30, 41, 59, 0.86);
+      background: rgba(15, 23, 42, 0.86);
+      border-color: rgba(148, 163, 184, 0.22);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
     }
 
     .button-secondary:hover {
-      background: rgba(51, 65, 85, 0.96);
+      background: rgba(34, 48, 70, 0.96);
+      border-color: rgba(148, 163, 184, 0.38);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
     }
 
     .button-active {
-      background: #0f766e;
-      border-color: rgba(45, 212, 191, 0.5);
+      background: linear-gradient(180deg, #16a394, #0f766e);
+      border-color: rgba(45, 212, 191, 0.56);
+      box-shadow:
+        0 9px 24px rgba(20, 184, 166, 0.22),
+        0 1px 0 rgba(255, 255, 255, 0.14) inset;
+    }
+
+    .segmented {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 999px;
+      background: rgba(2, 6, 14, 0.46);
+    }
+
+    .segmented button {
+      min-height: 30px;
+      padding-inline: 10px;
+      box-shadow: none;
     }
 
     .profiler-controls {
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      border: 1px solid rgba(59, 130, 246, 0.18);
+      background: rgba(10, 21, 36, 0.58);
     }
 
     .profiler-btn {
-      background: #0ea5e9;
+      background: linear-gradient(180deg, #0ea5e9, #0369a1);
       font-size: 0.9rem;
     }
 
@@ -239,10 +331,13 @@
     }
 
     pre {
-      background: rgba(20, 20, 20, 0.65);
-      border-radius: 8px;
+      margin: 0;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      background: rgba(3, 7, 18, 0.62);
+      border-radius: 10px;
       padding: 12px 16px;
-      font-size: 0.9rem;
+      color: #cbd5e1;
+      font-size: 0.84rem;
       white-space: pre-wrap;
       word-break: break-word;
       min-height: 2.6rem;
@@ -259,27 +354,80 @@
         padding: 12px;
       }
 
+      .app-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .header-meta {
+        justify-content: flex-start;
+      }
+
       .controls {
         padding: 10px;
       }
 
       .control-group {
         flex-direction: column;
+        flex-wrap: nowrap;
         align-items: stretch;
       }
 
       .controls label,
-      button,
-      select {
+      .control-group > button,
+      .control-group > select {
+        width: auto;
+        max-width: 100%;
+        align-self: stretch;
+      }
+
+      .controls label {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .controls label:has(input[type="checkbox"]) {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .controls label select {
         width: 100%;
+      }
+
+      .segmented {
+        width: 100%;
+        align-self: stretch;
+      }
+
+      .segmented button {
+        width: auto;
+        flex: 1 1 auto;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .toolbar {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
   <main id="test-stage" data-stage-size="wide">
-    <h1>Comment Overlay Engine Demo</h1>
     <section class="player">
+      <header class="app-header">
+        <div>
+          <p class="app-kicker">Manual Calibration Console</p>
+          <h1>Comment Overlay Engine Demo</h1>
+        </div>
+        <div class="header-meta" aria-label="検証対象">
+          <span class="meta-pill">sm6240144</span>
+          <span class="meta-pill">Canvas Trace</span>
+          <span class="meta-pill">Viewport Probe</span>
+        </div>
+      </header>
+
       <div class="video-wrapper overlay-container">
         <video
           id="test-video"
@@ -341,16 +489,18 @@
 
         <div class="controls control-group">
           <p class="control-group-title">Viewport</p>
-          <button type="button" class="stage-size-button button-active" data-stage-size="wide">100%</button>
-          <button type="button" class="stage-size-button button-secondary" data-stage-size="theater">960</button>
-          <button type="button" class="stage-size-button button-secondary" data-stage-size="compact">720</button>
-          <button type="button" class="stage-size-button button-secondary" data-stage-size="mobile">480</button>
+          <div class="segmented" aria-label="表示領域">
+            <button type="button" class="stage-size-button button-active" data-stage-size="wide">100%</button>
+            <button type="button" class="stage-size-button button-secondary" data-stage-size="theater">960</button>
+            <button type="button" class="stage-size-button button-secondary" data-stage-size="compact">720</button>
+            <button type="button" class="stage-size-button button-secondary" data-stage-size="mobile">480</button>
+          </div>
           <button type="button" id="fullscreen-button">全画面</button>
         </div>
       </div>
 
       <div class="controls profiler-controls">
-        <strong>🔬 デバッグプロファイラー</strong>
+        <strong>Debug Profiler</strong>
         <button type="button" id="profiler-stats" class="profiler-btn">統計表示</button>
         <button type="button" id="profiler-download-compact" class="profiler-btn">Compact JSON</button>
         <button type="button" id="profiler-download-raw" class="profiler-btn">Raw JSON</button>
