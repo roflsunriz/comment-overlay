@@ -27,5 +27,5 @@ export declare const STATIC_COMMENT_EDGE_PADDING_PX = 5;
 export declare const STATIC_COMMENT_STACKING_PADDING_PX = 2;
 export declare const STATIC_COMMENT_SIDE_MARGIN_PX = 8;
 export declare const MIN_STATIC_FONT_SIZE_PX = 12;
-export declare const NICO_FULL_SCROLL_VPOS_LEAD_MS = 2400;
+export declare const NICO_FULL_SCROLL_VPOS_LEAD_MS = 2300;
 //# sourceMappingURL=constants.d.ts.map

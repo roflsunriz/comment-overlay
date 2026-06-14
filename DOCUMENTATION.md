@@ -167,7 +167,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 
 ### フルスクリーン表示
 
-フルスクリーンでコメントを重ね続ける場合は、`video` 要素単体ではなく `initialize({ video, container })` に渡したオーバーレイコンテナを `requestFullscreen()` してください。`CommentRenderer` はフルスクリーン変更時にキャンバスをアクティブなコンテナへ追従させ、コンテナ矩形で即時リサイズします。キャンバスは動画より前面に配置されるため、ブラウザーの全画面レイヤーでコメントが動画の背面に隠れる問題を避けられます。
+フルスクリーンでコメントを重ね続ける場合は、`video` 要素単体ではなく `initialize({ video, container })` に渡したオーバーレイコンテナを `requestFullscreen()` してください。`CommentRenderer` はフルスクリーン変更時にキャンバスをアクティブなコンテナへ追従させ、コンテナ矩形で即時リサイズします。さらに、ブラウザー側のレイアウト確定後にも再リサイズと現在時刻からの再同期を行うため、全画面直後に古いキャンバス寸法やactiveコメント座標が残る問題を避けられます。キャンバスは動画より前面に配置されるため、ブラウザーの全画面レイヤーでコメントが動画の背面に隠れる問題を避けられます。
 
 ## ロガー
 
@@ -310,7 +310,7 @@ const renderer = new CommentRenderer(settings, {
 
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v3.1.10`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v3.1.19`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";

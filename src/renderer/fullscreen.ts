@@ -28,6 +28,25 @@ const setupFullscreenHandlingImpl = function (this: CommentRenderer): void {
   void this.handleFullscreenChange();
 };
 
+const scheduleFullscreenResizePasses = (renderer: CommentRenderer): void => {
+  const runResize = (): void => {
+    const fullscreenElement = renderer.getFullscreenElement();
+    if (fullscreenElement instanceof HTMLElement) {
+      const rect = fullscreenElement.getBoundingClientRect();
+      renderer.resize(rect.width, rect.height);
+      return;
+    }
+    renderer.resize();
+  };
+
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(runResize);
+  }
+  if (typeof setTimeout === "function") {
+    setTimeout(runResize, 80);
+  }
+};
+
 const resolveResizeObserverTargetImpl = function (
   this: CommentRenderer,
   videoElement: HTMLVideoElement,
@@ -83,10 +102,12 @@ const handleFullscreenChangeImpl = async function (this: CommentRenderer): Promi
   if (fullscreenContainer) {
     const rect = fullscreenContainer.getBoundingClientRect();
     this.resize(rect.width, rect.height);
+    scheduleFullscreenResizePasses(this);
     return;
   }
 
   this.resize();
+  scheduleFullscreenResizePasses(this);
 };
 
 const resolveFullscreenContainerImpl = function (

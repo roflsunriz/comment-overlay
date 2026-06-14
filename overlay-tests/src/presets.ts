@@ -62,6 +62,13 @@ export const COMMENT_PRESETS = {
     video: "./fixtures/sm6240144.mp4",
     seekSeconds: 344.9,
   },
+  zoma: {
+    label: "sm6240144 05:45.806 ゾーマCA",
+    comments: "./fixtures/sm6240144-comments.json",
+    video: "./fixtures/sm6240144.mp4",
+    seekSeconds: 345.806,
+    pauseAfterSeek: true,
+  },
 } as const;
 
 export type CommentPresetName = keyof typeof COMMENT_PRESETS;

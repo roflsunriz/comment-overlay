@@ -53,7 +53,7 @@ const jsonLine = (value) => `${JSON.stringify(value)}\n`;
 
 const buildCanvasHookScript = () => String.raw`
 (() => {
-  const traceHookVersion = 2;
+  const traceHookVersion = 3;
   if (
     globalThis.__NICO_CANVAS_TRACE_INSTALLED__ &&
     globalThis.__NICO_CANVAS_TRACE_VERSION__ === traceHookVersion
@@ -523,14 +523,22 @@ const getVideoStateExpression = () => String.raw`
 `;
 
 const setVideoTimeExpression = (seconds) => `
-(() => {
+(async () => {
   const videos = Array.from(document.querySelectorAll("video"));
   const video = videos
     .map((item) => ({ item, rect: item.getBoundingClientRect() }))
     .sort((a, b) => (b.rect.width * b.rect.height) - (a.rect.width * a.rect.height))[0]?.item;
   if (!video) return { ok: false, reason: "video-not-found" };
+  video.pause();
   video.currentTime = ${JSON.stringify(seconds)};
-  return { ok: true, currentTime: video.currentTime };
+  const deadline = performance.now() + 5000;
+  while (performance.now() < deadline) {
+    if (Math.abs(video.currentTime - ${JSON.stringify(seconds)}) < 0.25 && video.readyState >= 2) {
+      return { ok: true, currentTime: video.currentTime, readyState: video.readyState };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return { ok: false, reason: "seek-timeout", currentTime: video.currentTime, readyState: video.readyState };
 })();
 `;
 
@@ -783,8 +791,18 @@ const main = async () => {
     if (startMs !== null) {
       await waitForUsableVideo(Runtime);
       const seekSeconds = Math.max(0, (startMs - prerollMs) / 1000);
-      await evaluate(Runtime, setVideoTimeExpression(seekSeconds));
+      const seekState = await evaluate(Runtime, setVideoTimeExpression(seekSeconds));
+      if (!seekState?.ok) {
+        throw new Error(
+          `Failed to seek video to ${seekSeconds}s: ${seekState?.reason || "unknown"} ` +
+            `(currentTime=${seekState?.currentTime ?? "unknown"})`,
+        );
+      }
       await sleep(750);
+      await evaluate(
+        Runtime,
+        "globalThis.__NICO_TRACE_DRAIN__ ? globalThis.__NICO_TRACE_DRAIN__() : []",
+      );
     }
 
     const prePlayState =

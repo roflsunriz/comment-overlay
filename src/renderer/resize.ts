@@ -1,5 +1,10 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
-import { DEFAULT_LANE_COUNT, MIN_FONT_SIZE_PX, MIN_LANE_COUNT } from "@/shared/constants";
+import {
+  DEFAULT_LANE_COUNT,
+  MIN_FONT_SIZE_PX,
+  MIN_LANE_COUNT,
+  toMilliseconds,
+} from "@/shared/constants";
 
 const NICO_SCROLL_LANE_HEIGHT_RATIO = 2.525;
 
@@ -11,7 +16,11 @@ const resizeImpl = function (this: CommentRenderer, width?: number, height?: num
     return;
   }
 
-  const rect = video.getBoundingClientRect();
+  const fullscreenParentRect =
+    this.fullscreenActive && canvas.parentElement instanceof HTMLElement
+      ? canvas.parentElement.getBoundingClientRect()
+      : null;
+  const rect = fullscreenParentRect ?? video.getBoundingClientRect();
   const currentDpr = this.canvasDpr > 0 ? this.canvasDpr : 1;
   const fallbackWidth = this.displayWidth > 0 ? this.displayWidth : canvas.width / currentDpr;
   const fallbackHeight = this.displayHeight > 0 ? this.displayHeight : canvas.height / currentDpr;
@@ -30,8 +39,6 @@ const resizeImpl = function (this: CommentRenderer, width?: number, height?: num
 
   const cssWidth = Math.max(1, Math.floor(measuredWidth));
   const cssHeight = Math.max(1, Math.floor(measuredHeight));
-  const previousDisplayWidth = this.displayWidth > 0 ? this.displayWidth : cssWidth;
-  const previousDisplayHeight = this.displayHeight > 0 ? this.displayHeight : cssHeight;
   const nextDpr = this._settings.useDprScaling ? this.resolveDevicePixelRatio() : 1;
   const pixelWidth = Math.max(1, Math.round(cssWidth * nextDpr));
   const pixelHeight = Math.max(1, Math.round(cssHeight * nextDpr));
@@ -63,32 +70,13 @@ const resizeImpl = function (this: CommentRenderer, width?: number, height?: num
     }
   }
 
-  const scaleX = previousDisplayWidth > 0 ? cssWidth / previousDisplayWidth : 1;
-  const scaleY = previousDisplayHeight > 0 ? cssHeight / previousDisplayHeight : 1;
-
-  if (scaleX !== 1 || scaleY !== 1) {
-    this.comments.forEach((comment) => {
-      if (comment.isActive) {
-        comment.x *= scaleX;
-        comment.y *= scaleY;
-        comment.width *= scaleX;
-        comment.fontSize = Math.max(
-          MIN_FONT_SIZE_PX,
-          Math.floor(Math.max(1, comment.fontSize) * scaleY),
-        );
-        comment.height = comment.fontSize;
-        comment.virtualStartX *= scaleX;
-        comment.exitThreshold *= scaleX;
-        comment.baseSpeed *= scaleX;
-        comment.speed *= scaleX;
-        comment.speedPixelsPerMs *= scaleX;
-        comment.bufferWidth *= scaleX;
-        comment.reservationWidth *= scaleX;
-      }
-    });
-  }
-
   this.calculateLaneMetrics();
+
+  this.reservedLanes.clear();
+  this.topStaticLaneReservations.length = 0;
+  this.bottomStaticLaneReservations.length = 0;
+  this.performInitialSync(toMilliseconds(video.currentTime));
+  this.draw();
 };
 
 const resolveDevicePixelRatioImpl = function (this: CommentRenderer): number {
@@ -132,6 +120,23 @@ const setupResizeHandlingImpl = function (
 ): void {
   this.cleanupResizeHandling();
 
+  let scheduledResize = false;
+  const scheduleResize = (): void => {
+    if (scheduledResize) {
+      return;
+    }
+    scheduledResize = true;
+    const run = (): void => {
+      scheduledResize = false;
+      this.resize();
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(run);
+      return;
+    }
+    run();
+  };
+
   if (this._settings.useContainerResizeObserver && this.isResizeObserverAvailable) {
     const target = this.resolveResizeObserverTarget(videoElement);
     const observer = new ResizeObserver((entries) => {
@@ -147,16 +152,25 @@ const setupResizeHandlingImpl = function (
     observer.observe(target);
     this.resizeObserver = observer;
     this.resizeObserverTarget = target;
-  } else if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
-    const onResize = (): void => {
-      this.resize();
-    };
-    window.addEventListener("resize", onResize);
-    this.addCleanup(() => window.removeEventListener("resize", onResize));
   } else {
     this.log.debug(
       "Resize handling is disabled because neither ResizeObserver nor window APIs are available.",
     );
+  }
+
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("resize", scheduleResize);
+    this.addCleanup(() => window.removeEventListener("resize", scheduleResize));
+  }
+
+  const visualViewport = typeof window !== "undefined" ? window.visualViewport : undefined;
+  if (visualViewport && typeof visualViewport.addEventListener === "function") {
+    visualViewport.addEventListener("resize", scheduleResize);
+    visualViewport.addEventListener("scroll", scheduleResize);
+    this.addCleanup(() => {
+      visualViewport.removeEventListener("resize", scheduleResize);
+      visualViewport.removeEventListener("scroll", scheduleResize);
+    });
   }
 };
 

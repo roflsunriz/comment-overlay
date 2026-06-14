@@ -137,7 +137,8 @@ const setup = async () => {
     videoEl.setAttribute("controlsList", "nofullscreen nodownload noremoteplayback");
     videoEl.setAttribute("disablePictureInPicture", "");
     videoEl.setAttribute("playsinline", "");
-    const { CommentRenderer, cloneDefaultSettings, configureDebugLogging, debugLog: exportedDebugLog, } = (await loadOverlayModule(reportStatus));
+    const { CommentRenderer, COMMENT_OVERLAY_VERSION, cloneDefaultSettings, configureDebugLogging, debugLog: exportedDebugLog, } = (await loadOverlayModule(reportStatus));
+    const loadedOverlayVersion = typeof COMMENT_OVERLAY_VERSION === "string" ? COMMENT_OVERLAY_VERSION : "unknown";
     debugLogFn = typeof exportedDebugLog === "function" ? exportedDebugLog : null;
     const query = new URLSearchParams(window.location.search);
     const presetParam = query.get("preset");
@@ -478,13 +479,32 @@ const setup = async () => {
         const rect = containerEl.getBoundingClientRect();
         const canvas = renderer.canvas;
         const fullscreen = getFullscreenElement() === containerEl ? "オン" : "オフ";
+        const activeComments = renderer.activeComments ? Array.from(renderer.activeComments) : [];
+        const fullSample = activeComments
+            .filter((comment) => comment.isScrolling === true && comment.isFull === true)
+            .sort((a, b) => Math.max(b.width ?? 0, b.height ?? 0) - Math.max(a.width ?? 0, a.height ?? 0))[0];
+        const fullSampleStatus = fullSample
+            ? ` / Full: x=${Math.round(fullSample.x ?? 0)}, y=${Math.round(fullSample.y ?? 0)}, ` +
+                `w=${Math.round(fullSample.width ?? 0)}, h=${Math.round(fullSample.height ?? 0)}, ` +
+                `色=${fullSample.color ?? "?"}`
+            : "";
         viewportStatusEl.textContent =
-            `表示領域: ${Math.round(rect.width)} x ${Math.round(rect.height)} / ` +
+            `CO: ${loadedOverlayVersion} / ` +
+                `表示領域: ${Math.round(rect.width)} x ${Math.round(rect.height)} / ` +
                 `Canvas: ${canvas?.width ?? 0} x ${canvas?.height ?? 0} / ` +
-                `DPR: ${window.devicePixelRatio.toFixed(2)} / 全画面: ${fullscreen}`;
+                `DPR: ${window.devicePixelRatio.toFixed(2)} / 全画面: ${fullscreen}` +
+                fullSampleStatus;
     };
     const refreshViewportSoon = () => {
         requestAnimationFrame(() => {
+            const rect = containerEl.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                renderer.resize(rect.width, rect.height);
+            }
+            else {
+                renderer.resize();
+            }
+            syncRendererAtVideoTime();
             updateViewportStatus();
             captureVideoEvent("viewport-check");
         });
@@ -636,6 +656,22 @@ const setup = async () => {
         videoEl.currentTime = timeInSeconds;
         await seeked.catch(() => undefined);
     };
+    const syncRendererAtVideoTime = () => {
+        const timeMs = videoEl.currentTime * 1000;
+        if (typeof renderer.performInitialSync === "function") {
+            renderer.performInitialSync(timeMs);
+            renderer.draw();
+            return;
+        }
+        if (typeof renderer.processFrame === "function") {
+            renderer.processFrame(timeMs);
+            return;
+        }
+        if (typeof renderer.updateComments === "function") {
+            renderer.updateComments(timeMs);
+        }
+        renderer.draw();
+    };
     const pauseVideo = async () => {
         if (videoEl.paused) {
             return false;
@@ -785,8 +821,15 @@ const setup = async () => {
         await loadComments();
         if (preset.seekSeconds > 0) {
             await seekVideo(preset.seekSeconds);
-            await resumeVideo();
-            reportStatus(`${preset.label} を読み込み、${preset.seekSeconds.toFixed(0)}秒へ移動しました。`);
+            if ("pauseAfterSeek" in preset && preset.pauseAfterSeek) {
+                await pauseVideo();
+                syncRendererAtVideoTime();
+                reportStatus(`${preset.label} を読み込み、${preset.seekSeconds.toFixed(3)}秒で停止しました。`);
+            }
+            else {
+                await resumeVideo();
+                reportStatus(`${preset.label} を読み込み、${preset.seekSeconds.toFixed(0)}秒へ移動しました。`);
+            }
         }
         refreshViewportSoon();
     };

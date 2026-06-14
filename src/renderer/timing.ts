@@ -210,6 +210,7 @@ const onSeekImpl = function (this: CommentRenderer): void {
     comment.isActive = false;
     this.activeComments.delete(comment);
     comment.lane = -1;
+    comment.hasShown = false;
     comment.clearActivation();
 
     if (this.shouldActivateCommentAtTime(comment, this.currentTime, preview)) {

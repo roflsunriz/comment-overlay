@@ -37,7 +37,9 @@
     "nico:trace": "bun scripts/nico-trace.mjs",
     "nico:rdp-trace": "bun scripts/nico-rdp-trace.mjs",
     "nico:report": "bun scripts/nico-report.mjs",
-    "nico:overlay-trace": "bun scripts/nico-overlay-trace.mjs"
+    "nico:overlay-trace": "bun scripts/nico-overlay-trace.mjs",
+    "nico:strict-score": "node scripts/nico-strict-score.mjs",
+    "nico:internal-score": "node scripts/nico-internal-score.mjs"
   },
   "keywords": [
     "comment",

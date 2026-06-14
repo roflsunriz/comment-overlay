@@ -85,24 +85,32 @@ const getShadowParams = (
 };
 
 const getStrokeWidth = (): number => 2.8;
+const NICO_REFERENCE_HEIGHT_PX = 665;
 const NICO_FULL_BIG_FINAL_WIDTH_PX = 566;
 const NICO_FULL_BIG_FINAL_HEIGHT_PX = 808;
+const NICO_FULL_BIG_FINAL_WIDTH_RATIO = NICO_FULL_BIG_FINAL_WIDTH_PX / NICO_REFERENCE_HEIGHT_PX;
+const NICO_FULL_BIG_FINAL_HEIGHT_RATIO = NICO_FULL_BIG_FINAL_HEIGHT_PX / NICO_REFERENCE_HEIGHT_PX;
 const NICO_FULL_BIG_SOURCE_WIDTH_PX = 1098;
 const NICO_FULL_BIG_SOURCE_HEIGHT_PX = 1530;
 const NICO_FULL_BIG_SOURCE_PADDING_X_PX = 20.9;
 const NICO_FULL_BIG_SOURCE_BASELINE_Y_PX = 58.9;
 const NICO_FULL_BIG_SOURCE_LINE_HEIGHT_RATIO = 45.23908523908523 / 39;
+const NICO_FULL_MEDIUM_SOURCE_PADDING_X_PX = 14.9;
+const NICO_FULL_MEDIUM_SOURCE_BASELINE_Y_PX = 41.9;
+const NICO_FULL_MEDIUM_SOURCE_LINE_HEIGHT_RATIO = 28.92708257149126 / 27;
 const NICO_FULL_BIG_FINAL_FONT_SIZE_PX = 20;
 const NICO_FULL_BIG_FINAL_PADDING_X_PX = 11.4;
 const NICO_FULL_BIG_FINAL_BASELINE_Y_PX = 31.4;
 const NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX = 23.87692307692307;
 const NICO_FULL_DRAW_Y_OFFSET_PX = 2.4;
-const NICO_FULL_MINCHO_SYNC_FONT_SIZE_PX = 20;
 const NICO_FULL_MINCHO_SYNC_CANVAS_SCALE = 2;
 const NICO_FULL_MINCHO_SYNC_BIG_PADDING_Y_PX = 66.9;
 const NICO_FULL_MINCHO_SYNC_MEDIUM_PADDING_Y_PX = 55.6;
-const NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_X_PX = 46;
-const NICO_FULL_MINCHO_SYNC_BOTTOM_MARGIN_PX = 0.4;
+const NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_X_PX = 59;
+const NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_REFERENCE_HEIGHT_PX = 810;
+const NICO_FULL_MINCHO_SYNC_BASE_TEXTURE_PADDING_Y_PX = 21.5;
+const NICO_FULL_MINCHO_SYNC_TALL_TEXTURE_HEIGHT_PX = 878;
+const NICO_FULL_MINCHO_SYNC_BIG_TEXTURE_HEIGHT_PX = 900;
 const NICO_STATIC_WIDE_FINAL_FONT_SIZE_PX = 10;
 const NICO_STATIC_WIDE_FINAL_PADDING_X_PX = 6.75;
 const NICO_STATIC_WIDE_FINAL_BASELINE_Y_PX = 16.75;
@@ -149,11 +157,17 @@ const getTexturePadding = (
   const isFullScrolling = comment.isScrolling && comment.isFull;
   if (isFullScrolling) {
     if (comment.hasSameVposFullMinchoEnder) {
+      const textureHeight = Math.ceil(comment.height);
       return {
         paddingX: Math.max(10, comment.fontSize * 0.5),
-        paddingY: 0,
+        paddingY:
+          textureHeight >= NICO_FULL_MINCHO_SYNC_BIG_TEXTURE_HEIGHT_PX
+            ? NICO_FULL_MINCHO_SYNC_BIG_PADDING_Y_PX
+            : textureHeight >= NICO_FULL_MINCHO_SYNC_TALL_TEXTURE_HEIGHT_PX
+              ? NICO_FULL_MINCHO_SYNC_MEDIUM_PADDING_Y_PX
+              : NICO_FULL_MINCHO_SYNC_BASE_TEXTURE_PADDING_Y_PX,
         textureWidth: Math.ceil(comment.width),
-        textureHeight: Math.ceil(comment.height),
+        textureHeight,
       };
     }
     const synchronizedFullMinchoPaddingY =
@@ -245,7 +259,8 @@ const getStaticWideVisibleWidth = (comment: Comment): number =>
 
 const getTextureDrawOffsetX = (comment: Comment): number =>
   comment.isScrolling && comment.isFull && comment.hasSameVposFullMinchoEnder
-    ? NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_X_PX
+    ? NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_X_PX *
+      Math.min(1, comment.height / NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_REFERENCE_HEIGHT_PX)
     : 0;
 
 type TextureDrawPlacement = {
@@ -349,7 +364,7 @@ const createSegmentDrawer = (
 };
 
 const generateTextureCacheKey = (comment: Comment): string => {
-  return `v6::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.fontWeight}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lineHeightPx}::${comment.lines.length}`;
+  return `v8::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.fontWeight}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lineHeightPx}::${comment.width}::${comment.height}::${comment.lines.length}`;
 };
 
 type TexturePass = {
@@ -367,26 +382,6 @@ type TextureProfile = {
   output: TexturePass;
   traces?: TexturePass[];
 };
-
-const getSynchronizedMultilinePassLineHeight = (
-  comment: Comment,
-  passHeight: number,
-  canvasScale: number,
-): number => {
-  const lineCount = Math.max(1, comment.lines.length);
-  if (lineCount <= 1) {
-    return NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX;
-  }
-  const logicalHeight = passHeight / canvasScale;
-  const availableHeight = Math.max(
-    NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
-    logicalHeight - NICO_FULL_BIG_FINAL_BASELINE_Y_PX - NICO_FULL_MINCHO_SYNC_BOTTOM_MARGIN_PX,
-  );
-  return availableHeight / (lineCount - 1);
-};
-
-const getSynchronizedMultilinePassFontSize = (lineHeight: number): number =>
-  Math.min(NICO_FULL_MINCHO_SYNC_FONT_SIZE_PX, Math.max(1, lineHeight * 0.95));
 
 const createTexturePass = (
   comment: Comment,
@@ -455,51 +450,85 @@ const resolveTextureProfile = (
   textureWidth: number,
   textureHeight: number,
 ): TextureProfile | null => {
-  if (
+  const matchesScaledFullBig =
     comment.isScrolling &&
     comment.isFull &&
     comment.fontSize >= 35 &&
-    textureWidth === NICO_FULL_BIG_FINAL_WIDTH_PX &&
-    textureHeight === NICO_FULL_BIG_FINAL_HEIGHT_PX
-  ) {
+    Math.abs(
+      textureWidth -
+        comment.height * (NICO_FULL_BIG_FINAL_WIDTH_RATIO / NICO_FULL_BIG_FINAL_HEIGHT_RATIO),
+    ) <= 2 &&
+    Math.abs(
+      textureHeight -
+        textureWidth * (NICO_FULL_BIG_FINAL_HEIGHT_RATIO / NICO_FULL_BIG_FINAL_WIDTH_RATIO),
+    ) <= 3;
+
+  if (matchesScaledFullBig) {
+    const scale = textureHeight / NICO_FULL_BIG_FINAL_HEIGHT_PX;
     return {
       traces: [
         {
-          width: NICO_FULL_BIG_SOURCE_WIDTH_PX,
-          height: NICO_FULL_BIG_SOURCE_HEIGHT_PX,
+          width: Math.round(NICO_FULL_BIG_SOURCE_WIDTH_PX * scale),
+          height: Math.round(NICO_FULL_BIG_SOURCE_HEIGHT_PX * scale),
           fontSize: comment.fontSize,
-          paddingX: NICO_FULL_BIG_SOURCE_PADDING_X_PX,
-          baselineY: NICO_FULL_BIG_SOURCE_BASELINE_Y_PX,
+          paddingX: NICO_FULL_BIG_SOURCE_PADDING_X_PX * scale,
+          baselineY: NICO_FULL_BIG_SOURCE_BASELINE_Y_PX * scale,
           lineHeight: comment.fontSize * NICO_FULL_BIG_SOURCE_LINE_HEIGHT_RATIO,
           sourceFont: true,
         },
       ],
       output: {
-        width: NICO_FULL_BIG_FINAL_WIDTH_PX,
-        height: NICO_FULL_BIG_FINAL_HEIGHT_PX,
-        fontSize: NICO_FULL_BIG_FINAL_FONT_SIZE_PX,
-        paddingX: NICO_FULL_BIG_FINAL_PADDING_X_PX,
-        baselineY: NICO_FULL_BIG_FINAL_BASELINE_Y_PX,
-        lineHeight: NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX,
+        width: textureWidth,
+        height: textureHeight,
+        fontSize: NICO_FULL_BIG_FINAL_FONT_SIZE_PX * scale,
+        paddingX: NICO_FULL_BIG_FINAL_PADDING_X_PX * scale,
+        baselineY: NICO_FULL_BIG_FINAL_BASELINE_Y_PX * scale,
+        lineHeight: NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX * scale,
       },
     };
   }
 
   if (comment.isScrolling && comment.isFull && comment.hasSameVposFullMinchoEnder) {
-    const lineHeight = getSynchronizedMultilinePassLineHeight(
-      comment,
-      textureHeight,
-      NICO_FULL_MINCHO_SYNC_CANVAS_SCALE,
-    );
+    if (textureHeight <= NICO_FULL_MINCHO_SYNC_TALL_TEXTURE_HEIGHT_PX - 1) {
+      const scale = textureHeight / NICO_FULL_BIG_FINAL_HEIGHT_PX;
+      return {
+        output: {
+          width: textureWidth,
+          height: textureHeight,
+          fontSize: NICO_FULL_BIG_FINAL_FONT_SIZE_PX * scale,
+          paddingX: NICO_FULL_BIG_FINAL_PADDING_X_PX * scale,
+          baselineY: NICO_FULL_BIG_FINAL_BASELINE_Y_PX * scale,
+          lineHeight: NICO_FULL_BIG_FINAL_LINE_HEIGHT_PX * scale,
+          canvasScale: NICO_FULL_MINCHO_SYNC_CANVAS_SCALE,
+        },
+      };
+    }
+
+    if (textureHeight < NICO_FULL_MINCHO_SYNC_BIG_TEXTURE_HEIGHT_PX) {
+      return {
+        output: {
+          width: textureWidth,
+          height: textureHeight,
+          fontSize: comment.fontSize,
+          paddingX: NICO_FULL_MEDIUM_SOURCE_PADDING_X_PX,
+          baselineY: NICO_FULL_MEDIUM_SOURCE_BASELINE_Y_PX,
+          lineHeight: comment.fontSize * NICO_FULL_MEDIUM_SOURCE_LINE_HEIGHT_RATIO,
+          canvasScale: NICO_FULL_MINCHO_SYNC_CANVAS_SCALE,
+          sourceFont: true,
+        },
+      };
+    }
+
     return {
       output: {
         width: textureWidth,
         height: textureHeight,
-        fontSize: getSynchronizedMultilinePassFontSize(lineHeight),
-        paddingX: NICO_FULL_BIG_FINAL_PADDING_X_PX,
-        baselineY: NICO_FULL_BIG_FINAL_BASELINE_Y_PX,
-        lineHeight,
+        fontSize: comment.fontSize,
+        paddingX: NICO_FULL_BIG_SOURCE_PADDING_X_PX,
+        baselineY: NICO_FULL_BIG_SOURCE_BASELINE_Y_PX,
+        lineHeight: comment.fontSize * NICO_FULL_BIG_SOURCE_LINE_HEIGHT_RATIO,
         canvasScale: NICO_FULL_MINCHO_SYNC_CANVAS_SCALE,
+        sourceFont: true,
       },
     };
   }

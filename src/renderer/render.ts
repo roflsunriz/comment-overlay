@@ -69,6 +69,15 @@ const performInitialSyncImpl = function (this: CommentRenderer, frameTimeMs?: nu
     this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
   const prepareOptions = this.buildPrepareOptions(effectiveWidth);
 
+  this.activeComments.forEach((comment) => {
+    comment.isActive = false;
+    comment.clearActivation();
+  });
+  this.activeComments.clear();
+  this.reservedLanes.clear();
+  this.topStaticLaneReservations.length = 0;
+  this.bottomStaticLaneReservations.length = 0;
+
   const windowComments = this.getCommentsInTimeWindow(this.currentTime, ACTIVE_WINDOW_MS);
 
   windowComments.forEach((comment) => {
@@ -83,6 +92,7 @@ const performInitialSyncImpl = function (this: CommentRenderer, frameTimeMs?: nu
     comment.isActive = false;
     this.activeComments.delete(comment);
     comment.lane = -1;
+    comment.hasShown = false;
     comment.clearActivation();
 
     if (this.shouldActivateCommentAtTime(comment, this.currentTime)) {

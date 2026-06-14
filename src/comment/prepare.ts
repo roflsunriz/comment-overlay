@@ -10,12 +10,17 @@ export const getCommentCanvasFont = (
   `${comment.fontWeight ? `${comment.fontWeight} ` : ""}${comment.fontSize}px ${comment.fontFamily}`;
 
 const NICO_BASE_FONT_SIZE_RATIO = 27 / 665;
+const NICO_REFERENCE_HEIGHT_PX = 665;
 const MIN_SCROLL_FONT_SIZE_PX = 12;
 
 const NICO_TAB_REPLACEMENT = "\u2003\u2003";
 const NICO_STATIC_WIDE_TEXTURE_WIDTH_RATIO = 1252 / 597.38330078125;
-const NICO_FULL_SMALL_WIDTH_BUCKETS = [366, 510, 1662] as const;
-const NICO_FULL_BIG_WIDTH_PX = 566;
+const NICO_FULL_SMALL_WIDTH_BUCKET_RATIOS = [
+  366 / NICO_REFERENCE_HEIGHT_PX,
+  510 / NICO_REFERENCE_HEIGHT_PX,
+  1662 / NICO_REFERENCE_HEIGHT_PX,
+] as const;
+const NICO_FULL_BIG_WIDTH_RATIO = 566 / NICO_REFERENCE_HEIGHT_PX;
 const NICO_FULL_SMALL_HEIGHT_RATIO = 806 / 665;
 const NICO_FULL_BIG_HEIGHT_RATIO = 808 / 665;
 const NICO_FULL_MINCHO_BIG_WIDTH_RATIO = 1176 / 665;
@@ -26,20 +31,26 @@ const NICO_FULL_MINCHO_SYNC_MEMBER_BIG_WIDTH_RATIO = 1126 / 665;
 const NICO_FULL_MINCHO_SYNC_SPARSE_MEMBER_WIDTH_RATIO = 1046 / 665;
 const NICO_FULL_MINCHO_SYNC_SPARSE_ENDER_WIDTH_RATIO = 1254 / 665;
 const NICO_FULL_MINCHO_SYNC_MEMBER_MEDIUM_WIDTH_RATIO = 1140 / 665;
-const NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO = 1;
+const NICO_FULL_MINCHO_SYNC_MEMBER_MEDIUM_HEIGHT_RATIO = 878 / 665;
 const NICO_FULL_SCROLL_X_OFFSET_RATIO = 0.25;
-const NICO_FULL_SCROLL_MIN_X_OFFSET_PX = 160;
-const NICO_FULL_SCROLL_MAX_X_OFFSET_PX = 420;
+const NICO_FULL_SCROLL_MIN_X_OFFSET_BASE_PX = 160;
+const NICO_FULL_SCROLL_MAX_X_OFFSET_BASE_PX = 420;
 const NICO_SCROLL_EXTENSION_BASE_PX = 80;
 const NICO_SCROLL_EXTENSION_WIDTH_RATIO = 0.18;
-const NICO_SCROLL_EXTENSION_WIDE_THRESHOLD_PX = 400;
+const NICO_SCROLL_EXTENSION_WIDE_THRESHOLD_BASE_PX = 400;
 const NICO_SCROLL_EXTENSION_WIDE_RATIO = 0.2;
-const NICO_SCROLL_EXTENSION_MAX_PX = 420;
-const NICO_SCROLL_EXIT_EXTENSION_THRESHOLD_PX = 250;
+const NICO_SCROLL_EXTENSION_MAX_BASE_PX = 420;
+const NICO_SCROLL_EXIT_EXTENSION_THRESHOLD_BASE_PX = 250;
 const NICO_SCROLL_EXIT_EXTENSION_RATIO = 1.8;
-const NICO_SCROLL_EXIT_EXTENSION_MAX_PX = 420;
+const NICO_SCROLL_EXIT_EXTENSION_MAX_BASE_PX = 420;
 const NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX = 20;
 const NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO = 0.045;
+
+const getHeightScale = (canvasHeight: number): number =>
+  Math.max(0.01, canvasHeight / NICO_REFERENCE_HEIGHT_PX);
+
+const scaleReferencePx = (value: number, canvasHeight: number): number =>
+  value * getHeightScale(canvasHeight);
 
 const normalizeCommentTextForCanvas = (text: string): string =>
   text.replaceAll("\t", NICO_TAB_REPLACEMENT);
@@ -58,53 +69,58 @@ const ensureLines = (text: string): string[] => {
 const clampFontSize = (value: number, minSize = MIN_SCROLL_FONT_SIZE_PX): number =>
   Math.max(minSize, value);
 
-const snapFullCommentWidth = (comment: Comment): number => {
+const snapFullCommentWidth = (comment: Comment, canvasHeight: number): number => {
   if (comment.fontSize >= 35) {
-    return NICO_FULL_BIG_WIDTH_PX;
+    return Math.round(canvasHeight * NICO_FULL_BIG_WIDTH_RATIO);
   }
   const rawLines = comment.text.split(/\r?\n/);
   const maxRawLineLength = Math.max(0, ...rawLines.map((line) => line.length));
   if (comment.isEnder && maxRawLineLength >= 25) {
-    return NICO_FULL_SMALL_WIDTH_BUCKETS[2];
+    return Math.round(canvasHeight * NICO_FULL_SMALL_WIDTH_BUCKET_RATIOS[2]);
   }
   const maxRawTabCount = Math.max(0, ...rawLines.map((line) => (line.match(/\t/g) || []).length));
   if (maxRawTabCount >= 12) {
-    return NICO_FULL_SMALL_WIDTH_BUCKETS[2];
+    return Math.round(canvasHeight * NICO_FULL_SMALL_WIDTH_BUCKET_RATIOS[2]);
   }
   if (comment.width >= 1_200) {
-    return NICO_FULL_SMALL_WIDTH_BUCKETS[2];
+    return Math.round(canvasHeight * NICO_FULL_SMALL_WIDTH_BUCKET_RATIOS[2]);
   }
   if (comment.width >= 300) {
-    return NICO_FULL_SMALL_WIDTH_BUCKETS[1];
+    return Math.round(canvasHeight * NICO_FULL_SMALL_WIDTH_BUCKET_RATIOS[1]);
   }
-  return NICO_FULL_SMALL_WIDTH_BUCKETS[0];
+  return Math.round(canvasHeight * NICO_FULL_SMALL_WIDTH_BUCKET_RATIOS[0]);
 };
 
-const getFullScrollXOffset = (motionWidth: number): number =>
-  Math.min(
-    NICO_FULL_SCROLL_MAX_X_OFFSET_PX,
-    Math.max(NICO_FULL_SCROLL_MIN_X_OFFSET_PX, motionWidth * NICO_FULL_SCROLL_X_OFFSET_RATIO),
+const getFullScrollXOffset = (motionWidth: number, canvasHeight: number): number => {
+  return Math.min(
+    scaleReferencePx(NICO_FULL_SCROLL_MAX_X_OFFSET_BASE_PX, canvasHeight),
+    Math.max(
+      scaleReferencePx(NICO_FULL_SCROLL_MIN_X_OFFSET_BASE_PX, canvasHeight),
+      motionWidth * NICO_FULL_SCROLL_X_OFFSET_RATIO,
+    ),
   );
+};
 
-const getScrollMotionWidth = (comment: Comment, canvasHeight: number): number =>
-  comment.isScrolling && comment.isFull && comment.hasSameVposFullMinchoEnder
-    ? Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_SPARSE_ENDER_WIDTH_RATIO)
-    : comment.width;
-
-const getScrollDistanceExtension = (comment: Comment): number =>
-  Math.min(
-    NICO_SCROLL_EXTENSION_MAX_PX,
-    NICO_SCROLL_EXTENSION_BASE_PX +
+const getScrollDistanceExtension = (comment: Comment, canvasHeight: number): number => {
+  const wideThreshold = scaleReferencePx(
+    NICO_SCROLL_EXTENSION_WIDE_THRESHOLD_BASE_PX,
+    canvasHeight,
+  );
+  return Math.min(
+    scaleReferencePx(NICO_SCROLL_EXTENSION_MAX_BASE_PX, canvasHeight),
+    scaleReferencePx(NICO_SCROLL_EXTENSION_BASE_PX, canvasHeight) +
       comment.width * NICO_SCROLL_EXTENSION_WIDTH_RATIO +
-      Math.max(0, comment.width - NICO_SCROLL_EXTENSION_WIDE_THRESHOLD_PX) *
-        NICO_SCROLL_EXTENSION_WIDE_RATIO,
+      Math.max(0, comment.width - wideThreshold) * NICO_SCROLL_EXTENSION_WIDE_RATIO,
   );
+};
 
-const getScrollExitExtension = (comment: Comment): number =>
+const getScrollExitExtension = (comment: Comment, canvasHeight: number): number =>
   Math.min(
-    NICO_SCROLL_EXIT_EXTENSION_MAX_PX,
-    Math.max(0, comment.width - NICO_SCROLL_EXIT_EXTENSION_THRESHOLD_PX) *
-      NICO_SCROLL_EXIT_EXTENSION_RATIO,
+    scaleReferencePx(NICO_SCROLL_EXIT_EXTENSION_MAX_BASE_PX, canvasHeight),
+    Math.max(
+      0,
+      comment.width - scaleReferencePx(NICO_SCROLL_EXIT_EXTENSION_THRESHOLD_BASE_PX, canvasHeight),
+    ) * NICO_SCROLL_EXIT_EXTENSION_RATIO,
   );
 
 const getNonEmptyLineCount = (comment: Comment): number =>
@@ -113,6 +129,19 @@ const getNonEmptyLineCount = (comment: Comment): number =>
 
 const isSparseMultilineLayer = (comment: Comment): boolean =>
   comment.lines.length > 1 && getNonEmptyLineCount(comment) === 1;
+
+const getNonEmptyLineTokens = (comment: Comment): string[] =>
+  comment.lines
+    .map((line) => line.replace(NICO_LAYOUT_BLANK_CHARS_PATTERN, ""))
+    .filter((line) => line.length > 0);
+
+const isNarrowMarkerMultilineLayer = (comment: Comment): boolean => {
+  if (comment.lines.length <= 1) {
+    return false;
+  }
+  const tokens = getNonEmptyLineTokens(comment);
+  return tokens.length === 1 && /^[●○◉◎]+$/u.test(tokens[0]);
+};
 
 const isLargeComment = (comment: Comment): boolean =>
   comment.size === "big" || comment.fontSize >= 35;
@@ -176,13 +205,13 @@ export const prepareComment = (
       ) {
         comment.width = Math.round(
           canvasHeight *
-            (isSparseMultilineLayer(comment)
+            (isNarrowMarkerMultilineLayer(comment)
               ? NICO_FULL_MINCHO_SYNC_SPARSE_MEMBER_WIDTH_RATIO
               : NICO_FULL_MINCHO_SYNC_MEMBER_BIG_WIDTH_RATIO),
         );
         comment.height = Math.max(
           comment.height,
-          Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO),
+          Math.round(canvasHeight * NICO_FULL_MINCHO_MEDIUM_HEIGHT_RATIO),
         );
       } else if (
         isFullMinchoMultiline &&
@@ -198,16 +227,26 @@ export const prepareComment = (
         );
         comment.height = Math.max(
           comment.height,
-          Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO),
+          Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_HEIGHT_RATIO),
         );
       } else if (isFullMinchoMultiline && comment.hasSameVposFullMinchoEnder && comment.isEnder) {
-        comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_MEMBER_MEDIUM_WIDTH_RATIO);
+        comment.width = Math.round(
+          canvasHeight *
+            (isSparseMultilineLayer(comment)
+              ? NICO_FULL_MINCHO_SYNC_SPARSE_ENDER_WIDTH_RATIO
+              : NICO_FULL_MINCHO_SYNC_MEMBER_MEDIUM_WIDTH_RATIO),
+        );
         comment.height = Math.max(
           comment.height,
-          Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_HEIGHT_RATIO),
+          Math.round(canvasHeight * NICO_FULL_MINCHO_SYNC_MEMBER_MEDIUM_HEIGHT_RATIO),
         );
       } else if (isFullMinchoMultiline && isLargeComment(comment)) {
-        comment.width = Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_WIDTH_RATIO);
+        comment.width = Math.round(
+          canvasHeight *
+            (isNarrowMarkerMultilineLayer(comment)
+              ? NICO_FULL_MINCHO_SYNC_SPARSE_MEMBER_WIDTH_RATIO
+              : NICO_FULL_MINCHO_BIG_WIDTH_RATIO),
+        );
         comment.height = Math.max(
           comment.height,
           Math.round(canvasHeight * NICO_FULL_MINCHO_BIG_HEIGHT_RATIO),
@@ -222,7 +261,7 @@ export const prepareComment = (
         const fullHeightRatio = isLargeComment(comment)
           ? NICO_FULL_BIG_HEIGHT_RATIO
           : NICO_FULL_SMALL_HEIGHT_RATIO;
-        comment.width = snapFullCommentWidth(comment);
+        comment.width = snapFullCommentWidth(comment, canvasHeight);
         comment.height = Math.max(comment.height, Math.round(canvasHeight * fullHeightRatio));
       }
     }
@@ -254,26 +293,33 @@ export const prepareComment = (
     comment.staticExpiryTimeMs = null;
     const maxReservationWidth = measureTextWidth(ctx, "??".repeat(150));
 
-    const motionWidth = getScrollMotionWidth(comment, canvasHeight);
-    const bufferFromWidth = motionWidth * Math.max(options.bufferRatio, 0);
+    const bufferFromWidth = comment.width * Math.max(options.bufferRatio, 0);
     comment.bufferWidth = Math.max(options.baseBufferPx, bufferFromWidth);
     const entryBuffer = Math.max(options.entryBufferPx, comment.bufferWidth);
 
     const direction = comment.scrollDirection;
 
-    const fullScrollXOffset = comment.isFull ? getFullScrollXOffset(motionWidth) : 0;
-    const fullScrollSpeedExtension = comment.isFull
-      ? NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX +
-        motionWidth * NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO
+    const fullMotionScale = Math.min(1, canvasHeight / NICO_REFERENCE_HEIGHT_PX);
+    const virtualExtension = comment.isFull
+      ? options.virtualExtension * fullMotionScale
+      : options.virtualExtension;
+    const fullScrollXOffset = comment.isFull
+      ? getFullScrollXOffset(comment.width, canvasHeight)
       : 0;
-    const scrollDistanceExtension = comment.isFull ? 0 : getScrollDistanceExtension(comment);
-    const scrollExitExtension = comment.isFull ? 0 : getScrollExitExtension(comment);
+    const fullScrollSpeedExtension = comment.isFull
+      ? scaleReferencePx(NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX, canvasHeight) +
+        comment.width * NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO
+      : 0;
+    const scrollDistanceExtension = comment.isFull
+      ? 0
+      : getScrollDistanceExtension(comment, canvasHeight);
+    const scrollExitExtension = comment.isFull ? 0 : getScrollExitExtension(comment, canvasHeight);
     const startLeft =
       direction === "rtl"
-        ? safeVisibleWidth + options.virtualExtension + fullScrollXOffset + scrollDistanceExtension
+        ? safeVisibleWidth + virtualExtension + fullScrollXOffset + scrollDistanceExtension
         : -comment.width -
           comment.bufferWidth -
-          options.virtualExtension -
+          virtualExtension -
           fullScrollXOffset -
           scrollDistanceExtension;
     const exitLeft =
@@ -310,10 +356,10 @@ export const prepareComment = (
 
     const visibleDistance =
       safeVisibleWidth +
-      motionWidth +
+      comment.width +
       comment.bufferWidth +
       entryBuffer +
-      options.virtualExtension +
+      virtualExtension +
       fullScrollSpeedExtension +
       scrollDistanceExtension * 2 +
       scrollExitExtension;
