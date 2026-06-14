@@ -31,35 +31,12 @@ bun install
 - `bun run type-check`: `tsconfig.build.json` を用いた型チェックを実行します。
 - `bun run serve`: `overlay-tests` ディレクトリを静的サーバーで起動し、ビルド成果物を使って動作確認できます。
 - `bun run nico:trace -- ...`: CDP 接続した Chrome 上のニコニコ動画プレイヤーから Canvas 描画ログとスクリーンショットを採取します。
-- `bun run nico:overlay-trace -- ...`: 生コメントJSONを `comment-overlay` で描画し、校正用トレースを採取します。
+- `bun run nico:overlay-trace -- ...`: 生コメントJSONを `comment-overlay` で描画し、校正トレースを採取します。
 - `bun run nico:report -- ...`: 実プレイヤー採取ログと `comment-overlay` 側ログの差分レポートを生成します。
 - `bun run nico:strict-score -- ...`: 実プレイヤーと `comment-overlay` の `drawImage` 外側レイヤー位置を数値比較します。
 - `bun run nico:internal-score -- ...`: 実プレイヤーと `comment-overlay` のソースキャンバス内部 `fillText` 配置を数値比較します。
 
 開発にあたり、変更後は `bun run lint`、`bun run type-check`、`bun run build` を順番に実行して品質を確認してください。
-
-## ニコニコ実プレイヤー計測
-
-`scripts/nico-trace.mjs` は、ログイン済み Chrome を CDP 経由で計測し、ニコニコ実プレイヤーの Canvas 描画呼び出しを JSONL として保存する開発用ツールです。Chrome はあらかじめ `--remote-debugging-port=9222` 付きで起動してください。
-
-```bash
-bun run nico:trace -- --url "https://www.nicovideo.jp/watch/VIDEO_ID" --video-id VIDEO_ID --case baseline --start-ms 60000 --duration-ms 5000
-```
-
-出力は `.calibration/nico/<videoId>/<case>/` に保存されます。主な成果物は `trace.jsonl`、`network-comments.json`、`screenshots/*.png`、`meta.json` です。`trace.jsonl` の各 Canvas レコードには、可能な場合 `videoCurrentTimeMs` と `videoRect` も含まれるため、コメントの `x(t)` を実再生時刻に対して比較できます。
-
-`.calibration/` は校正用の一時成果物ディレクトリで、git 管理対象外です。必要な教師データ、スクリーンショット、レポートはローカルで再採取・再生成してください。
-
-`comment-overlay` 側の描画ログを採取したい場合は、ブラウザー上で `globalThis.__COMMENT_OVERLAY_TRACE_ENABLED__ = true` と `globalThis.__COMMENT_OVERLAY_TRACE__ = (record) => { ... }` を設定します。これは校正用の内部フックで、公開 API ではありません。
-
-実プレイヤーと `comment-overlay` のトレースを比較するには次を実行します。
-
-```bash
-bun run nico:overlay-trace -- --comments .calibration/sm6240144-comments.json --out .calibration/nico/sm6240144/overlay-cat-mario-100s-30s --width 1182 --height 665 --start-ms 100000 --duration-ms 30000 --fps 15
-bun run nico:report -- --real .calibration/nico/VIDEO_ID/baseline/trace.jsonl --overlay overlay-trace.jsonl --out .calibration/nico/VIDEO_ID/baseline/report.html
-```
-
-レポートには `fillText` / `strokeText` の本文一致に加えて、`drawImage` の source canvas 寸法 bucket と軌跡フィットも出力されます。`246x794`、`366x806`、`1662x806` のようなコメントアート由来のテクスチャが、実プレイヤーと `comment-overlay` の双方に出ているか、また `x(t)` の速度が一致しているかを確認できます。通常コメントについては `ordinary comment calibration` セクションで、通常 `naka` と通常 `ue` / `shita` のテクスチャ寸法、Y位置、速度をコメントアートとは分けて確認できます。PNG同士の簡易差分も同じHTML内で確認する場合は、`--real-image` と `--overlay-image` を追加してください。
 
 ## パブリッシュ手順（メンテナー向け）
 
@@ -232,23 +209,6 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 
 サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータと動画データは `overlay-tests/fixtures/` に配置してください。`overlay-tests/fixtures/sm6240144.mp4` と `overlay-tests/fixtures/sm6240144-comments.json` がローカルにある場合は、`http://127.0.0.1:4173/?preset=cat-mario` または UI の `sm6240144 猫マリオCA` preset で 01:40 付近のコメントアート確認を開始できます。これらの `sm6240144` 用アセットはgit管理対象外です。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
 
-v3.1.6 では、ニコニコ互換の `full` 横流れコメントについて、横長 `ender full` ロゴの幅スナップと表示開始 lead を調整しました。GRADIUS / XEVIOUS のような横長コメントアートで、行ごとのキャッシュ幅不足によって右端が切れる問題を抑制しています。また、同時刻に複数行の `ue` コメントが出る場合の上固定コメントの縦積みを改善しました。
-
-v3.1.7 では、内部キャリブレーションtraceの `drawImage` レコードに `sourceWidth` / `sourceHeight` を追加し、通常コメントのテクスチャ寸法をコメントアートとは分けて追えるようにしました。
-
-v3.1.8 では、Firefox DevTools RDP による実プレイヤー採取を追加し、固定 `ue` の横長コメントで実測された `1252x52` レイヤーと `0.8` 描画スケールに合わせて、横長固定コメントの幅と縮小率を調整しました。
-
-v3.1.9 では、明朝系の横長固定 `ue` コメントで実測された最終 `10px` テクスチャ描画段階を追加し、横長固定コメントが縦に潰れてクロップされる問題を軽減しました。明朝系の横長固定コメントでは横方向の描画スケールを分離し、中央寄せと見かけ幅も調整しています。
-
-v3.1.10 では、同一時刻の `full` / `mincho` / 複数行コメント群で、行数の少ない同期レイヤーだけが上側に圧縮される問題を修正しました。同期レイヤーの内部行間を論理キャンバス高と行数から計算し、密な複数行レイヤーでは行ピッチに合わせて内部フォントサイズを抑制することで、前景だけが太りすぎる問題も軽減しています。
-
-v3.1.11 では、CDP 採取した実プレイヤーの `drawImage` 座標に合わせて、`full` / `mincho` / 複数行コメント群のテクスチャ高さ、描画時の Y パディング、`full` 横流れコメントの vpos lead を再校正しました。同一 vpos の同期レイヤーでも各コメント自身の幅で移動量を計算し、ゾーマ/ドラゴン系の大規模コメントアートで横方向の先行と縦方向の浮きを抑えています。
-
-v3.1.12 では、同一時刻に積まれる `full` / `mincho` / 複数行コメント群の内部テクスチャ生成を、実プレイヤーの CDP `fillText` ログに合わせて高さ別に再校正しました。`900px` 級は 39px ソース描画、`878px` 級は 27px ソース描画、`810px` 級は最終 20px 描画として扱い、ゾーマ系の大規模コメントアートで外枠は合っているのに下地や前景だけが縮む問題を抑えています。校正用に外側レイヤー位置スコアと内部行配置スコアを出す `nico:strict-score` / `nico:internal-score` も追加しています。
-
-v3.1.19 では、同一時刻の `full` / `mincho` 同期レイヤーで、非空行1本のコメントを一律に狭いテクスチャへ落としていた判定を修正しました。`●` / `○` 系の狭いマーカー層だけを小幅扱いにし、赤い下地レイヤーのような1行ブロック片は通常幅へ戻すことで、ゾーマCAで下地とダークレッド層が横にずれる問題を抑えています。また、リサイズや全画面切り替え時は既存activeコメントを単純拡大せず、現在の動画時刻から再同期します。全画面遷移直後はブラウザーのレイアウト確定を待つため、即時・次フレーム・短時間遅延の複数回でリサイズを行い、fullscreen中はオーバーレイ親要素の矩形を優先してキャンバスを再配置します。`full` コメントの固定幅バケット、スクロール用の仮想延長幅、同期レイヤーの描画オフセット、スクロール距離補正の基準px値に加え、同期テクスチャ内のフォント、baseline、lineHeightも表示高比例に変更し、コメントアート系の大きな多行コメントが通常コメントと同じようにビューポート変更へ追従するようにしました。再同期時は表示済みフラグをいったん解除して現在時刻の表示窓を再構築するため、リサイズ後に古いテクスチャが残る問題を避けます。
-
-より詳細なセットアップや API の使い方は [DOCUMENTATION.md](./DOCUMENTATION.md) を参照してください。
 
 ## コントリビューション
 
