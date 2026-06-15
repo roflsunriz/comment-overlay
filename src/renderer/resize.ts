@@ -100,7 +100,9 @@ const calculateLaneMetricsImpl = function (this: CommentRenderer): void {
     this.displayHeight > 0 ? this.displayHeight : canvas.height / Math.max(this.canvasDpr, 1);
   const baseHeight = Math.max(MIN_FONT_SIZE_PX, Math.floor(effectiveHeight * (27 / 665)));
   this.laneHeight = baseHeight * NICO_SCROLL_LANE_HEIGHT_RATIO;
-  const availableLanes = Math.floor(effectiveHeight / Math.max(this.laneHeight, 1));
+  const lanePitch = Math.max(this.laneHeight, 1);
+  const verticalSafety = lanePitch;
+  const availableLanes = Math.floor(Math.max(0, effectiveHeight - verticalSafety) / lanePitch);
   if (this._settings.useFixedLaneCount) {
     const desired = Number.isFinite(this._settings.fixedLaneCount)
       ? Math.floor(this._settings.fixedLaneCount)

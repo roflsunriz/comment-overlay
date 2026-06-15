@@ -82,14 +82,18 @@ const sanitizeCommentEntry = (entry) => {
     return { text, vposMs, commands };
 };
 const extractCommentEntries = (payload) => {
+    const preferDisplayThread = (entries) => {
+        const trunkEntries = entries.filter((entry) => entry.source === "trunk");
+        return trunkEntries.length > 0 ? trunkEntries : entries;
+    };
     if (Array.isArray(payload)) {
-        return payload;
+        return preferDisplayThread(payload.filter((entry) => Boolean(entry)));
     }
     if (payload && typeof payload === "object") {
         const entries = Array.isArray(payload.comments)
             ? payload.comments
             : [];
-        return entries.map((entry) => {
+        return preferDisplayThread(entries.map((entry) => {
             if (!entry || typeof entry !== "object") {
                 return {};
             }
@@ -101,7 +105,7 @@ const extractCommentEntries = (payload) => {
                 ...candidate,
                 text: typeof candidate.body === "string" ? candidate.body : "",
             };
-        });
+        }));
     }
     return [];
 };

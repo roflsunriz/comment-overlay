@@ -39,7 +39,8 @@
     "nico:report": "bun scripts/nico-report.mjs",
     "nico:overlay-trace": "bun scripts/nico-overlay-trace.mjs",
     "nico:strict-score": "node scripts/nico-strict-score.mjs",
-    "nico:internal-score": "node scripts/nico-internal-score.mjs"
+    "nico:internal-score": "node scripts/nico-internal-score.mjs",
+    "nico:lane-reverse": "node scripts/nico-lane-reverse.mjs"
   },
   "keywords": [
     "comment",

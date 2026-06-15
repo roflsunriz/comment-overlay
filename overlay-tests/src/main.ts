@@ -20,6 +20,7 @@ type RawCommentEntry = {
   body?: unknown;
   vposMs?: unknown;
   commands?: unknown;
+  source?: unknown;
 };
 
 type RendererCommentLike = {
@@ -187,14 +188,19 @@ const sanitizeCommentEntry = (entry: unknown): CommentEntry | null => {
 };
 
 const extractCommentEntries = (payload: unknown): RawCommentEntry[] => {
+  const preferDisplayThread = (entries: RawCommentEntry[]): RawCommentEntry[] => {
+    const trunkEntries = entries.filter((entry) => entry.source === "trunk");
+    return trunkEntries.length > 0 ? trunkEntries : entries;
+  };
+
   if (Array.isArray(payload)) {
-    return payload;
+    return preferDisplayThread(payload.filter((entry): entry is RawCommentEntry => Boolean(entry)));
   }
   if (payload && typeof payload === "object") {
     const entries = Array.isArray((payload as { comments?: unknown }).comments)
       ? (payload as { comments: unknown[] }).comments
       : [];
-    return entries.map((entry: unknown): RawCommentEntry => {
+    return preferDisplayThread(entries.map((entry: unknown): RawCommentEntry => {
       if (!entry || typeof entry !== "object") {
         return {};
       }
@@ -206,7 +212,7 @@ const extractCommentEntries = (payload: unknown): RawCommentEntry[] => {
         ...candidate,
         text: typeof candidate.body === "string" ? candidate.body : "",
       };
-    });
+    }));
   }
   return [];
 };

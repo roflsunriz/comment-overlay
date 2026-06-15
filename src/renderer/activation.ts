@@ -14,6 +14,7 @@ import {
   VIRTUAL_CANVAS_EXTENSION_PX,
   toMilliseconds,
 } from "@/shared/constants";
+import { emitCalibrationTraceEvent } from "@/shared/calibration-trace";
 import { formatCommentPreview, debugLog, isDebugLoggingEnabled } from "@/shared/debug";
 
 const updateCommentsImpl = function (this: CommentRenderer, frameTimeMs?: number): void {
@@ -225,17 +226,50 @@ const findAvailableLaneImpl = function (this: CommentRenderer, comment: Comment)
   this.pruneStaticLaneReservations(currentTime);
   const laneCandidates = this.getLanePriorityOrder(currentTime);
   const newReservation = this.createLaneReservation(comment, currentTime);
+  const laneEvaluations = laneCandidates.map((lane) => {
+    const reservations = this.reservedLanes.get(lane) ?? [];
+    const blocker = reservations.find((reservation) =>
+      this.areReservationsConflicting(reservation, newReservation),
+    );
+    return {
+      lane,
+      available: blocker === undefined,
+      nextAvailableTime: this.getLaneNextAvailableTime(lane, currentTime),
+      blocker,
+    };
+  });
+  const selected = laneEvaluations.find((candidate) => candidate.available);
+  const fallbackLane = laneCandidates[laneCandidates.length - 1] ?? 0;
+  const selectedLane = selected?.lane ?? fallbackLane;
 
-  for (const lane of laneCandidates) {
-    if (this.isLaneAvailable(lane, newReservation, currentTime)) {
-      this.storeLaneReservation(lane, newReservation);
-      return lane;
-    }
-  }
-
-  const fallbackLane = laneCandidates[0] ?? 0;
-  this.storeLaneReservation(fallbackLane, newReservation);
-  return fallbackLane;
+  this.storeLaneReservation(selectedLane, newReservation);
+  emitCalibrationTraceEvent("laneDecision", comment, {
+    meta: {
+      currentTimeMs: currentTime,
+      selectedLane,
+      usedFallback: selected === undefined,
+      candidateLanes: laneEvaluations.map((candidate) => candidate.lane).join(","),
+      availableLanes: laneEvaluations
+        .filter((candidate) => candidate.available)
+        .map((candidate) => candidate.lane)
+        .join(","),
+      nextAvailableTimes: laneEvaluations
+        .map((candidate) => Math.round(candidate.nextAvailableTime))
+        .join(","),
+      blockedBy: laneEvaluations
+        .map((candidate) =>
+          candidate.blocker
+            ? `${candidate.lane}:${candidate.blocker.comment.creationIndex}@${candidate.blocker.comment.vposMs}`
+            : `${candidate.lane}:-`,
+        )
+        .join(","),
+      reservationStartTimeMs: Math.round(newReservation.startTime),
+      reservationEndTimeMs: Math.round(newReservation.endTime),
+      reservationTotalEndTimeMs: Math.round(newReservation.totalEndTime),
+      reservationWidth: Math.round(newReservation.width),
+    },
+  });
+  return selectedLane;
 };
 
 export const registerActivationMethods = (ctor: typeof CommentRenderer): void => {

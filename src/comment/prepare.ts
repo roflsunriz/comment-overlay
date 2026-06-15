@@ -45,6 +45,8 @@ const NICO_SCROLL_EXIT_EXTENSION_RATIO = 1.8;
 const NICO_SCROLL_EXIT_EXTENSION_MAX_BASE_PX = 420;
 const NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX = 20;
 const NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO = 0.045;
+const NICO_SCROLL_TEXTURE_PADDING_X_RATIO = 1.15;
+const NICO_SCROLL_RESERVATION_TEXTURE_WIDTH_RATIO = 850 / 1182;
 
 const getHeightScale = (canvasHeight: number): number =>
   Math.max(0.01, canvasHeight / NICO_REFERENCE_HEIGHT_PX);
@@ -122,6 +124,19 @@ const getScrollExitExtension = (comment: Comment, canvasHeight: number): number 
       comment.width - scaleReferencePx(NICO_SCROLL_EXIT_EXTENSION_THRESHOLD_BASE_PX, canvasHeight),
     ) * NICO_SCROLL_EXIT_EXTENSION_RATIO,
   );
+
+const getScrollReservationTextureWidth = (comment: Comment, visibleWidth: number): number => {
+  if (comment.isFull) {
+    return comment.width;
+  }
+  const baseScale = Math.max(comment.sizeScale, 1);
+  const baseFontSize = comment.fontSize / baseScale;
+  const baseWidth = comment.width / baseScale;
+  const texturePaddingX = baseFontSize * NICO_SCROLL_TEXTURE_PADDING_X_RATIO;
+  const textureWidth = baseWidth * 2 + texturePaddingX * 2;
+  const textureCap = visibleWidth * NICO_SCROLL_RESERVATION_TEXTURE_WIDTH_RATIO;
+  return Math.min(textureWidth, textureCap);
+};
 
 const getNonEmptyLineCount = (comment: Comment): number =>
   comment.lines.filter((line) => line.replace(NICO_LAYOUT_BLANK_CHARS_PATTERN, "").length > 0)
@@ -292,8 +307,12 @@ export const prepareComment = (
 
     comment.staticExpiryTimeMs = null;
     const maxReservationWidth = measureTextWidth(ctx, "??".repeat(150));
+    const motionWidth =
+      comment.isScrolling && !comment.isFull
+        ? comment.width / Math.max(comment.sizeScale, 1)
+        : comment.width;
 
-    const bufferFromWidth = comment.width * Math.max(options.bufferRatio, 0);
+    const bufferFromWidth = motionWidth * Math.max(options.bufferRatio, 0);
     comment.bufferWidth = Math.max(options.baseBufferPx, bufferFromWidth);
     const entryBuffer = Math.max(options.entryBufferPx, comment.bufferWidth);
 
@@ -317,14 +336,14 @@ export const prepareComment = (
     const startLeft =
       direction === "rtl"
         ? safeVisibleWidth + virtualExtension + fullScrollXOffset + scrollDistanceExtension
-        : -comment.width -
+        : -motionWidth -
           comment.bufferWidth -
           virtualExtension -
           fullScrollXOffset -
           scrollDistanceExtension;
     const exitLeft =
       direction === "rtl"
-        ? -comment.width -
+        ? -motionWidth -
           comment.bufferWidth -
           entryBuffer +
           fullScrollXOffset -
@@ -336,16 +355,11 @@ export const prepareComment = (
           scrollDistanceExtension +
           scrollExitExtension;
     const trailingBoundary = direction === "rtl" ? safeVisibleWidth + entryBuffer : -entryBuffer;
-    const trailingEdgeAtStart =
-      direction === "rtl"
-        ? startLeft + comment.width + comment.bufferWidth
-        : startLeft - comment.bufferWidth;
-
     comment.virtualStartX = startLeft;
     comment.x = startLeft;
     comment.exitThreshold = exitLeft;
 
-    const widthRatio = safeVisibleWidth > 0 ? comment.width / safeVisibleWidth : 0;
+    const widthRatio = safeVisibleWidth > 0 ? motionWidth / safeVisibleWidth : 0;
     const hasFixedDuration = options.maxVisibleDurationMs === options.minVisibleDurationMs;
     let visibleDurationMs = options.maxVisibleDurationMs;
     if (!hasFixedDuration && widthRatio > 1 && !comment.isFull) {
@@ -356,7 +370,7 @@ export const prepareComment = (
 
     const visibleDistance =
       safeVisibleWidth +
-      comment.width +
+      motionWidth +
       comment.bufferWidth +
       entryBuffer +
       virtualExtension +
@@ -371,6 +385,10 @@ export const prepareComment = (
     comment.speedPixelsPerMs = pixelsPerMs;
 
     const travelDistance = Math.abs(exitLeft - startLeft);
+    const trailingEdgeAtStart =
+      direction === "rtl"
+        ? startLeft + motionWidth + comment.bufferWidth
+        : startLeft - comment.bufferWidth;
     const preCollisionDistance =
       direction === "rtl"
         ? Math.max(0, trailingEdgeAtStart - trailingBoundary)
@@ -384,8 +402,12 @@ export const prepareComment = (
       Math.ceil(travelDistance / safePixelsPerMs),
     );
 
-    const reservationBase = comment.width + comment.bufferWidth + entryBuffer;
-    comment.reservationWidth = Math.min(maxReservationWidth, reservationBase);
+    const reservationBase = motionWidth + comment.bufferWidth + entryBuffer;
+    const textureReservationWidth = getScrollReservationTextureWidth(comment, safeVisibleWidth);
+    comment.reservationWidth = Math.min(
+      maxReservationWidth,
+      Math.max(reservationBase, textureReservationWidth),
+    );
     comment.lastUpdateTime = comment.getTimeSource().now();
     comment.isPaused = false;
   } catch (error) {

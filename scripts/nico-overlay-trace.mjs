@@ -34,7 +34,9 @@ const numberArg = (args, key, fallback) => {
 };
 
 const normalizeCommentEntries = (input) => {
-  const comments = Array.isArray(input?.comments) ? input.comments : Array.isArray(input) ? input : [];
+  const rawComments = Array.isArray(input?.comments) ? input.comments : Array.isArray(input) ? input : [];
+  const trunkComments = rawComments.filter((comment) => comment?.source === "trunk");
+  const comments = trunkComments.length > 0 ? trunkComments : rawComments;
   return comments
     .map((comment) => ({
       text: typeof comment.body === "string" ? comment.body : String(comment.text ?? ""),

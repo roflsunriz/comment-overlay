@@ -213,10 +213,11 @@ const getTexturePadding = (
   }
 
   const paddingX = comment.isScrolling
-    ? comment.fontSize * 1.15
+    ? (comment.fontSize / Math.max(comment.sizeScale, 1)) * 1.15
     : Math.max(10, comment.fontSize * 0.5);
+  const scrollTextureFontSize = comment.fontSize / Math.max(comment.sizeScale, 1);
   const minimumTextureHeight = comment.isScrolling
-    ? Math.round(comment.fontSize * (40 / 9))
+    ? Math.round(scrollTextureFontSize * (40 / 9))
     : comment.height + comment.fontSize / 3;
   const textureHeight = Math.ceil(
     Math.max(comment.height + Math.max(10, comment.fontSize), minimumTextureHeight),
@@ -229,7 +230,9 @@ const getTexturePadding = (
     paddingX,
     paddingY,
     textureWidth: Math.ceil(
-      comment.isScrolling ? comment.width * 2 + paddingX * 2 : comment.width + paddingX * 2,
+      comment.isScrolling
+        ? (comment.width / Math.max(comment.sizeScale, 1)) * 2 + paddingX * 2
+        : comment.width + paddingX * 2,
     ),
     textureHeight,
   };
@@ -729,7 +732,7 @@ export const drawComment = (
       const drawScale = getTextureDrawScale(comment);
       const placement = resolveTextureDrawPlacement(comment, texture, drawX, paddingX, drawScale);
       const targetX = placement.x;
-      const targetY = comment.y - paddingY;
+      const targetY = comment.isScrolling ? comment.y : comment.y - paddingY;
       if (placement.scaleX === 1 && placement.scaleY === 1) {
         ctx.drawImage(texture, targetX, targetY);
       } else {

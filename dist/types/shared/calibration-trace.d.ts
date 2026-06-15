@@ -2,7 +2,7 @@ import type { Comment } from "@/comment/comment";
 type TraceValue = string | number | boolean | null;
 export interface CalibrationTraceRecord {
     readonly source: "comment-overlay";
-    readonly op: "fillText" | "strokeText" | "drawImage";
+    readonly op: "fillText" | "strokeText" | "drawImage" | "laneDecision";
     readonly timestampMs: number;
     readonly text?: string;
     readonly x?: number;
@@ -44,5 +44,6 @@ declare global {
     var __COMMENT_OVERLAY_TRACE_ENABLED__: boolean | undefined;
 }
 export declare const emitCalibrationTrace: (op: CalibrationTraceRecord["op"], ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, comment: Comment, details: Omit<CalibrationTraceRecord, "source" | "op" | "timestampMs" | "comment">) => void;
+export declare const emitCalibrationTraceEvent: (op: CalibrationTraceRecord["op"], comment: Comment, details: Omit<CalibrationTraceRecord, "source" | "op" | "timestampMs" | "comment">) => void;
 export {};
 //# sourceMappingURL=calibration-trace.d.ts.map

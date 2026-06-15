@@ -16,7 +16,12 @@ export interface CalibrationActiveCommentSnapshot {
     readonly opacity: number;
     readonly visibleDurationMs: number;
     readonly totalDurationMs: number;
+    readonly preCollisionDurationMs: number;
     readonly speedPixelsPerMs: number;
+    readonly virtualStartX: number;
+    readonly exitThreshold: number;
+    readonly bufferWidth: number;
+    readonly reservationWidth: number;
     readonly creationIndex: number;
 }
 export interface CalibrationFrameSnapshot {

@@ -4,7 +4,7 @@ type TraceValue = string | number | boolean | null;
 
 export interface CalibrationTraceRecord {
   readonly source: "comment-overlay";
-  readonly op: "fillText" | "strokeText" | "drawImage";
+  readonly op: "fillText" | "strokeText" | "drawImage" | "laneDecision";
   readonly timestampMs: number;
   readonly text?: string;
   readonly x?: number;
@@ -128,6 +128,25 @@ export const emitCalibrationTrace = (
     shadowOffsetY: ctx.shadowOffsetY,
     transform: snapshotTransform(ctx),
     ...snapshotCanvasSize(ctx),
+    comment: snapshotComment(comment),
+    ...details,
+  });
+};
+
+export const emitCalibrationTraceEvent = (
+  op: CalibrationTraceRecord["op"],
+  comment: Comment,
+  details: Omit<CalibrationTraceRecord, "source" | "op" | "timestampMs" | "comment">,
+): void => {
+  const emitter = globalThis.__COMMENT_OVERLAY_TRACE__;
+  if (globalThis.__COMMENT_OVERLAY_TRACE_ENABLED__ !== true || typeof emitter !== "function") {
+    return;
+  }
+
+  emitter({
+    source: "comment-overlay",
+    op,
+    timestampMs: getTimestampMs(),
     comment: snapshotComment(comment),
     ...details,
   });

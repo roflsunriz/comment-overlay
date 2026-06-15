@@ -17,7 +17,12 @@ export interface CalibrationActiveCommentSnapshot {
   readonly opacity: number;
   readonly visibleDurationMs: number;
   readonly totalDurationMs: number;
+  readonly preCollisionDurationMs: number;
   readonly speedPixelsPerMs: number;
+  readonly virtualStartX: number;
+  readonly exitThreshold: number;
+  readonly bufferWidth: number;
+  readonly reservationWidth: number;
   readonly creationIndex: number;
 }
 
@@ -56,7 +61,12 @@ const snapshotActiveComment = (
   opacity: comment.opacity,
   visibleDurationMs: comment.visibleDurationMs,
   totalDurationMs: comment.totalDurationMs,
+  preCollisionDurationMs: comment.preCollisionDurationMs,
   speedPixelsPerMs: comment.speedPixelsPerMs,
+  virtualStartX: comment.virtualStartX,
+  exitThreshold: comment.exitThreshold,
+  bufferWidth: comment.bufferWidth,
+  reservationWidth: comment.reservationWidth,
   creationIndex: comment.creationIndex,
 });
 

@@ -2,6 +2,8 @@ import type { CommentRenderer } from "@/renderer/comment-renderer";
 import type { LaneReservation } from "@/shared/types";
 import { EDGE_EPSILON, RESERVATION_TIME_MARGIN_MS } from "@/shared/constants";
 
+const NICO_LANE_REUSE_TOTAL_END_WEIGHT = 0;
+
 const getLanePriorityOrderImpl = function (this: CommentRenderer, currentTime: number): number[] {
   const indices = Array.from({ length: this.laneCount }, (_, index) => index);
   const sorted = indices.sort((a, b) => {
@@ -38,7 +40,13 @@ const getLaneNextAvailableTimeImpl = function (
   if (!candidate) {
     return currentTime;
   }
-  return Math.max(currentTime, candidate.endTime + RESERVATION_TIME_MARGIN_MS);
+  const displayTailMs = Math.max(0, candidate.totalEndTime - candidate.endTime);
+  return Math.max(
+    currentTime,
+    candidate.endTime +
+      displayTailMs * NICO_LANE_REUSE_TOTAL_END_WEIGHT +
+      RESERVATION_TIME_MARGIN_MS,
+  );
 };
 
 const createLaneReservationImpl = function (
@@ -52,15 +60,19 @@ const createLaneReservationImpl = function (
   const startTime = Math.max(0, baseStartTime);
   const endTime = startTime + comment.preCollisionDurationMs + RESERVATION_TIME_MARGIN_MS;
   const totalEndTime = startTime + comment.totalDurationMs + RESERVATION_TIME_MARGIN_MS;
+  const reservationWidth =
+    Number.isFinite(comment.reservationWidth) && comment.reservationWidth > 0
+      ? comment.reservationWidth
+      : comment.width;
   return {
     comment,
     startTime,
     endTime: Math.max(startTime, endTime),
     totalEndTime: Math.max(startTime, totalEndTime),
     startLeft: comment.virtualStartX,
-    width: comment.width,
+    width: reservationWidth,
     speed,
-    buffer: comment.bufferWidth,
+    buffer: 0,
     directionSign: comment.getDirectionSign(),
   };
 };
