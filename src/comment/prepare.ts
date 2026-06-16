@@ -45,7 +45,6 @@ const NICO_SCROLL_EXIT_EXTENSION_RATIO = 1.8;
 const NICO_SCROLL_EXIT_EXTENSION_MAX_BASE_PX = 420;
 const NICO_FULL_SCROLL_SPEED_EXTENSION_BASE_PX = 20;
 const NICO_FULL_SCROLL_SPEED_EXTENSION_WIDTH_RATIO = 0.045;
-const NICO_SCROLL_TEXTURE_PADDING_X_RATIO = 1.15;
 const NICO_SCROLL_RESERVATION_TEXTURE_WIDTH_RATIO = 850 / 1182;
 
 const getHeightScale = (canvasHeight: number): number =>
@@ -130,10 +129,8 @@ const getScrollReservationTextureWidth = (comment: Comment, visibleWidth: number
     return comment.width;
   }
   const baseScale = Math.max(comment.sizeScale, 1);
-  const baseFontSize = comment.fontSize / baseScale;
   const baseWidth = comment.width / baseScale;
-  const texturePaddingX = baseFontSize * NICO_SCROLL_TEXTURE_PADDING_X_RATIO;
-  const textureWidth = baseWidth * 2 + texturePaddingX * 2;
+  const textureWidth = baseWidth;
   const textureCap = visibleWidth * NICO_SCROLL_RESERVATION_TEXTURE_WIDTH_RATIO;
   return Math.min(textureWidth, textureCap);
 };
@@ -307,10 +304,7 @@ export const prepareComment = (
 
     comment.staticExpiryTimeMs = null;
     const maxReservationWidth = measureTextWidth(ctx, "??".repeat(150));
-    const motionWidth =
-      comment.isScrolling && !comment.isFull
-        ? comment.width / Math.max(comment.sizeScale, 1)
-        : comment.width;
+    const motionWidth = comment.width;
 
     const bufferFromWidth = motionWidth * Math.max(options.bufferRatio, 0);
     comment.bufferWidth = Math.max(options.baseBufferPx, bufferFromWidth);

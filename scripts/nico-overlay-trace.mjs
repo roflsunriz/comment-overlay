@@ -33,19 +33,54 @@ const numberArg = (args, key, fallback) => {
   return Number.isFinite(value) ? value : fallback;
 };
 
-const normalizeCommentEntries = (input) => {
+const csvNumberSet = (value) =>
+  new Set(
+    String(value ?? "")
+      .split(",")
+      .map((item) => Number(item.trim()))
+      .filter(Number.isFinite),
+  );
+
+const normalizeCommentEntries = (input, sourceMode, excludeNos, includeNos) => {
   const rawComments = Array.isArray(input?.comments) ? input.comments : Array.isArray(input) ? input : [];
   const trunkComments = rawComments.filter((comment) => comment?.source === "trunk");
-  const comments = trunkComments.length > 0 ? trunkComments : rawComments;
+  const leafComments = rawComments.filter((comment) => comment?.source === "leaf");
+  const baseComments =
+    sourceMode === "all"
+      ? rawComments
+      : sourceMode === "leaf"
+        ? leafComments
+        : sourceMode === "trunk"
+          ? trunkComments
+          : trunkComments.length > 0
+          ? trunkComments
+          : rawComments;
+  const includedComments =
+    includeNos.size === 0
+      ? []
+      : rawComments.filter((comment) => includeNos.has(Number(comment.no)));
+  const seenNos = new Set();
+  const comments = [...baseComments, ...includedComments].filter((comment) => {
+    const no = Number(comment.no);
+    if (seenNos.has(no)) return false;
+    seenNos.add(no);
+    return true;
+  });
   return comments
     .map((comment) => ({
+      no: Number(comment.no),
       text: typeof comment.body === "string" ? comment.body : String(comment.text ?? ""),
       vposMs: Number(comment.vposMs),
       commands: Array.isArray(comment.commands)
         ? comment.commands.filter((command) => typeof command === "string")
         : [],
     }))
-    .filter((comment) => comment.text.length > 0 && Number.isFinite(comment.vposMs));
+    .filter(
+      (comment) =>
+        comment.text.length > 0 &&
+        Number.isFinite(comment.vposMs) &&
+        !excludeNos.has(comment.no),
+    );
 };
 
 const dataUrlToBuffer = (value) => {
@@ -118,6 +153,7 @@ const browserHarness = async ({
   durationMs,
   startMs,
   captureDurationMs,
+  prerollMs,
   fps,
   dpr,
 }) => {
@@ -208,6 +244,30 @@ const browserHarness = async ({
   const frames = [];
   const frameIntervalMs = 1000 / fps;
   const frameCount = Math.max(1, Math.floor(captureDurationMs / frameIntervalMs));
+  const prerollStartMs = Math.max(0, startMs - Math.max(0, prerollMs));
+
+  let prerollFrameIndex = 0;
+  for (
+    let frameTimeMs = prerollStartMs;
+    frameTimeMs < startMs;
+    frameTimeMs += frameIntervalMs
+  ) {
+    currentTimeSourceMs = frameTimeMs;
+    currentTime = frameTimeMs / 1000;
+    const snapshot = captureRendererCalibrationFrame(renderer, frameTimeMs, {
+      collectTrace: true,
+      traceOps: ["laneDecision"],
+    });
+    for (const record of snapshot.records) {
+      records.push({
+        ...record,
+        frameIndex: -1 - prerollFrameIndex,
+        frameTimeMs,
+        phase: "preroll",
+      });
+    }
+    prerollFrameIndex += 1;
+  }
 
   for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
     const frameTimeMs = startMs + frameIndex * frameIntervalMs;
@@ -229,6 +289,7 @@ const browserHarness = async ({
         ...record,
         frameIndex,
         frameTimeMs,
+        phase: "capture",
       });
     }
   }
@@ -246,6 +307,7 @@ const browserHarness = async ({
       durationMs,
       startMs,
       captureDurationMs,
+      prerollMs,
       fps,
       dpr,
       commentCount: comments.length,
@@ -265,12 +327,16 @@ const main = async () => {
   const height = numberArg(args, "height", 665);
   const startMs = numberArg(args, "start-ms", 100_000);
   const captureDurationMs = numberArg(args, "duration-ms", 30_000);
+  const prerollMs = numberArg(args, "preroll-ms", 3_000);
   const durationMs = numberArg(args, "video-duration-ms", 661_394);
   const fps = numberArg(args, "fps", 15);
   const dpr = numberArg(args, "dpr", 1);
+  const commentSource = args["comment-source"] || "auto";
+  const excludeNos = csvNumberSet(args["exclude-nos"]);
+  const includeNos = csvNumberSet(args["include-nos"]);
 
   const commentsJson = JSON.parse(await readFile(commentsPath, "utf8"));
-  const comments = normalizeCommentEntries(commentsJson);
+  const comments = normalizeCommentEntries(commentsJson, commentSource, excludeNos, includeNos);
   const modulePath = resolve("dist/comment-overlay.es.js");
 
   await mkdir(outDir, { recursive: true });
@@ -295,6 +361,7 @@ const main = async () => {
       durationMs,
       startMs,
       captureDurationMs,
+      prerollMs,
       fps,
       dpr,
     })})`;
@@ -321,7 +388,11 @@ const main = async () => {
         {
           createdAt: new Date().toISOString(),
           commentsPath,
+          commentSource,
+          excludeNos: [...excludeNos],
+          includeNos: [...includeNos],
           moduleUrl: staticServer.moduleUrl,
+          prerollMs,
           ...value.meta,
         },
         null,

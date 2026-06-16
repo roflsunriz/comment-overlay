@@ -38,6 +38,7 @@ export interface CalibrationFrameSnapshot {
 }
 export interface CaptureCalibrationFrameOptions {
     readonly collectTrace?: boolean;
+    readonly traceOps?: readonly CalibrationTraceRecord["op"][];
 }
 export declare const captureRendererCalibrationFrame: (renderer: CommentRenderer, frameTimeMs: number, options?: CaptureCalibrationFrameOptions) => CalibrationFrameSnapshot;
 //# sourceMappingURL=calibration-debug.d.ts.map

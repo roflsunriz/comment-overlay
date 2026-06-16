@@ -99,7 +99,89 @@ const applyTransform = (record, x, y) => {
   };
 };
 
-const normalizeDrawImage = (record, source) => {
+const parseFontSize = (font) => {
+  const match = String(font ?? "").match(/(\d+(?:\.\d+)?)px/u);
+  return match ? Number(match[1]) : null;
+};
+
+const metadataKeyCandidates = (record, source) => {
+  const keys = [];
+  if (record.sourceCanvasId != null) keys.push(`canvas:${record.sourceCanvasId}`);
+  if (record.canvasId != null) keys.push(`canvas:${record.canvasId}`);
+  if (record.comment?.creationIndex != null) {
+    keys.push(`comment:${record.comment.creationIndex}`);
+    if (source === "comment-overlay") keys.push(`canvas:${record.comment.creationIndex}`);
+  }
+  return keys;
+};
+
+const collectTextMetadata = (records, source) => {
+  const metadata = new Map();
+  const textRecords = records.filter((record) => record.op === "fillText" || record.op === "strokeText");
+  for (const record of textRecords) {
+    const keys = metadataKeyCandidates(record, source);
+    for (const key of keys) {
+      const existing = metadata.get(key) ?? {
+        textParts: [],
+        fillStyle: record.fillStyle ?? null,
+        strokeStyle: record.strokeStyle ?? null,
+        font: record.font ?? null,
+        fontSize: parseFontSize(record.font),
+        canvasWidth: Number(record.canvasWidth),
+        canvasHeight: Number(record.canvasHeight),
+        commentVposMs: Number(record.comment?.vposMs),
+        commentLayout: record.comment?.layout ?? null,
+        commentLane: Number(record.comment?.lane),
+        commentCreationIndex: Number(record.comment?.creationIndex),
+      };
+      if (record.op === "fillText" && typeof record.text === "string" && record.text.length > 0) {
+        existing.textParts.push(record.text);
+      }
+      if (record.fillStyle != null) existing.fillStyle = record.fillStyle;
+      if (record.strokeStyle != null) existing.strokeStyle = record.strokeStyle;
+      if (record.font != null) {
+        existing.font = record.font;
+        existing.fontSize = parseFontSize(record.font);
+      }
+      metadata.set(key, existing);
+    }
+  }
+  return metadata;
+};
+
+const lookupTextMetadata = (record, source, metadata) => {
+  const direct = record.comment
+    ? {
+        text: record.comment.text ?? null,
+        fillStyle: record.comment.color ?? record.fillStyle ?? null,
+        strokeStyle: record.strokeStyle ?? null,
+        font: record.font ?? null,
+        fontSize: Number(record.comment.fontSize ?? parseFontSize(record.font)),
+        commentVposMs: Number(record.comment.vposMs),
+        commentLayout: record.comment.layout ?? null,
+        commentLane: Number(record.comment.lane),
+        commentCreationIndex: Number(record.comment.creationIndex),
+      }
+    : null;
+  for (const key of metadataKeyCandidates(record, source)) {
+    const value = metadata.get(key);
+    if (value) {
+      return {
+        ...value,
+        text: value.textParts.join("").slice(0, 120) || direct?.text || null,
+        textLength: value.textParts.join("").length || direct?.text?.length || null,
+      };
+    }
+  }
+  return direct
+    ? {
+        ...direct,
+        textLength: direct.text?.length ?? null,
+      }
+    : null;
+};
+
+const normalizeDrawImage = (record, source, textMetadata) => {
   const draw =
     Number.isFinite(Number(record.x)) &&
     Number.isFinite(Number(record.y)) &&
@@ -141,6 +223,7 @@ const normalizeDrawImage = (record, source) => {
     (Number.isFinite(videoTop) && source === "niconico-player" ? videoTop : 0);
   const dw = draw.dw / scaleX;
   const dh = draw.dh / scaleY;
+  const metadata = lookupTextMetadata(record, source, textMetadata);
   return {
     source,
     raw: record,
@@ -165,6 +248,18 @@ const normalizeDrawImage = (record, source) => {
     height: dh,
     right: dx + dw,
     bottom: dy + dh,
+    text: metadata?.text ?? null,
+    textLength: metadata?.textLength ?? null,
+    textFillStyle: metadata?.fillStyle ?? null,
+    textStrokeStyle: metadata?.strokeStyle ?? null,
+    textFont: metadata?.font ?? null,
+    textFontSize: metadata?.fontSize ?? null,
+    commentVposMs: Number.isFinite(metadata?.commentVposMs) ? metadata.commentVposMs : null,
+    commentLayout: metadata?.commentLayout ?? null,
+    commentLane: Number.isFinite(metadata?.commentLane) ? metadata.commentLane : null,
+    commentCreationIndex: Number.isFinite(metadata?.commentCreationIndex)
+      ? metadata.commentCreationIndex
+      : null,
   };
 };
 
@@ -182,7 +277,7 @@ const isOrdinaryMovingCandidate = (record, options) => {
   if (record.sourceHeight < options.minSourceHeight) return false;
   if (record.width < options.minDrawWidth || record.height < options.minDrawHeight) return false;
   if (record.height > options.maxDrawHeight) return false;
-  if (record.y < options.minY) return false;
+  if (record.bottom < options.minY) return false;
   if (options.finalCanvasOnly) {
     const visibleWidth = record.videoWidth ?? record.canvasWidth ?? 0;
     const visibleHeight = record.videoHeight ?? record.canvasHeight ?? 0;
@@ -201,6 +296,21 @@ const makeTrajectorySeed = (record) => ({
   id: `${record.sourceCanvasId ?? record.canvasId ?? "canvas"}:${record.sequence}`,
   samples: [record],
   last: record,
+});
+
+const metadataFromFirstSample = (first) => ({
+  text: first.text ?? null,
+  textLength: first.textLength ?? null,
+  textFillStyle: first.textFillStyle ?? null,
+  textStrokeStyle: first.textStrokeStyle ?? null,
+  textFont: first.textFont ?? null,
+  textFontSize: Number.isFinite(Number(first.textFontSize)) ? Number(first.textFontSize) : null,
+  commentVposMs: Number.isFinite(Number(first.commentVposMs)) ? Number(first.commentVposMs) : null,
+  commentLayout: first.commentLayout ?? null,
+  commentLane: Number.isFinite(Number(first.commentLane)) ? Number(first.commentLane) : null,
+  commentCreationIndex: Number.isFinite(Number(first.commentCreationIndex))
+    ? Number(first.commentCreationIndex)
+    : null,
 });
 
 const canLinkTrajectory = (trajectory, record, options) => {
@@ -269,6 +379,7 @@ const groupTrajectories = (records, options) => {
         durationMs > 0 ? ((last.x - first.x) / durationMs) * 1000 : 0;
       return {
         id,
+        ...metadataFromFirstSample(first),
         samples: sorted,
         sampleCount: sorted.length,
         firstTimeMs: first.timeMs,
@@ -302,6 +413,7 @@ const buildTrajectoryFromSamples = (id, samples) => {
     durationMs > 0 ? ((last.x - first.x) / durationMs) * 1000 : 0;
   return {
     id,
+    ...metadataFromFirstSample(first),
     samples: sorted,
     sampleCount: sorted.length,
     firstTimeMs: first.timeMs,
@@ -460,9 +572,10 @@ const summarizeLanePriorityTransitions = (trajectories) => {
 };
 
 const buildReport = (records, options) => {
+  const textMetadata = collectTextMetadata(records, options.source);
   const drawImages = records
     .filter((record) => record.op === "drawImage")
-    .map((record) => normalizeDrawImage(record, options.source))
+    .map((record) => normalizeDrawImage(record, options.source, textMetadata))
     .filter(Boolean);
   const candidates = drawImages.filter((record) => isOrdinaryMovingCandidate(record, options));
   const allTrajectories =
@@ -528,7 +641,6 @@ const buildReport = (records, options) => {
     trajectorySamples: lanes
       .slice()
       .sort((a, b) => a.firstMotionTimeMs - b.firstMotionTimeMs || a.inferredLane - b.inferredLane)
-      .slice(0, options.sampleLimit)
       .map((trajectory) => ({
         id: trajectory.id,
         firstTimeMs: Math.round(trajectory.firstTimeMs),
@@ -543,6 +655,12 @@ const buildReport = (records, options) => {
         drawSize: `${Math.round(trajectory.drawWidth ?? 0)}x${Math.round(trajectory.drawHeight ?? 0)}`,
         velocityPxPerSec: Number(trajectory.velocityPxPerSec.toFixed(3)),
         sampleCount: trajectory.sampleCount,
+        text: trajectory.text,
+        textLength: trajectory.textLength,
+        textFillStyle: trajectory.textFillStyle,
+        textFontSize: trajectory.textFontSize,
+        commentVposMs: trajectory.commentVposMs,
+        commentCreationIndex: trajectory.commentCreationIndex,
       })),
     inferredAlgorithmNotes: [
       "moving small drawImage trajectories are treated as ordinary naka comment candidates",

@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "description": "Local 9-probe composite score definition. Keep this aligned with docs/nico-calibration-probes.example.json.",
+  "probes": [
+    {
+      "id": "sm6240144-lane-215s-ordinary",
+      "type": "lane",
+      "videoId": "sm6240144",
+      "label": "03:35 ordinary naka cluster",
+      "unstableInput": true,
+      "officialComments": "all",
+      "commentSource": "all",
+      "teacherReport": ".calibration/nico/sm6240144/lane-ordinary-215s-20s/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm6240144/overlay-lane-ordinary-215s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 215000,
+        "end-ms": 235000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    },
+    {
+      "id": "sm38851567-lane-096s-dense",
+      "type": "lane",
+      "videoId": "sm38851567",
+      "label": "01:36 dense ordinary comments",
+      "teacherReport": ".calibration/nico/sm38851567/lane-090s-14s-cdp/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm38851567/overlay-lane-090s-14s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 96000,
+        "end-ms": 104000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    },
+    {
+      "id": "sm6240144-lane-565s-ordinary",
+      "type": "lane",
+      "videoId": "sm6240144",
+      "label": "05:29 ordinary naka cluster",
+      "unstableInput": true,
+      "teacherReport": ".calibration/nico/sm6240144/lane-ordinary-563s-14s-current-cdp-refresh/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm6240144/overlay-lane-ordinary-565s-12s-v336-auto-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 566000,
+        "end-ms": 571300,
+        "min-source-width": 380,
+        "max-source-height": 190
+      }
+    },
+    {
+      "id": "sm38851567-lane-030s-static-heavy",
+      "type": "lane",
+      "videoId": "sm38851567",
+      "label": "00:30 mixed static and ordinary comments",
+      "teacherReport": ".calibration/nico/sm38851567/lane-030s-14s-cdp/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm38851567/overlay-lane-030s-14s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 30000,
+        "end-ms": 44000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    },
+    {
+      "id": "sm38851567-lane-090s-dense",
+      "type": "lane",
+      "videoId": "sm38851567",
+      "label": "01:30 densest comment cluster",
+      "teacherReport": ".calibration/nico/sm38851567/lane-090s-14s-cdp/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm38851567/overlay-lane-090s-14s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 90000,
+        "end-ms": 104000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    },
+    {
+      "id": "sm38851567-lane-130s-ending",
+      "type": "lane",
+      "videoId": "sm38851567",
+      "label": "02:10 ending applause cluster",
+      "teacherReport": ".calibration/nico/sm38851567/lane-130s-14s-cdp/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm38851567/overlay-lane-130s-14s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 130000,
+        "end-ms": 144000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    },
+    {
+      "id": "sm6945510-lane-080s-reaction",
+      "type": "lane",
+      "videoId": "sm6945510",
+      "label": "01:20 reaction cluster",
+      "teacherReport": ".calibration/nico/sm6945510/lane-080s-14s-cdp/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm6945510/overlay-lane-080s-14s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 80000,
+        "end-ms": 94000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    },
+    {
+      "id": "sm6945510-lane-210s-dense",
+      "type": "lane",
+      "videoId": "sm6945510",
+      "label": "03:30 dense ordinary cluster",
+      "teacherReport": ".calibration/nico/sm6945510/lane-210s-14s-cdp/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm6945510/overlay-lane-210s-14s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 210000,
+        "end-ms": 224000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    },
+    {
+      "id": "sm6945510-lane-140s-dense",
+      "type": "lane",
+      "videoId": "sm6945510",
+      "label": "02:20 dense ordinary cluster",
+      "teacherReport": ".calibration/nico/sm6945510/lane-140s-14s-cdp/lane-reverse-content-pitch68-sourcecanvas-full.json",
+      "candidateReport": ".calibration/nico/sm6945510/overlay-lane-140s-14s-current/lane-reverse-draw-pitch68-sourcecanvas.json",
+      "options": {
+        "start-ms": 140000,
+        "end-ms": 154000,
+        "min-source-width": 120,
+        "max-source-height": 220
+      }
+    }
+  ]
+}

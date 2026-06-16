@@ -7,4 +7,4 @@
 - [コメント位置取りキャリブレーション](./nico-calibration-comment-position.md)
 - [上部レーン / 上固定コメントのはみ出し修正](./nico-calibration-upper-lane-overflow.md)
 - [ファイナルフェーズキャリブレーション](./nico-calibration-final-phase.md)
-
+- [ニコニコ横断プローブ計画](./nico-calibration-probes.md)

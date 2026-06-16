@@ -213,9 +213,9 @@ const getTexturePadding = (
   }
 
   const paddingX = comment.isScrolling
-    ? (comment.fontSize / Math.max(comment.sizeScale, 1)) * 1.15
+    ? comment.fontSize * 1.15
     : Math.max(10, comment.fontSize * 0.5);
-  const scrollTextureFontSize = comment.fontSize / Math.max(comment.sizeScale, 1);
+  const scrollTextureFontSize = comment.fontSize;
   const minimumTextureHeight = comment.isScrolling
     ? Math.round(scrollTextureFontSize * (40 / 9))
     : comment.height + comment.fontSize / 3;
@@ -230,9 +230,7 @@ const getTexturePadding = (
     paddingX,
     paddingY,
     textureWidth: Math.ceil(
-      comment.isScrolling
-        ? (comment.width / Math.max(comment.sizeScale, 1)) * 2 + paddingX * 2
-        : comment.width + paddingX * 2,
+      comment.isScrolling ? comment.width * 2 + paddingX * 2 : comment.width + paddingX * 2,
     ),
     textureHeight,
   };

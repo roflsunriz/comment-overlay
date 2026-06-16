@@ -41,6 +41,7 @@ export interface CalibrationFrameSnapshot {
 
 export interface CaptureCalibrationFrameOptions {
   readonly collectTrace?: boolean;
+  readonly traceOps?: readonly CalibrationTraceRecord["op"][];
 }
 
 const snapshotActiveComment = (
@@ -95,8 +96,13 @@ export const captureRendererCalibrationFrame = (
   const previousEmitter = globalThis.__COMMENT_OVERLAY_TRACE__;
 
   if (options.collectTrace === true) {
+    const allowedOps =
+      options.traceOps && options.traceOps.length > 0 ? new Set(options.traceOps) : null;
     globalThis.__COMMENT_OVERLAY_TRACE_ENABLED__ = true;
     globalThis.__COMMENT_OVERLAY_TRACE__ = ((record) => {
+      if (allowedOps && !allowedOps.has(record.op)) {
+        return;
+      }
       records.push(record);
     }) satisfies CalibrationTraceEmitter;
   }

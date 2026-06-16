@@ -38,9 +38,13 @@
     "nico:rdp-trace": "bun scripts/nico-rdp-trace.mjs",
     "nico:report": "bun scripts/nico-report.mjs",
     "nico:overlay-trace": "bun scripts/nico-overlay-trace.mjs",
+    "nico:fetch-comments": "bun scripts/nico-fetch-comments.mjs",
     "nico:strict-score": "node scripts/nico-strict-score.mjs",
     "nico:internal-score": "node scripts/nico-internal-score.mjs",
-    "nico:lane-reverse": "node scripts/nico-lane-reverse.mjs"
+    "nico:lane-reverse": "node scripts/nico-lane-reverse.mjs",
+    "nico:lane-diagnose": "node scripts/nico-lane-diagnose.mjs",
+    "nico:probe-score": "node scripts/nico-probe-score.mjs",
+    "nico:probe-overlay-capture": "node scripts/nico-probe-overlay-capture.mjs"
   },
   "keywords": [
     "comment",

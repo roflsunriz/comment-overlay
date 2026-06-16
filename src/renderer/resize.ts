@@ -6,7 +6,7 @@ import {
   toMilliseconds,
 } from "@/shared/constants";
 
-const NICO_SCROLL_LANE_HEIGHT_RATIO = 2.525;
+const NICO_SCROLL_LANE_HEIGHT_RATIO = 2.1;
 
 const resizeImpl = function (this: CommentRenderer, width?: number, height?: number): void {
   const video = this.videoElement;

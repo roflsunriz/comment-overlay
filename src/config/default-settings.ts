@@ -1,6 +1,6 @@
 import type { RendererSettings, ReadonlyRendererSettings } from "@/shared/types";
 
-export const NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS = 6_000;
+export const NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS = 6_700;
 
 const BASE_SETTINGS: RendererSettings = {
   commentColor: "#FFFFFF",
@@ -27,4 +27,4 @@ export const cloneDefaultSettings = (): RendererSettings => ({
   ngRegexps: [...BASE_SETTINGS.ngRegexps],
 });
 
-export const COMMENT_OVERLAY_VERSION = "v3.1.34";
+export const COMMENT_OVERLAY_VERSION = "v3.1.40";

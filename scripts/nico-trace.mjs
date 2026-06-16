@@ -514,7 +514,7 @@ const getVideoStateExpression = () => String.raw`
       scrollX: window.scrollX,
       scrollY: window.scrollY,
     },
-    bodyText: document.body.innerText.slice(0, 2000),
+    bodyText: (document.body?.innerText || "").slice(0, 2000),
     visibleButtons,
     selected,
     videos: candidates,
@@ -651,7 +651,11 @@ const evaluate = async (Runtime, expression, options = {}) => {
     ...options,
   });
   if (response.exceptionDetails) {
-    throw new Error(`Runtime.evaluate failed: ${response.exceptionDetails.text || "unknown"}`);
+    const details = response.exceptionDetails;
+    const exceptionDescription = details.exception?.description || details.exception?.value || "";
+    throw new Error(
+      `Runtime.evaluate failed: ${details.text || "unknown"} ${exceptionDescription}`.trim(),
+    );
   }
   return response.result.value;
 };
@@ -704,6 +708,7 @@ const main = async () => {
   const fps = Math.max(1, toNumber(args.fps, DEFAULT_FPS));
   const prerollMs = toNumber(args["preroll-ms"], DEFAULT_PREROLL_MS);
   const adWaitMs = toNumber(args["ad-wait-ms"], DEFAULT_AD_WAIT_MS);
+  const videoWaitMs = toNumber(args["video-wait-ms"], 15000);
   const startMs = args["start-ms"] === undefined ? null : Math.max(0, toNumber(args["start-ms"], 0));
   const caseName = sanitizeSegment(args.case || "capture");
   const requestedVideoId = sanitizeSegment(args["video-id"] || "unknown-video");
@@ -789,7 +794,7 @@ const main = async () => {
     }
 
     if (startMs !== null) {
-      await waitForUsableVideo(Runtime);
+      await waitForUsableVideo(Runtime, videoWaitMs);
       const seekSeconds = Math.max(0, (startMs - prerollMs) / 1000);
       const seekState = await evaluate(Runtime, setVideoTimeExpression(seekSeconds));
       if (!seekState?.ok) {

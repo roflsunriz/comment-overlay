@@ -2,28 +2,11 @@ import type { CommentRenderer } from "@/renderer/comment-renderer";
 import type { LaneReservation } from "@/shared/types";
 import { EDGE_EPSILON, RESERVATION_TIME_MARGIN_MS } from "@/shared/constants";
 
-const NICO_LANE_REUSE_TOTAL_END_WEIGHT = 0;
+const NICO_LANE_REUSE_TOTAL_END_WEIGHT = 1.0;
+const NICO_COLLISION_OVERLAP_TOLERANCE_PX = 24;
 
-const getLanePriorityOrderImpl = function (this: CommentRenderer, currentTime: number): number[] {
-  const indices = Array.from({ length: this.laneCount }, (_, index) => index);
-  const sorted = indices.sort((a, b) => {
-    const nextA = this.getLaneNextAvailableTime(a, currentTime);
-    const nextB = this.getLaneNextAvailableTime(b, currentTime);
-    if (Math.abs(nextA - nextB) <= EDGE_EPSILON) {
-      return a - b;
-    }
-    return nextA - nextB;
-  });
-  const staticReserved = this.getStaticReservedLaneSet();
-  if (staticReserved.size === 0) {
-    return sorted;
-  }
-  const preferred = sorted.filter((lane) => !staticReserved.has(lane));
-  if (preferred.length === 0) {
-    return sorted;
-  }
-  const blocked = sorted.filter((lane) => staticReserved.has(lane));
-  return [...preferred, ...blocked];
+const getLanePriorityOrderImpl = function (this: CommentRenderer): number[] {
+  return Array.from({ length: this.laneCount }, (_, index) => index);
 };
 
 const getLaneNextAvailableTimeImpl = function (
@@ -151,7 +134,10 @@ const areReservationsConflictingImpl = function (
     }
     const forwardGap = this.computeForwardGap(a, b, time);
     const backwardGap = this.computeForwardGap(b, a, time);
-    if (forwardGap <= EDGE_EPSILON && backwardGap <= EDGE_EPSILON) {
+    if (
+      forwardGap <= -NICO_COLLISION_OVERLAP_TOLERANCE_PX &&
+      backwardGap <= -NICO_COLLISION_OVERLAP_TOLERANCE_PX
+    ) {
       return true;
     }
   }
