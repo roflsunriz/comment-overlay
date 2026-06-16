@@ -3,69 +3,24 @@ export const moduleCandidates = [
     "../dist/comment-overlay.es.js",
     "../dist/comment-overlay.es",
 ];
-export const DEFAULT_COMMENT_DATA_SOURCES = ["./fixtures/so45409498-comments.json"];
 export const INITIAL_VIDEO_VOLUME = 0.01;
-export const COMMENT_PRESETS = {
-    default: {
-        label: "Default sample",
-        comments: "./fixtures/so45409498-comments.json",
-        video: "./fixtures/video.mp4",
-        seekSeconds: 0,
-    },
-    "cat-mario": {
-        label: "sm6240144 猫マリオCA",
+export const VIDEO_CASES = {
+    sm6240144: {
+        label: "sm6240144",
         comments: "./fixtures/sm6240144-comments.json",
         video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 100,
     },
-    gradius: {
-        label: "sm6240144 00:22 GRADIUS",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 22,
+    sm6945510: {
+        label: "sm6945510",
+        comments: "./fixtures/sm6945510-comments.json",
+        video: "./fixtures/sm6945510.mp4",
     },
-    xevious: {
-        label: "sm6240144 00:59 XEVIOUS",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 59,
-    },
-    spelunker: {
-        label: "sm6240144 01:21 スペランカー",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 81,
-    },
-    "half-fish": {
-        label: "sm6240144 01:23 半魚人",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 83,
-    },
-    spell: {
-        label: "sm6240144 03:02 呪文",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 182,
-    },
-    "wing-monster": {
-        label: "sm6240144 羽モンスターCA",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 313,
-    },
-    "ender-dragon": {
-        label: "sm6240144 05:46 エンダーCA",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 344.9,
-    },
-    zoma: {
-        label: "sm6240144 05:45.806 ゾーマCA",
-        comments: "./fixtures/sm6240144-comments.json",
-        video: "./fixtures/sm6240144.mp4",
-        seekSeconds: 345.806,
-        pauseAfterSeek: true,
+    sm38851567: {
+        label: "sm38851567",
+        comments: "./fixtures/sm38851567-comments.json",
+        video: "./fixtures/sm38851567.mp4",
     },
 };
+export const DEFAULT_VIDEO_CASE_ID = "sm6240144";
+export const DEFAULT_COMMENT_DATA_SOURCES = [VIDEO_CASES[DEFAULT_VIDEO_CASE_ID].comments];
 //# sourceMappingURL=presets.js.map

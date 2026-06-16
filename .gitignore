@@ -7,9 +7,10 @@ overlay-tests/dist/
 *.swp
 coverage/
 *.tsbuildinfo
-overlay-tests/fixtures/*.mp4
-overlay-tests/fixtures/sm6240144-comments.json
-.calibration/
+.calibration/*
+!.calibration/nico/
+.calibration/nico/*
+!.calibration/nico/probes.json
 
 # Claw-Code specific ignores
 .claw/

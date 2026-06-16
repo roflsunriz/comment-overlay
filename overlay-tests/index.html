@@ -151,6 +151,10 @@
       z-index: 2 !important;
     }
 
+    .video-wrapper.controls-hidden {
+      cursor: none;
+    }
+
     .media-controls {
       position: absolute;
       right: 12px;
@@ -167,6 +171,17 @@
       background: rgba(3, 7, 18, 0.72);
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
       backdrop-filter: blur(14px);
+      opacity: 1;
+      transform: translateY(0);
+      transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
+    }
+
+    .video-wrapper.controls-hidden .media-controls {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
     }
 
     .media-controls button {
@@ -486,7 +501,7 @@
           <h1>Comment Overlay Engine Demo</h1>
         </div>
         <div class="header-meta" aria-label="検証対象">
-          <span class="meta-pill">sm6240144</span>
+          <span class="meta-pill">3 Sources</span>
           <span class="meta-pill">Canvas Trace</span>
           <span class="meta-pill">Viewport Probe</span>
         </div>
@@ -501,9 +516,10 @@
           playsinline
           preload="metadata"
           autoplay
+          loop
         >
           <source
-            src="./fixtures/video.mp4"
+            src="./fixtures/sm6240144.mp4"
             type="video/mp4"
           />
           Your browser does not support the HTML5 video element.
@@ -531,29 +547,13 @@
         <div class="controls control-group">
           <p class="control-group-title">Case</p>
           <label>
-            コメントデータ
-            <select id="comment-preset">
-              <option value="default">Default sample</option>
-              <option value="gradius">sm6240144 00:22 GRADIUS</option>
-              <option value="xevious">sm6240144 00:59 XEVIOUS</option>
-              <option value="spelunker">sm6240144 01:21 スペランカー</option>
-              <option value="half-fish">sm6240144 01:23 半魚人</option>
-              <option value="cat-mario">sm6240144 猫マリオCA</option>
-              <option value="spell">sm6240144 03:02 呪文</option>
-              <option value="wing-monster">sm6240144 羽モンスターCA</option>
-              <option value="ender-dragon">sm6240144 05:46 エンダーCA</option>
-              <option value="zoma">sm6240144 05:45.806 ゾーマCA</option>
+            動画
+            <select id="video-case">
+              <option value="sm6240144" selected>sm6240144</option>
+              <option value="sm6945510">sm6945510</option>
+              <option value="sm38851567">sm38851567</option>
             </select>
           </label>
-          <button type="button" class="button-secondary" data-comment-preset="gradius">00:22 GRADIUS</button>
-          <button type="button" class="button-secondary" data-comment-preset="xevious">00:59 XEVIOUS</button>
-          <button type="button" class="button-secondary" data-comment-preset="spelunker">01:21 探検</button>
-          <button type="button" class="button-secondary" data-comment-preset="half-fish">01:23 半魚</button>
-          <button type="button" class="button-secondary" data-comment-preset="cat-mario">01:40 猫</button>
-          <button type="button" class="button-secondary" data-comment-preset="spell">03:02 呪文</button>
-          <button type="button" class="button-secondary" data-comment-preset="wing-monster">05:13 羽</button>
-          <button type="button" class="button-secondary" data-comment-preset="ender-dragon">05:45 竜</button>
-          <button type="button" class="button-secondary" data-comment-preset="zoma">05:45.806 ゾーマ</button>
           <button type="button" id="reload-comments">再読込</button>
         </div>
 
@@ -562,6 +562,10 @@
           <label>
             <input type="checkbox" id="toggle-visibility" checked />
             コメント表示
+          </label>
+          <label>
+            <input type="checkbox" id="toggle-repeat" checked />
+            リピート
           </label>
           <label>
             方向

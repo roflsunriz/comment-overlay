@@ -1,4 +1,4 @@
-import { COMMENT_PRESETS, DEFAULT_COMMENT_DATA_SOURCES, INITIAL_VIDEO_VOLUME, } from "./presets.js";
+import { DEFAULT_VIDEO_CASE_ID, DEFAULT_COMMENT_DATA_SOURCES, INITIAL_VIDEO_VOLUME, VIDEO_CASES, } from "./presets.js";
 import { loadOverlayModule } from "./overlay-module.js";
 import { installOverlayProfiler, pushOverlaySample } from "./profiler.js";
 let debugLogFn = null;
@@ -28,7 +28,8 @@ const stageEl = document.querySelector("#test-stage");
 const videoEl = document.querySelector("#test-video");
 const containerEl = document.querySelector(".overlay-container");
 const toggleEl = document.querySelector("#toggle-visibility");
-const commentPresetSelect = document.querySelector("#comment-preset");
+const repeatToggleEl = document.querySelector("#toggle-repeat");
+const videoCaseSelect = document.querySelector("#video-case");
 const mediaPlayToggleButton = document.querySelector("#media-play-toggle");
 const mediaSeekEl = document.querySelector("#media-seek");
 const mediaTimeEl = document.querySelector("#media-time");
@@ -114,7 +115,8 @@ const setup = async () => {
         !(stageEl instanceof HTMLElement) ||
         !(containerEl instanceof HTMLElement) ||
         !(toggleEl instanceof HTMLInputElement) ||
-        !(commentPresetSelect instanceof HTMLSelectElement) ||
+        !(repeatToggleEl instanceof HTMLInputElement) ||
+        !(videoCaseSelect instanceof HTMLSelectElement) ||
         !(mediaPlayToggleButton instanceof HTMLButtonElement) ||
         !(mediaSeekEl instanceof HTMLInputElement) ||
         !(mediaTimeEl instanceof HTMLElement) ||
@@ -137,6 +139,7 @@ const setup = async () => {
     }
     reportStatus("Bootstrapping overlay module...");
     videoEl.volume = INITIAL_VIDEO_VOLUME;
+    videoEl.loop = repeatToggleEl.checked;
     videoEl.controls = false;
     videoEl.setAttribute("controlsList", "nofullscreen nodownload noremoteplayback");
     videoEl.setAttribute("disablePictureInPicture", "");
@@ -145,19 +148,12 @@ const setup = async () => {
     const loadedOverlayVersion = typeof COMMENT_OVERLAY_VERSION === "string" ? COMMENT_OVERLAY_VERSION : "unknown";
     debugLogFn = typeof exportedDebugLog === "function" ? exportedDebugLog : null;
     const query = new URLSearchParams(window.location.search);
-    const presetParam = query.get("preset");
-    const initialPreset = presetParam && presetParam in COMMENT_PRESETS ? presetParam : "default";
-    let selectedPreset = initialPreset;
-    let selectedCommentSource = query.get("comments") || COMMENT_PRESETS[selectedPreset].comments;
-    const videoOverride = query.get("video");
-    if (typeof videoOverride === "string" && videoOverride.length > 0) {
-        videoEl.src = videoOverride;
-        videoEl.load();
-    }
-    else {
-        videoEl.src = COMMENT_PRESETS[selectedPreset].video;
-        videoEl.load();
-    }
+    const caseParam = query.get("case") || query.get("videoId");
+    const initialCaseId = caseParam && caseParam in VIDEO_CASES ? caseParam : DEFAULT_VIDEO_CASE_ID;
+    let selectedVideoCaseId = initialCaseId;
+    let selectedCommentSource = VIDEO_CASES[selectedVideoCaseId].comments;
+    videoEl.src = VIDEO_CASES[selectedVideoCaseId].video;
+    videoEl.load();
     const debugParam = query.get("overlayDebug");
     isDebugOverlayEnabled =
         debugParam === "1" || debugParam === "true" || debugParam === "yes" || debugParam === "on";
@@ -311,6 +307,29 @@ const setup = async () => {
     videoEl.addEventListener("timeupdate", updateMediaControls);
     videoEl.addEventListener("play", updateMediaControls);
     videoEl.addEventListener("pause", updateMediaControls);
+    let controlsHideTimer = null;
+    const setControlsHidden = (hidden) => {
+        containerEl.classList.toggle("controls-hidden", hidden);
+    };
+    const scheduleControlsHide = () => {
+        if (controlsHideTimer) {
+            clearTimeout(controlsHideTimer);
+        }
+        controlsHideTimer = setTimeout(() => {
+            setControlsHidden(true);
+        }, 3000);
+    };
+    const wakeControls = () => {
+        setControlsHidden(false);
+        scheduleControlsHide();
+    };
+    containerEl.addEventListener("mousemove", wakeControls);
+    containerEl.addEventListener("mouseenter", wakeControls);
+    containerEl.addEventListener("mouseleave", () => {
+        setControlsHidden(true);
+    });
+    containerEl.addEventListener("focusin", wakeControls);
+    wakeControls();
     mediaPlayToggleButton.addEventListener("click", () => {
         if (videoEl.paused) {
             void resumeVideo();
@@ -336,6 +355,10 @@ const setup = async () => {
             videoEl.muted = videoEl.volume === 0;
             updateMediaControls();
         }
+    });
+    repeatToggleEl.addEventListener("change", () => {
+        videoEl.loop = repeatToggleEl.checked;
+        reportStatus(repeatToggleEl.checked ? "リピート再生を有効にしました。" : "リピート再生を無効にしました。");
     });
     const shouldIgnoreKeyboardShortcut = (event) => {
         if (event.altKey || event.ctrlKey || event.metaKey) {
@@ -625,7 +648,7 @@ const setup = async () => {
     };
     updateSettingsStatus();
     updateViewportStatus();
-    commentPresetSelect.value = selectedPreset;
+    videoCaseSelect.value = selectedVideoCaseId;
     directionSelect.value = typeof currentSettings.scrollDirection === "string"
         ? currentSettings.scrollDirection
         : "rtl";
@@ -808,49 +831,27 @@ const setup = async () => {
         renderer.resetState();
         void loadComments();
     });
-    const isCommentPresetName = (value) => value in COMMENT_PRESETS;
-    const applyCommentPreset = async (presetName) => {
-        const resolvedPresetName = isCommentPresetName(presetName)
-            ? presetName
-            : "default";
-        const preset = COMMENT_PRESETS[resolvedPresetName];
-        selectedPreset = resolvedPresetName;
-        selectedCommentSource = preset.comments;
-        commentPresetSelect.value = selectedPreset;
-        if (!videoOverride && videoEl.getAttribute("src") !== preset.video) {
-            videoEl.src = preset.video;
+    const isVideoCaseId = (value) => value in VIDEO_CASES;
+    const applyVideoCase = async (caseId) => {
+        const resolvedCaseId = isVideoCaseId(caseId) ? caseId : DEFAULT_VIDEO_CASE_ID;
+        const nextCase = VIDEO_CASES[resolvedCaseId];
+        selectedVideoCaseId = resolvedCaseId;
+        selectedCommentSource = nextCase.comments;
+        videoCaseSelect.value = selectedVideoCaseId;
+        if (videoEl.getAttribute("src") !== nextCase.video) {
+            await pauseVideo();
+            videoEl.src = nextCase.video;
             videoEl.load();
         }
         renderer.resetState();
         await loadComments();
-        if (preset.seekSeconds > 0) {
-            await seekVideo(preset.seekSeconds);
-            if ("pauseAfterSeek" in preset && preset.pauseAfterSeek) {
-                await pauseVideo();
-                syncRendererAtVideoTime();
-                reportStatus(`${preset.label} を読み込み、${preset.seekSeconds.toFixed(3)}秒で停止しました。`);
-            }
-            else {
-                await resumeVideo();
-                reportStatus(`${preset.label} を読み込み、${preset.seekSeconds.toFixed(0)}秒へ移動しました。`);
-            }
-        }
+        await seekVideo(0);
+        await resumeVideo();
         refreshViewportSoon();
+        reportStatus(`${nextCase.label} の動画とコメントを読み込みました。`);
     };
-    commentPresetSelect.addEventListener("change", () => {
-        void applyCommentPreset(commentPresetSelect.value);
-    });
-    document.querySelectorAll("[data-comment-preset]").forEach((button) => {
-        if (!(button instanceof HTMLButtonElement)) {
-            return;
-        }
-        const presetName = button.dataset.commentPreset;
-        if (typeof presetName !== "string" || !isCommentPresetName(presetName)) {
-            return;
-        }
-        button.addEventListener("click", () => {
-            void applyCommentPreset(presetName);
-        });
+    videoCaseSelect.addEventListener("change", () => {
+        void applyVideoCase(videoCaseSelect.value);
     });
     const setStageSize = (size) => {
         const validSizes = ["wide", "theater", "compact", "mobile"];
@@ -968,44 +969,6 @@ const setup = async () => {
             }
         });
     }
-    const videoSources = typeof videoOverride === "string" && videoOverride.length > 0
-        ? [videoOverride, "./fixtures/video.mp4", "./fixtures/video2.mp4"]
-        : [
-            COMMENT_PRESETS[selectedPreset].video,
-            "./fixtures/video.mp4",
-            "./fixtures/video2.mp4",
-        ].filter((source, index, sources) => source && sources.indexOf(source) === index);
-    const resolveInitialIndex = () => {
-        const currentSrc = videoEl.getAttribute("src") ?? "";
-        const normalizedSrc = currentSrc.startsWith("./") ? currentSrc : `./${currentSrc}`;
-        const index = videoSources.findIndex((source) => source === normalizedSrc);
-        return index >= 0 ? index : 0;
-    };
-    let currentSourceIndex = resolveInitialIndex();
-    const switchVideoSource = (nextIndex) => {
-        const nextSource = videoSources[nextIndex];
-        if (!nextSource) {
-            return;
-        }
-        currentSourceIndex = nextIndex;
-        videoEl.src = nextSource;
-        videoEl.load();
-        void videoEl.play().catch(() => {
-            reportStatus(`動画の自動再生に失敗しました。手動で再生してください: ${nextSource}`);
-        });
-        renderer.resetState();
-        void loadComments();
-        reportStatus(`動画ソースを${nextSource}に切り替えました。`);
-        refreshViewportSoon();
-    };
-    videoEl.addEventListener("ended", () => {
-        const hasNext = currentSourceIndex + 1 < videoSources.length;
-        if (!hasNext) {
-            reportStatus("再生可能な動画が全て終了しました。");
-            return;
-        }
-        switchVideoSource(currentSourceIndex + 1);
-    });
     const viewportObserver = new ResizeObserver(() => {
         updateViewportStatus();
     });
@@ -1015,10 +978,7 @@ const setup = async () => {
         renderer.destroy();
     });
     await loadComments();
-    if (selectedPreset !== "default") {
-        await seekVideo(COMMENT_PRESETS[selectedPreset].seekSeconds);
-        await resumeVideo();
-    }
+    await resumeVideo();
     refreshViewportSoon();
 };
 void setup();
