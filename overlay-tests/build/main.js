@@ -23,6 +23,19 @@ const formatPreview = (text) => {
     }
     return `${trimmed.slice(0, 40)}…`;
 };
+const numberMeta = (value) => {
+    const candidate = Number(value);
+    return Number.isFinite(candidate) ? candidate : undefined;
+};
+const stringMeta = (value) => {
+    if (typeof value === "string" && value.length > 0) {
+        return value;
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
+    }
+    return undefined;
+};
 const statusEl = document.querySelector("#status");
 const stageEl = document.querySelector("#test-stage");
 const videoEl = document.querySelector("#test-video");
@@ -80,7 +93,16 @@ const sanitizeCommentEntry = (entry) => {
     const commands = Array.isArray(candidate.commands)
         ? candidate.commands.filter((value) => typeof value === "string" && value.length > 0)
         : [];
-    return { text, vposMs, commands };
+    const meta = {
+        no: numberMeta(candidate.no),
+        fork: stringMeta(candidate.forkLabel) ?? stringMeta(candidate.fork),
+        source: stringMeta(candidate.source),
+        threadId: stringMeta(candidate.threadId) ?? stringMeta(candidate.thread),
+        date: numberMeta(candidate.date),
+        userIdHash: stringMeta(candidate.userIdHash) ?? stringMeta(candidate.userId),
+    };
+    const hasMeta = Object.values(meta).some((value) => value !== undefined);
+    return { text, vposMs, commands, meta: hasMeta ? meta : null };
 };
 const extractCommentEntries = (payload) => {
     const preferDisplayThread = (entries) => {
@@ -753,14 +775,17 @@ const setup = async () => {
                 await seekVideo(0);
                 renderer.resetState();
                 renderer.clearComments();
-                cleaned.forEach(({ text, vposMs, commands }) => {
+                cleaned.forEach(({ text, vposMs, commands, meta }) => {
                     safeDebugLog("overlay-ingest", {
                         preview: formatPreview(text),
                         vposMs,
                         commands: commands.length,
+                        no: meta?.no,
+                        fork: meta?.fork,
+                        threadId: meta?.threadId,
                         source,
                     });
-                    renderer.addComment(text, vposMs, commands);
+                    renderer.addComment(text, vposMs, commands, meta);
                 });
             }
             finally {

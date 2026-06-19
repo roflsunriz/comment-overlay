@@ -10,10 +10,20 @@ import { installOverlayProfiler, pushOverlaySample, type OverlayDebugSample } fr
 
 type DebugLogFn = (category: string, payload: unknown) => void;
 
+type CommentMeta = {
+  no?: number;
+  fork?: string;
+  source?: string;
+  threadId?: string;
+  date?: number;
+  userIdHash?: string;
+};
+
 type CommentEntry = {
   text: string;
   vposMs: number;
   commands: string[];
+  meta: CommentMeta | null;
 };
 
 type RawCommentEntry = {
@@ -21,7 +31,15 @@ type RawCommentEntry = {
   body?: unknown;
   vposMs?: unknown;
   commands?: unknown;
+  no?: unknown;
+  fork?: unknown;
+  forkLabel?: unknown;
   source?: unknown;
+  threadId?: unknown;
+  thread?: unknown;
+  date?: unknown;
+  userId?: unknown;
+  userIdHash?: unknown;
 };
 
 type RendererCommentLike = {
@@ -36,6 +54,12 @@ type RendererCommentLike = {
   isFull?: boolean;
   isScrolling?: boolean;
   hasShown?: boolean;
+  no?: number;
+  fork?: string;
+  source?: string;
+  threadId?: string;
+  date?: number;
+  userIdHash?: string;
 };
 
 type RendererLike = {
@@ -62,7 +86,7 @@ type RendererLike = {
   resize(width?: number, height?: number): void;
   resetState(): void;
   clearComments(): void;
-  addComment(text: string, vposMs: number, commands: string[]): void;
+  addComment(text: string, vposMs: number, commands: string[], meta?: CommentMeta | null): void;
   setCommentVisibility(visible: boolean): void;
   destroy(): void;
   getEffectiveCommentVpos?: (comment: RendererCommentLike) => number;
@@ -126,6 +150,21 @@ const formatPreview = (text: unknown): string => {
   return `${trimmed.slice(0, 40)}…`;
 };
 
+const numberMeta = (value: unknown): number | undefined => {
+  const candidate = Number(value);
+  return Number.isFinite(candidate) ? candidate : undefined;
+};
+
+const stringMeta = (value: unknown): string | undefined => {
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return undefined;
+};
+
 const statusEl = document.querySelector("#status");
 const stageEl = document.querySelector("#test-stage");
 const videoEl = document.querySelector("#test-video");
@@ -184,9 +223,20 @@ const sanitizeCommentEntry = (entry: unknown): CommentEntry | null => {
     return null;
   }
   const commands = Array.isArray(candidate.commands)
-    ? candidate.commands.filter((value): value is string => typeof value === "string" && value.length > 0)
+    ? candidate.commands.filter(
+        (value): value is string => typeof value === "string" && value.length > 0,
+      )
     : [];
-  return { text, vposMs, commands };
+  const meta: CommentMeta = {
+    no: numberMeta(candidate.no),
+    fork: stringMeta(candidate.forkLabel) ?? stringMeta(candidate.fork),
+    source: stringMeta(candidate.source),
+    threadId: stringMeta(candidate.threadId) ?? stringMeta(candidate.thread),
+    date: numberMeta(candidate.date),
+    userIdHash: stringMeta(candidate.userIdHash) ?? stringMeta(candidate.userId),
+  };
+  const hasMeta = Object.values(meta).some((value) => value !== undefined);
+  return { text, vposMs, commands, meta: hasMeta ? meta : null };
 };
 
 const extractCommentEntries = (payload: unknown): RawCommentEntry[] => {
@@ -935,14 +985,17 @@ const setup = async () => {
         await seekVideo(0);
         renderer.resetState();
         renderer.clearComments();
-        cleaned.forEach(({ text, vposMs, commands }) => {
+        cleaned.forEach(({ text, vposMs, commands, meta }) => {
           safeDebugLog("overlay-ingest", {
             preview: formatPreview(text),
             vposMs,
             commands: commands.length,
+            no: meta?.no,
+            fork: meta?.fork,
+            threadId: meta?.threadId,
             source,
           });
-          renderer.addComment(text, vposMs, commands);
+          renderer.addComment(text, vposMs, commands, meta);
         });
       } finally {
         if (wasPlaying) {

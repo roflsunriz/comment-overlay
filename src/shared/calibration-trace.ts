@@ -1,4 +1,5 @@
 import type { Comment } from "@/comment/comment";
+import type { CalibrationCommentMeta } from "@/shared/types";
 
 type TraceValue = string | number | boolean | null;
 
@@ -29,6 +30,12 @@ export interface CalibrationTraceRecord {
   readonly comment?: {
     readonly text: string;
     readonly vposMs: number;
+    readonly no?: number;
+    readonly fork?: string;
+    readonly source?: string;
+    readonly threadId?: string;
+    readonly date?: number;
+    readonly userIdHash?: string;
     readonly layout: string;
     readonly lane: number;
     readonly fontSize: number;
@@ -88,9 +95,22 @@ const snapshotCanvasSize = (
   };
 };
 
+const snapshotMeta = (meta: CalibrationCommentMeta | null): CalibrationCommentMeta =>
+  meta
+    ? {
+        ...(meta.no !== undefined ? { no: meta.no } : {}),
+        ...(meta.fork !== undefined ? { fork: meta.fork } : {}),
+        ...(meta.source !== undefined ? { source: meta.source } : {}),
+        ...(meta.threadId !== undefined ? { threadId: meta.threadId } : {}),
+        ...(meta.date !== undefined ? { date: meta.date } : {}),
+        ...(meta.userIdHash !== undefined ? { userIdHash: meta.userIdHash } : {}),
+      }
+    : {};
+
 const snapshotComment = (comment: Comment): CalibrationTraceRecord["comment"] => ({
   text: comment.text,
   vposMs: comment.vposMs,
+  ...snapshotMeta(comment.meta),
   layout: comment.layout,
   lane: comment.lane,
   fontSize: comment.fontSize,

@@ -510,10 +510,15 @@ const readLongString = async (client, grip) => {
 };
 
 const evaluateJson = async (client, consoleActor, expression, timeoutMs) => {
+  const trimmed = String(expression).trim().replace(/;+$/u, "");
+  const expressionSource =
+    trimmed.startsWith("(") || trimmed.startsWith("async ")
+      ? `JSON.stringify((${trimmed}))`
+      : `JSON.stringify(${trimmed})`;
   const result = await evaluate(
     client,
     consoleActor,
-    `JSON.stringify(eval(${JSON.stringify(expression)}))`,
+    expressionSource,
     timeoutMs,
   );
   return JSON.parse(result);

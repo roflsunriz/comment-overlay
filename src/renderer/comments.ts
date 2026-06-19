@@ -1,5 +1,6 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
 import { Comment } from "@/comment/comment";
+import type { CalibrationCommentMeta } from "@/shared/types";
 import { formatCommentPreview, debugLog } from "@/shared/debug";
 import { EDGE_EPSILON, sanitizeVposMs } from "@/shared/constants";
 
@@ -22,9 +23,19 @@ const refreshSameVposFullMinchoEnderFlags = (comments: Comment[]): void => {
   });
 };
 
+const getSortableCommentNo = (comment: Comment): number | null => {
+  const no = comment.meta?.no;
+  return typeof no === "number" && Number.isFinite(no) ? no : null;
+};
+
 const addCommentsImpl = function (
   this: CommentRenderer,
-  entries: ReadonlyArray<{ text: string; vposMs: number; commands?: string[] }>,
+  entries: ReadonlyArray<{
+    text: string;
+    vposMs: number;
+    commands?: string[];
+    meta?: CalibrationCommentMeta | null;
+  }>,
 ): Comment[] {
   if (!Array.isArray(entries) || entries.length === 0) {
     return [];
@@ -34,7 +45,7 @@ const addCommentsImpl = function (
   this.commentDependencies.settingsVersion = this.settingsVersion;
 
   for (const entry of entries) {
-    const { text, vposMs, commands = [] } = entry;
+    const { text, vposMs, commands = [], meta = null } = entry;
     const preview = formatCommentPreview(text);
 
     if (this.isNGComment(text)) {
@@ -49,11 +60,19 @@ const addCommentsImpl = function (
       continue;
     }
 
+    const identityKey =
+      meta?.no !== undefined
+        ? `no:${meta.source ?? ""}:${meta.fork ?? ""}:${meta.threadId ?? ""}:${meta.no}`
+        : `fallback:${text}\0${normalizedVposMs}`;
+    const toIdentityKey = (comment: Comment): string =>
+      comment.meta?.no !== undefined
+        ? `no:${comment.meta.source ?? ""}:${comment.meta.fork ?? ""}:${
+            comment.meta.threadId ?? ""
+          }:${comment.meta.no}`
+        : `fallback:${comment.text}\0${comment.vposMs}`;
     const duplicate =
-      this.comments.some(
-        (comment) => comment.text === text && comment.vposMs === normalizedVposMs,
-      ) ||
-      addedComments.some((comment) => comment.text === text && comment.vposMs === normalizedVposMs);
+      this.comments.some((comment) => toIdentityKey(comment) === identityKey) ||
+      addedComments.some((comment) => toIdentityKey(comment) === identityKey);
     if (duplicate) {
       debugLog("comment-skip-duplicate", { preview, vposMs: normalizedVposMs });
       continue;
@@ -65,6 +84,7 @@ const addCommentsImpl = function (
       commands,
       this._settings,
       this.commentDependencies,
+      meta,
     );
     comment.creationIndex = this.commentSequence++;
     comment.epochId = this.epochId;
@@ -93,6 +113,11 @@ const addCommentsImpl = function (
     if (Math.abs(vposMsDiff) > EDGE_EPSILON) {
       return vposMsDiff;
     }
+    const aNo = getSortableCommentNo(a);
+    const bNo = getSortableCommentNo(b);
+    if (aNo !== null && bNo !== null && Math.abs(aNo - bNo) > EDGE_EPSILON) {
+      return aNo - bNo;
+    }
     return a.creationIndex - b.creationIndex;
   });
 
@@ -104,8 +129,9 @@ const addCommentImpl = function (
   text: string,
   vposMs: number,
   commands: string[] = [],
+  meta: CalibrationCommentMeta | null = null,
 ): Comment | null {
-  const [comment] = this.addComments([{ text, vposMs, commands }]);
+  const [comment] = this.addComments([{ text, vposMs, commands, meta }]);
   return comment ?? null;
 };
 

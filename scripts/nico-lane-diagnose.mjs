@@ -79,9 +79,29 @@ const tracePathFromLaneReport = (report) => {
 
 const normalizeText = (value) => String(value ?? "").replace(/\s+/gu, " ").trim();
 
+const identityKey = (value) => {
+  const rawNo = value?.no ?? value?.commentNo;
+  if (rawNo === null || rawNo === undefined) return null;
+  const no = Number(rawNo);
+  if (!Number.isFinite(no)) return null;
+  return [
+    "no",
+    String(value?.source ?? value?.commentSource ?? ""),
+    String(value?.fork ?? value?.commentFork ?? ""),
+    String(value?.threadId ?? value?.commentThreadId ?? ""),
+    String(no),
+  ].join(":");
+};
+
 const buildLaneDecisionIndex = async (tracePath) => {
   if (!tracePath || !(await fileExists(tracePath))) {
-    return { byCreationIndex: new Map(), byVposText: new Map(), tracePath, available: false };
+    return {
+      byIdentity: new Map(),
+      byCreationIndex: new Map(),
+      byVposText: new Map(),
+      tracePath,
+      available: false,
+    };
   }
   const records = await readJsonl(tracePath);
   const decisions = records
@@ -97,6 +117,10 @@ const buildLaneDecisionIndex = async (tracePath) => {
         currentTimeMs: Number(meta.currentTimeMs),
         creationIndex: Number.isFinite(creationIndex) ? creationIndex : null,
         vposMs: Number.isFinite(vposMs) ? vposMs : null,
+        no: Number.isFinite(Number(comment.no)) ? Number(comment.no) : null,
+        fork: comment.fork ?? null,
+        source: comment.source ?? null,
+        threadId: comment.threadId ?? null,
         text,
         selectedLane: Number(meta.selectedLane),
         usedFallback: meta.usedFallback === true || meta.usedFallback === "true",
@@ -112,7 +136,12 @@ const buildLaneDecisionIndex = async (tracePath) => {
     });
   const byCreationIndex = new Map();
   const byVposText = new Map();
+  const byIdentity = new Map();
   for (const decision of decisions) {
+    const key = identityKey(decision);
+    if (key) {
+      byIdentity.set(key, decision);
+    }
     if (decision.creationIndex !== null) {
       byCreationIndex.set(decision.creationIndex, decision);
     }
@@ -120,10 +149,14 @@ const buildLaneDecisionIndex = async (tracePath) => {
       byVposText.set(`${decision.vposMs}:${decision.text}`, decision);
     }
   }
-  return { byCreationIndex, byVposText, tracePath, available: true, count: decisions.length };
+  return { byIdentity, byCreationIndex, byVposText, tracePath, available: true, count: decisions.length };
 };
 
 const findDecision = (index, candidate) => {
+  const key = identityKey(candidate);
+  if (key && index.byIdentity.has(key)) {
+    return index.byIdentity.get(key);
+  }
   const creationIndex = Number(candidate.creationIndex);
   if (Number.isFinite(creationIndex) && index.byCreationIndex.has(creationIndex)) {
     return index.byCreationIndex.get(creationIndex);
@@ -271,9 +304,13 @@ const summarizeProbe = async (probe) => {
       teacher: probe.result?.teacherCount ?? null,
       candidate: probe.result?.candidateCount ?? null,
       matchedPairs: classifiedPairs.length,
+      matchedByIdentity: probe.result?.inputSet?.matchedByIdentity ?? null,
+      matchedByHeuristic: probe.result?.inputSet?.matchedByHeuristic ?? null,
       missedTeacher: probe.result?.missedTeacherCount ?? null,
       extraCandidate: probe.result?.extraCandidateCount ?? null,
     },
+    inputSet: probe.result?.inputSet ?? null,
+    oracleScores: probe.result?.oracleScores ?? null,
     averages: {
       laneDelta: average(laneDeltas),
       absLaneDelta: average(laneDeltas.map(Math.abs)),
@@ -319,6 +356,16 @@ const buildMarkdown = (report) => {
     }
     lines.push(`- score: ${probe.score}`);
     lines.push(`- count: teacher ${probe.counts.teacher} / candidate ${probe.counts.candidate} / matched ${probe.counts.matchedPairs}`);
+    if (probe.inputSet) {
+      lines.push(
+        `- input set: identity ${probe.inputSet.matchedByIdentity} / heuristic ${probe.inputSet.matchedByHeuristic} / shared identity ${probe.inputSet.sharedIdentityKeys}`,
+      );
+    }
+    if (probe.oracleScores) {
+      lines.push(
+        `- oracle: commentSet ${probe.oracleScores.commentSet?.progressPercent ?? "n/a"} / lane ${probe.oracleScores.lane?.progressPercent ?? "n/a"} / laneY ${probe.oracleScores.laneY?.progressPercent ?? "n/a"} / laneYTime ${probe.oracleScores.laneYTime?.progressPercent ?? "n/a"}`,
+      );
+    }
     lines.push(`- lane delta avg: ${probe.averages.laneDelta?.toFixed(2) ?? "n/a"} / abs ${probe.averages.absLaneDelta?.toFixed(2) ?? "n/a"}`);
     lines.push(`- time delta avg: ${probe.averages.timeDeltaMs?.toFixed(0) ?? "n/a"}ms / abs ${probe.averages.absTimeDeltaMs?.toFixed(0) ?? "n/a"}ms`);
     lines.push("- categories:");

@@ -72,6 +72,22 @@ const appendOption = (args, key, value) => {
   args.push(`--${key}`, String(value));
 };
 
+const resolveCommentsPathForProbe = async (probe) => {
+  if (probe.comments) return probe.comments;
+  const videoId = probe.videoId;
+  if (typeof videoId !== "string" || videoId.length === 0) return null;
+  const officialAllCommentsPath = `.calibration/nico/${videoId}/input-current/nvcomment-current-all-comments.json`;
+  const officialMainCommentsPath = `.calibration/nico/${videoId}/input-current/nvcomment-current-main-comments.json`;
+  const fixtureCommentsPath = `overlay-tests/fixtures/${videoId}-comments.json`;
+  if ((probe.officialComments ?? "main") === "all" && (await fileExists(resolve(officialAllCommentsPath)))) {
+    return officialAllCommentsPath;
+  }
+  if ((probe.officialComments ?? "main") !== "fixture" && (await fileExists(resolve(officialMainCommentsPath)))) {
+    return officialMainCommentsPath;
+  }
+  return (await fileExists(resolve(fixtureCommentsPath))) ? fixtureCommentsPath : null;
+};
+
 const scoreLaneProbe = async (probe) => {
   const args = [
     "scripts/nico-lane-score.mjs",
@@ -80,6 +96,7 @@ const scoreLaneProbe = async (probe) => {
     "--candidate",
     probe.candidateReport,
   ];
+  appendOption(args, "comments", await resolveCommentsPathForProbe(probe));
   for (const [key, value] of Object.entries(probe.options ?? {})) {
     appendOption(args, key, value);
   }
@@ -199,6 +216,34 @@ const percentile = (values, ratio) => {
   return sorted[index];
 };
 
+const meanFinite = (values) => {
+  const finite = values.map(Number).filter(Number.isFinite);
+  return finite.length > 0
+    ? Math.round((finite.reduce((sum, value) => sum + value, 0) / finite.length) * 10) / 10
+    : null;
+};
+
+const summarizeOracleScores = (probeResults) => {
+  const scored = probeResults.filter(
+    (probe) => probe.status === "ok" && Number.isFinite(Number(probe.score)),
+  );
+  const compositeEligible = scored.filter((probe) => probe.excludeFromComposite !== true);
+  const keys = ["normal", "commentSet", "lane", "y", "laneY", "laneYTime"];
+  return Object.fromEntries(
+    keys.map((key) => [
+      key,
+      {
+        allMean: meanFinite(
+          scored.map((probe) => probe.result?.oracleScores?.[key]?.progressPercent),
+        ),
+        compositeMean: meanFinite(
+          compositeEligible.map((probe) => probe.result?.oracleScores?.[key]?.progressPercent),
+        ),
+      },
+    ]),
+  );
+};
+
 const summarize = (probeResults) => {
   const scored = probeResults.filter(
     (probe) => probe.status === "ok" && Number.isFinite(Number(probe.score)),
@@ -258,6 +303,7 @@ const summarize = (probeResults) => {
           ? "Composite score is the mean of probes not marked excludeFromComposite."
           : "Composite score is null until at least one probe is eligible.",
     },
+    oracle: summarizeOracleScores(probeResults),
   };
 };
 

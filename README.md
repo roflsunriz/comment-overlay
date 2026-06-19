@@ -114,6 +114,8 @@ video.addEventListener("ended", () => {
 
 第2引数 `vposMs` はコメントを表示するミリ秒単位の再生位置です。
 
+校正用途では `renderer.addComment(text, vposMs, commands, meta)` の第4引数に `no`、`fork`、`source`、`threadId`、`date`、`userIdHash` を渡せます。これらは描画挙動には影響せず、重複判定と校正 trace / frame snapshot のコメント同一性復元に使用されます。
+
 対応コメントコマンドは以下の通りです。
 - 位置指定: `shita`, `ue`, `naka`
 - サイズ指定: `small`, `medium`, `big`
@@ -126,7 +128,7 @@ video.addEventListener("ended", () => {
 - 行高指定: `lh:1.5` や `lineheight:150%` (倍率またはパーセント)
 - コメントコマンドが未指定のときは`naka` `medium` `defont` `white` 相当の表示になります。
 
-`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
+`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。v4.0.0 では通常 `naka` コメントのレーン投入を、同一 `vposMs` では `no` 昇順、上レーン優先、同一レーン再利用条件 `dt >= max(width / speed)` の公式観測式へ更新しました。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ### RendererSettings のポイント
 

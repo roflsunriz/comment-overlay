@@ -43,6 +43,8 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 
 コメントは `renderer.addComment(text, vposMs, commands)` で追加します。`vposMs` はミリ秒単位のタイムスタンプです。動画再生時に自動で同期され、コメントが表示されます。
 
+校正用途では第4引数に `CalibrationCommentMeta` 相当のメタデータを渡せます。`no`、`fork`、`source`、`threadId`、`date`、`userIdHash` は描画結果を変えずに `laneDecision` trace と frame snapshot へ保持され、同一本文・同一 vpos のコメントを公式 trace と対応付けるために使えます。
+
 ## 設定
 
 `cloneDefaultSettings()` で得られる `RendererSettings` を編集して表示を制御します。
@@ -156,7 +158,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 - 字間: `ls:10` / `letterspacing:10` (px単位)
 - 行高: `lh:1.5` / `lineheight:150%` (倍率またはパーセント)
 
-`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
+`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。v4.0.0 では通常 `naka` コメントのレーン投入を、同一 `vposMs` では `no` 昇順、上レーン優先、同一レーン再利用条件 `dt >= max(width / speed)` の公式観測式へ更新しました。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ## ライフサイクル
 
@@ -270,7 +272,7 @@ const renderer = new CommentRenderer(settings, {
 
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v3.1.19`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v4.0.0`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";

@@ -27,6 +27,12 @@ export interface CalibrationTraceRecord {
     readonly comment?: {
         readonly text: string;
         readonly vposMs: number;
+        readonly no?: number;
+        readonly fork?: string;
+        readonly source?: string;
+        readonly threadId?: string;
+        readonly date?: number;
+        readonly userIdHash?: string;
         readonly layout: string;
         readonly lane: number;
         readonly fontSize: number;

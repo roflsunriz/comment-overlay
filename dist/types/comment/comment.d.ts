@@ -1,4 +1,4 @@
-import type { CommentLayoutCommand, CommentSizeCommand, RenderStyle, RendererSettings, ScrollDirection, CommentDependencies, CommentPrepareOptions, TimeSource } from "@/shared/types";
+import type { CommentLayoutCommand, CommentSizeCommand, RenderStyle, RendererSettings, ScrollDirection, CommentDependencies, CalibrationCommentMeta, CommentPrepareOptions, TimeSource } from "@/shared/types";
 export declare class Comment {
     readonly text: string;
     readonly vposMs: number;
@@ -13,6 +13,7 @@ export declare class Comment {
     readonly isInvisible: boolean;
     readonly isFull: boolean;
     readonly isEnder: boolean;
+    readonly meta: CalibrationCommentMeta | null;
     hasSameVposFullMinchoEnder: boolean;
     x: number;
     y: number;
@@ -54,7 +55,7 @@ export declare class Comment {
     private lastSyncedSettingsVersion;
     private cachedTexture;
     private textureCacheKey;
-    constructor(text: string, vposMs: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies);
+    constructor(text: string, vposMs: number, commands: string[] | undefined, settings: RendererSettings, dependencies?: CommentDependencies, meta?: CalibrationCommentMeta | null);
     prepare(ctx: CanvasRenderingContext2D, visibleWidth: number, canvasHeight: number, options: CommentPrepareOptions): void;
     draw(ctx: CanvasRenderingContext2D, interpolatedX?: number | null): void;
     update(playbackRate?: number, isPaused?: boolean): void;

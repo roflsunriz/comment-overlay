@@ -3,6 +3,12 @@ import type { CalibrationTraceRecord } from "@/shared/calibration-trace";
 export interface CalibrationActiveCommentSnapshot {
     readonly text: string;
     readonly vposMs: number;
+    readonly no?: number;
+    readonly fork?: string;
+    readonly source?: string;
+    readonly threadId?: string;
+    readonly date?: number;
+    readonly userIdHash?: string;
     readonly commands: readonly string[];
     readonly layout: string;
     readonly lane: number;

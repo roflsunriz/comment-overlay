@@ -53,7 +53,7 @@ const jsonLine = (value) => `${JSON.stringify(value)}\n`;
 
 const buildCanvasHookScript = () => String.raw`
 (() => {
-  const traceHookVersion = 3;
+  const traceHookVersion = 5;
   if (
     globalThis.__NICO_CANVAS_TRACE_INSTALLED__ &&
     globalThis.__NICO_CANVAS_TRACE_VERSION__ === traceHookVersion
@@ -65,6 +65,7 @@ const buildCanvasHookScript = () => String.raw`
   const buffer = [];
   const responseBuffer = [];
   const canvasIds = new WeakMap();
+  const canvasTextMetadata = new Map();
   let nextCanvasId = 1;
   let sequence = 0;
   let responseSequence = 0;
@@ -122,6 +123,43 @@ const buildCanvasHookScript = () => String.raw`
       sourceCanvasId: sourceCanvas ? canvasId(sourceCanvas) : null,
       sourceWidth: typeof source.width === "number" ? source.width : null,
       sourceHeight: typeof source.height === "number" ? source.height : null,
+    };
+  };
+
+  const textMetadataSnapshot = (ctx, text, includeText) => {
+    const canvas = ctx && ctx.canvas ? ctx.canvas : null;
+    const id = canvasId(canvas);
+    if (id === null) {
+      return;
+    }
+    const existing = canvasTextMetadata.get(id);
+    const textValue = String(text ?? "");
+    const next = existing ?? {
+      textParts: [],
+      canvasId: id,
+      canvasWidth: canvas && typeof canvas.width === "number" ? canvas.width : null,
+      canvasHeight: canvas && typeof canvas.height === "number" ? canvas.height : null,
+    };
+    if (includeText && textValue.length > 0) {
+      next.textParts.push(textValue);
+    }
+    next.text = next.textParts.join("").slice(0, 120) || null;
+    next.textLength = next.textParts.join("").length || null;
+    next.fillStyle = ctx && "fillStyle" in ctx ? styleValue(ctx.fillStyle) : null;
+    next.strokeStyle = ctx && "strokeStyle" in ctx ? styleValue(ctx.strokeStyle) : null;
+    next.font = ctx && "font" in ctx ? ctx.font : null;
+    next.fontSize = parseFloat(String(next.font ?? "").match(/(\d+(?:\.\d+)?)px/)?.[1] ?? "NaN");
+    next.canvasWidth = canvas && typeof canvas.width === "number" ? canvas.width : next.canvasWidth;
+    next.canvasHeight = canvas && typeof canvas.height === "number" ? canvas.height : next.canvasHeight;
+    next.updatedAtMs = now();
+    canvasTextMetadata.set(id, next);
+  };
+
+  const textMetadataForSource = (source) => {
+    const info = sourceInfo(source);
+    return {
+      ...info,
+      sourceCanvasText: info.sourceCanvasId === null ? null : canvasTextMetadata.get(info.sourceCanvasId) ?? null,
     };
   };
 
@@ -242,6 +280,7 @@ const buildCanvasHookScript = () => String.raw`
     }
     const prototype = ContextCtor.prototype;
     patchMethod(prototype, "fillText", (ctx, args) => {
+      textMetadataSnapshot(ctx, args[0], true);
       snapshot(ctx, "fillText", {
         text: String(args[0] ?? ""),
         x: Number(args[1]),
@@ -250,6 +289,7 @@ const buildCanvasHookScript = () => String.raw`
       });
     });
     patchMethod(prototype, "strokeText", (ctx, args) => {
+      textMetadataSnapshot(ctx, args[0], false);
       snapshot(ctx, "strokeText", {
         text: String(args[0] ?? ""),
         x: Number(args[1]),
@@ -259,8 +299,20 @@ const buildCanvasHookScript = () => String.raw`
     });
     patchMethod(prototype, "drawImage", (ctx, args) => {
       snapshot(ctx, "drawImage", {
-        ...sourceInfo(args[0]),
+        ...textMetadataForSource(args[0]),
         args: args.slice(1).map((value) => (typeof value === "number" ? value : null)),
+      });
+    });
+    patchMethod(prototype, "clearRect", (ctx, args) => {
+      if (ctx?.canvas && Number(args[0]) <= 0 && Number(args[1]) <= 0) {
+        const width = Number(args[2]);
+        const height = Number(args[3]);
+        if (width >= Number(ctx.canvas.width) && height >= Number(ctx.canvas.height)) {
+          canvasTextMetadata.delete(canvasId(ctx.canvas));
+        }
+      }
+      snapshot(ctx, "clearRect", {
+        args: args.map((value) => (typeof value === "number" ? value : String(value))),
       });
     });
     for (const method of ["save", "restore", "setTransform", "resetTransform", "transform", "scale", "translate", "rotate"]) {
@@ -824,6 +876,10 @@ const main = async () => {
     }
     if (startMs !== null) {
       await sleep(prerollMs);
+      await evaluate(
+        Runtime,
+        "globalThis.__NICO_TRACE_DRAIN__ ? globalThis.__NICO_TRACE_DRAIN__() : []",
+      );
     }
 
     const intervalMs = 1000 / fps;

@@ -5,6 +5,7 @@ import type {
   RendererSettings,
   ScrollDirection,
   CommentDependencies,
+  CalibrationCommentMeta,
   CommentPrepareOptions,
   TimeSource,
 } from "@/shared/types";
@@ -30,6 +31,7 @@ export class Comment {
   readonly isInvisible: boolean;
   readonly isFull: boolean;
   readonly isEnder: boolean;
+  readonly meta: CalibrationCommentMeta | null;
   hasSameVposFullMinchoEnder = false;
 
   x = 0;
@@ -79,6 +81,7 @@ export class Comment {
     commands: string[] | undefined,
     settings: RendererSettings,
     dependencies: CommentDependencies = {},
+    meta: CalibrationCommentMeta | null = null,
   ) {
     if (typeof text !== "string") {
       throw new Error("Comment text must be a string");
@@ -90,6 +93,7 @@ export class Comment {
     this.text = text;
     this.vposMs = vposMs;
     this.commands = Array.isArray(commands) ? [...commands] : [];
+    this.meta = meta ? { ...meta } : null;
 
     const parsedCommands = parseCommentCommands(this.commands, {
       defaultColor: settings.commentColor,

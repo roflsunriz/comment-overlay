@@ -3,6 +3,7 @@ import type {
   RendererSettings,
   CommentRendererEventHooks,
   CommentDependencies,
+  CalibrationCommentMeta,
   CommentPrepareOptions,
   TimeSource,
 } from "@/shared/types";
@@ -145,9 +146,19 @@ export class CommentRenderer {
   }
   declare public isNGComment: (text: string) => boolean;
   declare public addComments: (
-    entries: ReadonlyArray<{ text: string; vposMs: number; commands?: string[] }>,
+    entries: ReadonlyArray<{
+      text: string;
+      vposMs: number;
+      commands?: string[];
+      meta?: CalibrationCommentMeta | null;
+    }>,
   ) => Comment[];
-  declare public addComment: (text: string, vposMs: number, commands?: string[]) => Comment | null;
+  declare public addComment: (
+    text: string,
+    vposMs: number,
+    commands?: string[],
+    meta?: CalibrationCommentMeta | null,
+  ) => Comment | null;
   declare public clearComments: () => void;
   declare public resetState: () => void;
   declare public resetFinalPhaseState: () => void;

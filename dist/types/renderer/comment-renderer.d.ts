@@ -1,4 +1,4 @@
-import type { RendererSettings, CommentRendererEventHooks, CommentDependencies, CommentPrepareOptions, TimeSource } from "@/shared/types";
+import type { RendererSettings, CommentRendererEventHooks, CommentDependencies, CalibrationCommentMeta, CommentPrepareOptions, TimeSource } from "@/shared/types";
 import { Comment } from "@/comment/comment";
 import type { Logger } from "@/shared/types";
 export { createDefaultAnimationFrameProvider } from "@/shared/settings";
@@ -92,8 +92,9 @@ export declare class CommentRenderer {
         text: string;
         vposMs: number;
         commands?: string[];
+        meta?: CalibrationCommentMeta | null;
     }>) => Comment[];
-    addComment: (text: string, vposMs: number, commands?: string[]) => Comment | null;
+    addComment: (text: string, vposMs: number, commands?: string[], meta?: CalibrationCommentMeta | null) => Comment | null;
     clearComments: () => void;
     resetState: () => void;
     resetFinalPhaseState: () => void;

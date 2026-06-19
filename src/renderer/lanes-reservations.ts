@@ -2,7 +2,7 @@ import type { CommentRenderer } from "@/renderer/comment-renderer";
 import type { LaneReservation } from "@/shared/types";
 import { EDGE_EPSILON, RESERVATION_TIME_MARGIN_MS } from "@/shared/constants";
 
-const NICO_LANE_REUSE_TOTAL_END_WEIGHT = 1.0;
+const NICO_LANE_REUSE_EPSILON_MS = 0.001;
 const NICO_COLLISION_OVERLAP_TOLERANCE_PX = 24;
 
 const getLanePriorityOrderImpl = function (this: CommentRenderer): number[] {
@@ -23,13 +23,7 @@ const getLaneNextAvailableTimeImpl = function (
   if (!candidate) {
     return currentTime;
   }
-  const displayTailMs = Math.max(0, candidate.totalEndTime - candidate.endTime);
-  return Math.max(
-    currentTime,
-    candidate.endTime +
-      displayTailMs * NICO_LANE_REUSE_TOTAL_END_WEIGHT +
-      RESERVATION_TIME_MARGIN_MS,
-  );
+  return Math.max(currentTime, candidate.endTime + RESERVATION_TIME_MARGIN_MS);
 };
 
 const createLaneReservationImpl = function (
@@ -41,12 +35,12 @@ const createLaneReservationImpl = function (
   const effectiveStart = this.getEffectiveCommentVpos(comment);
   const baseStartTime = Number.isFinite(effectiveStart) ? effectiveStart : referenceTime;
   const startTime = Math.max(0, baseStartTime);
-  const endTime = startTime + comment.preCollisionDurationMs + RESERVATION_TIME_MARGIN_MS;
-  const totalEndTime = startTime + comment.totalDurationMs + RESERVATION_TIME_MARGIN_MS;
   const reservationWidth =
-    Number.isFinite(comment.reservationWidth) && comment.reservationWidth > 0
-      ? comment.reservationWidth
-      : comment.width;
+    Number.isFinite(comment.width) && comment.width > 0 ? comment.width : comment.reservationWidth;
+  const sameLaneRequiredMs =
+    speed > 0 ? Math.max(reservationWidth, 0) / speed : comment.preCollisionDurationMs;
+  const endTime = startTime + sameLaneRequiredMs + RESERVATION_TIME_MARGIN_MS;
+  const totalEndTime = startTime + comment.totalDurationMs + RESERVATION_TIME_MARGIN_MS;
   return {
     comment,
     startTime,
@@ -98,6 +92,14 @@ const areReservationsConflictingImpl = function (
   a: LaneReservation,
   b: LaneReservation,
 ): boolean {
+  if (a.directionSign === b.directionSign) {
+    const aRequiredMs = a.speed > 0 ? Math.max(a.width, 0) / a.speed : 0;
+    const bRequiredMs = b.speed > 0 ? Math.max(b.width, 0) / b.speed : 0;
+    const requiredMs = Math.max(aRequiredMs, bRequiredMs);
+    const dtMs = Math.abs(b.startTime - a.startTime);
+    return dtMs + NICO_LANE_REUSE_EPSILON_MS < requiredMs;
+  }
+
   const overlapStart = Math.max(a.startTime, b.startTime);
   const overlapEnd = Math.min(a.endTime, b.endTime);
   if (overlapStart >= overlapEnd) {

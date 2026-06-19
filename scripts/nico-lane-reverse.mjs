@@ -104,6 +104,34 @@ const parseFontSize = (font) => {
   return match ? Number(match[1]) : null;
 };
 
+const finiteNumberOrNull = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const stringOrNull = (value) => {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+};
+
+const commentNoOrNull = (value) => {
+  const number = finiteNumberOrNull(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+};
+
+const extractCommentIdentity = (comment) => ({
+  commentNo: commentNoOrNull(comment?.no),
+  commentFork: stringOrNull(comment?.fork),
+  commentSource: stringOrNull(comment?.source),
+  commentThreadId: stringOrNull(comment?.threadId),
+  commentDate: finiteNumberOrNull(comment?.date),
+  commentUserIdHash: stringOrNull(comment?.userIdHash),
+});
+
 const metadataKeyCandidates = (record, source) => {
   const keys = [];
   if (record.sourceCanvasId != null) keys.push(`canvas:${record.sourceCanvasId}`);
@@ -129,10 +157,11 @@ const collectTextMetadata = (records, source) => {
         fontSize: parseFontSize(record.font),
         canvasWidth: Number(record.canvasWidth),
         canvasHeight: Number(record.canvasHeight),
-        commentVposMs: Number(record.comment?.vposMs),
+        commentVposMs: finiteNumberOrNull(record.comment?.vposMs),
         commentLayout: record.comment?.layout ?? null,
-        commentLane: Number(record.comment?.lane),
-        commentCreationIndex: Number(record.comment?.creationIndex),
+        commentLane: finiteNumberOrNull(record.comment?.lane),
+        commentCreationIndex: finiteNumberOrNull(record.comment?.creationIndex),
+        ...extractCommentIdentity(record.comment),
       };
       if (record.op === "fillText" && typeof record.text === "string" && record.text.length > 0) {
         existing.textParts.push(record.text);
@@ -149,6 +178,37 @@ const collectTextMetadata = (records, source) => {
   return metadata;
 };
 
+const normalizeSourceCanvasTextMetadata = (value) => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const textParts = Array.isArray(value.textParts)
+    ? value.textParts.filter((part) => typeof part === "string" && part.length > 0)
+    : [];
+  const text = typeof value.text === "string" && value.text.length > 0 ? value.text : textParts.join("");
+  const fontSize = finiteNumberOrNull(value.fontSize) ?? parseFontSize(value.font);
+  return {
+    text: text ? text.slice(0, 120) : null,
+    textLength: finiteNumberOrNull(value.textLength) ?? (text ? text.length : null),
+    fillStyle: stringOrNull(value.fillStyle),
+    strokeStyle: stringOrNull(value.strokeStyle),
+    font: stringOrNull(value.font),
+    fontSize,
+    canvasWidth: finiteNumberOrNull(value.canvasWidth),
+    canvasHeight: finiteNumberOrNull(value.canvasHeight),
+    commentVposMs: null,
+    commentLayout: null,
+    commentLane: null,
+    commentCreationIndex: null,
+    commentNo: null,
+    commentFork: null,
+    commentSource: null,
+    commentThreadId: null,
+    commentDate: null,
+    commentUserIdHash: null,
+  };
+};
+
 const lookupTextMetadata = (record, source, metadata) => {
   const direct = record.comment
     ? {
@@ -161,6 +221,7 @@ const lookupTextMetadata = (record, source, metadata) => {
         commentLayout: record.comment.layout ?? null,
         commentLane: Number(record.comment.lane),
         commentCreationIndex: Number(record.comment.creationIndex),
+        ...extractCommentIdentity(record.comment),
       }
     : null;
   for (const key of metadataKeyCandidates(record, source)) {
@@ -172,6 +233,14 @@ const lookupTextMetadata = (record, source, metadata) => {
         textLength: value.textParts.join("").length || direct?.text?.length || null,
       };
     }
+  }
+  const sourceCanvasText = normalizeSourceCanvasTextMetadata(record.sourceCanvasText);
+  if (sourceCanvasText) {
+    return {
+      ...sourceCanvasText,
+      text: sourceCanvasText.text || direct?.text || null,
+      textLength: sourceCanvasText.textLength || direct?.text?.length || null,
+    };
   }
   return direct
     ? {
@@ -260,6 +329,12 @@ const normalizeDrawImage = (record, source, textMetadata) => {
     commentCreationIndex: Number.isFinite(metadata?.commentCreationIndex)
       ? metadata.commentCreationIndex
       : null,
+    commentNo: commentNoOrNull(metadata?.commentNo),
+    commentFork: metadata?.commentFork ?? null,
+    commentSource: metadata?.commentSource ?? null,
+    commentThreadId: metadata?.commentThreadId ?? null,
+    commentDate: Number.isFinite(metadata?.commentDate) ? metadata.commentDate : null,
+    commentUserIdHash: metadata?.commentUserIdHash ?? null,
   };
 };
 
@@ -304,13 +379,17 @@ const metadataFromFirstSample = (first) => ({
   textFillStyle: first.textFillStyle ?? null,
   textStrokeStyle: first.textStrokeStyle ?? null,
   textFont: first.textFont ?? null,
-  textFontSize: Number.isFinite(Number(first.textFontSize)) ? Number(first.textFontSize) : null,
-  commentVposMs: Number.isFinite(Number(first.commentVposMs)) ? Number(first.commentVposMs) : null,
+  textFontSize: finiteNumberOrNull(first.textFontSize),
+  commentVposMs: finiteNumberOrNull(first.commentVposMs),
   commentLayout: first.commentLayout ?? null,
-  commentLane: Number.isFinite(Number(first.commentLane)) ? Number(first.commentLane) : null,
-  commentCreationIndex: Number.isFinite(Number(first.commentCreationIndex))
-    ? Number(first.commentCreationIndex)
-    : null,
+  commentLane: finiteNumberOrNull(first.commentLane),
+  commentCreationIndex: finiteNumberOrNull(first.commentCreationIndex),
+  commentNo: commentNoOrNull(first.commentNo),
+  commentFork: first.commentFork ?? null,
+  commentSource: first.commentSource ?? null,
+  commentThreadId: first.commentThreadId ?? null,
+  commentDate: finiteNumberOrNull(first.commentDate),
+  commentUserIdHash: first.commentUserIdHash ?? null,
 });
 
 const canLinkTrajectory = (trajectory, record, options) => {
@@ -660,7 +739,14 @@ const buildReport = (records, options) => {
         textFillStyle: trajectory.textFillStyle,
         textFontSize: trajectory.textFontSize,
         commentVposMs: trajectory.commentVposMs,
+        commentLane: trajectory.commentLane,
         commentCreationIndex: trajectory.commentCreationIndex,
+        commentNo: trajectory.commentNo,
+        commentFork: trajectory.commentFork,
+        commentSource: trajectory.commentSource,
+        commentThreadId: trajectory.commentThreadId,
+        commentDate: trajectory.commentDate,
+        commentUserIdHash: trajectory.commentUserIdHash,
       })),
     inferredAlgorithmNotes: [
       "moving small drawImage trajectories are treated as ordinary naka comment candidates",

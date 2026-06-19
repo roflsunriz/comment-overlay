@@ -4,6 +4,12 @@ import type { CalibrationTraceEmitter, CalibrationTraceRecord } from "@/shared/c
 export interface CalibrationActiveCommentSnapshot {
   readonly text: string;
   readonly vposMs: number;
+  readonly no?: number;
+  readonly fork?: string;
+  readonly source?: string;
+  readonly threadId?: string;
+  readonly date?: number;
+  readonly userIdHash?: string;
   readonly commands: readonly string[];
   readonly layout: string;
   readonly lane: number;
@@ -49,6 +55,12 @@ const snapshotActiveComment = (
 ): CalibrationActiveCommentSnapshot => ({
   text: comment.text,
   vposMs: comment.vposMs,
+  ...(comment.meta?.no !== undefined ? { no: comment.meta.no } : {}),
+  ...(comment.meta?.fork !== undefined ? { fork: comment.meta.fork } : {}),
+  ...(comment.meta?.source !== undefined ? { source: comment.meta.source } : {}),
+  ...(comment.meta?.threadId !== undefined ? { threadId: comment.meta.threadId } : {}),
+  ...(comment.meta?.date !== undefined ? { date: comment.meta.date } : {}),
+  ...(comment.meta?.userIdHash !== undefined ? { userIdHash: comment.meta.userIdHash } : {}),
   commands: comment.commands,
   layout: comment.layout,
   lane: comment.lane,

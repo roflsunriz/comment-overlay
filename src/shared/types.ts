@@ -76,6 +76,15 @@ export type CommentSizeCommand = "small" | "medium" | "big";
 
 export type CommentFontCommand = "defont" | "gothic" | "mincho";
 
+export interface CalibrationCommentMeta {
+  readonly no?: number;
+  readonly fork?: string;
+  readonly source?: string;
+  readonly threadId?: string;
+  readonly date?: number;
+  readonly userIdHash?: string;
+}
+
 export type CommentColorCommand =
   | "white"
   | "red"

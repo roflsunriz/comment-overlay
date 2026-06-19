@@ -67,14 +67,42 @@ const normalizeCommentEntries = (input, sourceMode, excludeNos, includeNos) => {
     return true;
   });
   return comments
-    .map((comment) => ({
-      no: Number(comment.no),
-      text: typeof comment.body === "string" ? comment.body : String(comment.text ?? ""),
-      vposMs: Number(comment.vposMs),
-      commands: Array.isArray(comment.commands)
-        ? comment.commands.filter((command) => typeof command === "string")
-        : [],
-    }))
+    .map((comment) => {
+      const no = Number(comment.no);
+      return {
+        no,
+        text: typeof comment.body === "string" ? comment.body : String(comment.text ?? ""),
+        vposMs: Number(comment.vposMs),
+        commands: Array.isArray(comment.commands)
+          ? comment.commands.filter((command) => typeof command === "string")
+          : [],
+        meta: {
+          no: Number.isFinite(no) ? no : undefined,
+          fork:
+            typeof comment.forkLabel === "string"
+              ? comment.forkLabel
+              : typeof comment.fork === "string"
+                ? comment.fork
+                : Number.isFinite(Number(comment.fork))
+                  ? String(comment.fork)
+                  : undefined,
+          source: typeof comment.source === "string" ? comment.source : undefined,
+          threadId:
+            typeof comment.threadId === "string"
+              ? comment.threadId
+              : Number.isFinite(Number(comment.thread))
+                ? String(comment.thread)
+                : undefined,
+          date: Number.isFinite(Number(comment.date)) ? Number(comment.date) : undefined,
+          userIdHash:
+            typeof comment.userIdHash === "string"
+              ? comment.userIdHash
+              : typeof comment.userId === "string"
+                ? comment.userId
+                : undefined,
+        },
+      };
+    })
     .filter(
       (comment) =>
         comment.text.length > 0 &&

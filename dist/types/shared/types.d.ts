@@ -49,6 +49,14 @@ export type ReadonlyRendererSettings = {
 export type CommentLayoutCommand = "naka" | "ue" | "shita";
 export type CommentSizeCommand = "small" | "medium" | "big";
 export type CommentFontCommand = "defont" | "gothic" | "mincho";
+export interface CalibrationCommentMeta {
+    readonly no?: number;
+    readonly fork?: string;
+    readonly source?: string;
+    readonly threadId?: string;
+    readonly date?: number;
+    readonly userIdHash?: string;
+}
 export type CommentColorCommand = "white" | "red" | "pink" | "orange" | "yellow" | "green" | "cyan" | "blue" | "purple" | "black" | "white2" | "red2" | "pink2" | "orange2" | "yellow2" | "green2" | "cyan2" | "blue2" | "purple2" | "black2";
 export type CommentSpecialCommand = "_live" | "invisible";
 export type CommentHexColorCommand = `#${string}`;
