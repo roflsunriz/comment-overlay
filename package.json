@@ -41,10 +41,9 @@
     "nico:fetch-comments": "bun scripts/nico-fetch-comments.mjs",
     "nico:strict-score": "node scripts/nico-strict-score.mjs",
     "nico:internal-score": "node scripts/nico-internal-score.mjs",
-    "nico:lane-reverse": "node scripts/nico-lane-reverse.mjs",
-    "nico:lane-diagnose": "node scripts/nico-lane-diagnose.mjs",
-    "nico:lane-cases": "node scripts/nico-lane-cases.mjs",
     "nico:teacher-vs-teacher": "node scripts/nico-teacher-vs-teacher.mjs",
+    "nico:blackbox-probe": "node scripts/nico-blackbox-probe-cdp.mjs",
+    "nico:blackbox-lanes": "node scripts/nico-blackbox-lane-extract.mjs",
     "nico:probe-score": "node scripts/nico-probe-score.mjs",
     "nico:probe-overlay-capture": "node scripts/nico-probe-overlay-capture.mjs"
   },
