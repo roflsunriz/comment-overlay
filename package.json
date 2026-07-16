@@ -33,6 +33,7 @@
     "type-check": "tsc --project tsconfig.build.json --noEmit",
     "typegen": "tsc --project tsconfig.build.json",
     "lint": "eslint src --ext .ts",
+    "format": "prettier --write research CHANGELOG.md how-to-update.md package.json",
     "preview": "vite preview",
     "nico:trace": "bun scripts/nico-trace.mjs",
     "nico:rdp-trace": "bun scripts/nico-rdp-trace.mjs",
@@ -45,7 +46,11 @@
     "nico:blackbox-probe": "node scripts/nico-blackbox-probe-cdp.mjs",
     "nico:blackbox-lanes": "node scripts/nico-blackbox-lane-extract.mjs",
     "nico:probe-score": "node scripts/nico-probe-score.mjs",
-    "nico:probe-overlay-capture": "node scripts/nico-probe-overlay-capture.mjs"
+    "nico:probe-overlay-capture": "node scripts/nico-probe-overlay-capture.mjs",
+    "research:nico:capture": "node research/tools/capture-session.mjs",
+    "research:nico:replay": "node research/tools/replay-session.mjs",
+    "research:nico:supplement": "node research/tools/supplement-static-resource.mjs",
+    "research:test": "node --test research/tools/tests/*.test.mjs"
   },
   "keywords": [
     "comment",

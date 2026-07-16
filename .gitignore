@@ -18,4 +18,9 @@ CLAUDE.md
 
 COMMON-AGENTS.md
 
+# Local-only reverse-engineering captures and run artifacts
+research/captures/
+research/runs/
+research/.tmp/
+
 COMMON-AGENTS.md

@@ -35,6 +35,12 @@ bun install
 - `bun run nico:report -- ...`: 実プレイヤー採取ログと `comment-overlay` 側ログの差分レポートを生成します。
 - `bun run nico:strict-score -- ...`: 実プレイヤーと `comment-overlay` の `drawImage` 外側レイヤー位置を数値比較します。
 - `bun run nico:internal-score -- ...`: 実プレイヤーと `comment-overlay` のソースキャンバス内部 `fillText` 配置を数値比較します。
+- `bun run research:nico:capture -- ...`: 匿名のニコニコ動画セッションを、Git管理外の研究用アーカイブへ記録します。
+- `bun run research:nico:replay -- ...`: 記録済みセッションを、外部通信を遮断したChromeで再生して通信監査結果を生成します。
+- `bun run research:nico:supplement -- ...`: 監査で不足が判明した公式静的資産1件を、ホストと拡張子を制限して追補します。
+- `bun run research:test`: `research/tools` 配下の研究基盤をテストします。
+
+ニコニコ互換性研究の方針、隔離要件、具体的な使用手順は [`research/README.md`](./research/README.md) に集約しています。
 
 開発にあたり、変更後は `bun run lint`、`bun run type-check`、`bun run build` を順番に実行して品質を確認してください。
 
