@@ -1,12 +1,8 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
-import {
-  DEFAULT_LANE_COUNT,
-  MIN_FONT_SIZE_PX,
-  MIN_LANE_COUNT,
-  toMilliseconds,
-} from "@/shared/constants";
+import { DEFAULT_LANE_COUNT, MIN_LANE_COUNT, toMilliseconds } from "@/shared/constants";
 
-const NICO_SCROLL_LANE_HEIGHT_RATIO = 2.1;
+const NICO_REFERENCE_CANVAS_HEIGHT = 768;
+const NICO_MEDIUM_SINGLE_SLOT_PITCH = 68.1645984649658;
 
 const resizeImpl = function (this: CommentRenderer, width?: number, height?: number): void {
   const video = this.videoElement;
@@ -98,8 +94,8 @@ const calculateLaneMetricsImpl = function (this: CommentRenderer): void {
 
   const effectiveHeight =
     this.displayHeight > 0 ? this.displayHeight : canvas.height / Math.max(this.canvasDpr, 1);
-  const baseHeight = Math.max(MIN_FONT_SIZE_PX, Math.floor(effectiveHeight * (27 / 665)));
-  this.laneHeight = baseHeight * NICO_SCROLL_LANE_HEIGHT_RATIO;
+  this.laneHeight =
+    effectiveHeight * (NICO_MEDIUM_SINGLE_SLOT_PITCH / NICO_REFERENCE_CANVAS_HEIGHT);
   const lanePitch = Math.max(this.laneHeight, 1);
   const verticalSafety = lanePitch;
   const availableLanes = Math.floor(Math.max(0, effectiveHeight - verticalSafety) / lanePitch);

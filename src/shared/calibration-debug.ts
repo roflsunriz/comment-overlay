@@ -18,6 +18,8 @@ export interface CalibrationActiveCommentSnapshot {
   readonly width: number;
   readonly height: number;
   readonly fontSize: number;
+  readonly lineHeightPx: number;
+  readonly slotHeight: number;
   readonly fontFamily: string;
   readonly color: string;
   readonly opacity: number;
@@ -69,6 +71,8 @@ const snapshotActiveComment = (
   width: comment.width,
   height: comment.height,
   fontSize: comment.fontSize,
+  lineHeightPx: comment.lineHeightPx,
+  slotHeight: comment.slotHeight,
   fontFamily: comment.fontFamily,
   color: comment.color,
   opacity: comment.opacity,

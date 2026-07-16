@@ -17,6 +17,8 @@ export interface CalibrationActiveCommentSnapshot {
     readonly width: number;
     readonly height: number;
     readonly fontSize: number;
+    readonly lineHeightPx: number;
+    readonly slotHeight: number;
     readonly fontFamily: string;
     readonly color: string;
     readonly opacity: number;

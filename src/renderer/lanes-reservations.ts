@@ -51,6 +51,8 @@ const createLaneReservationImpl = function (
     speed,
     buffer: 0,
     directionSign: comment.getDirectionSign(),
+    verticalStart: 0,
+    verticalEnd: Math.max(1, comment.slotHeight || comment.height),
   };
 };
 
@@ -60,21 +62,16 @@ const isLaneAvailableImpl = function (
   candidate: LaneReservation,
   currentTime: number,
 ): boolean {
-  const reservations = this.reservedLanes.get(lane);
-  if (!reservations || reservations.length === 0) {
-    return true;
-  }
-  const firstValidIndex = this.findFirstValidReservationIndex(reservations, currentTime);
-  for (let i = firstValidIndex; i < reservations.length; i += 1) {
-    const reservation = reservations[i];
-    if (!reservation) {
-      continue;
-    }
-    if (this.areReservationsConflicting(reservation, candidate)) {
-      return false;
-    }
-  }
-  return true;
+  const slotHeight = Math.max(1, candidate.verticalEnd - candidate.verticalStart);
+  candidate.verticalStart = lane;
+  candidate.verticalEnd = lane + slotHeight;
+  return [...this.reservedLanes.values()].flat().every((reservation) => {
+    if (reservation.totalEndTime <= currentTime) return true;
+    const verticallyDisjoint =
+      reservation.verticalEnd < candidate.verticalStart ||
+      candidate.verticalEnd < reservation.verticalStart;
+    return verticallyDisjoint || !this.areReservationsConflicting(reservation, candidate);
+  });
 };
 
 const storeLaneReservationImpl = function (

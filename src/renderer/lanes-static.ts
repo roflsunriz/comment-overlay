@@ -1,5 +1,6 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
 import type { Comment } from "@/comment/comment";
+import { resolveNicoVerticalSlotGap } from "@/comment/nico-layout";
 
 const findCommentIndexAtOrAfterImpl = function (
   this: CommentRenderer,
@@ -74,13 +75,6 @@ const getGlobalLaneIndexForBottomImpl = function (
   return Math.max(0, this.laneCount - 1 - localIndex);
 };
 
-const calculateStaticTexturePaddingY = (comment: Comment): number => {
-  const textureHeight = Math.ceil(
-    comment.lines.length > 1 ? comment.height : comment.height + comment.fontSize / 3,
-  );
-  return Math.max(0, (textureHeight - comment.height) / 2);
-};
-
 const resolveStaticCommentOffsetImpl = function (
   this: CommentRenderer,
   position: "ue" | "shita",
@@ -89,14 +83,11 @@ const resolveStaticCommentOffsetImpl = function (
   comment: Comment,
 ): number {
   const effectiveHeight = Math.max(1, displayHeight);
-  const commentHeight = Math.max(comment.height, comment.fontSize);
-  const edgePadding = 5;
-  const stackPadding = 0;
-  const topTexturePadding = calculateStaticTexturePaddingY(comment);
+  const commentHeight = Math.max(1, comment.slotHeight || comment.height);
+  const verticalSlotGap = resolveNicoVerticalSlotGap(effectiveHeight);
 
   if (position === "ue") {
-    const minY = edgePadding + topTexturePadding;
-    let cumulativeY = minY;
+    let cumulativeY = 0;
     const reservations = this.getStaticReservations(position);
     const laneSortedReservations = reservations
       .filter((r) => r.lane < lane)
@@ -104,14 +95,13 @@ const resolveStaticCommentOffsetImpl = function (
 
     for (const reservation of laneSortedReservations) {
       const reservedHeight = reservation.yEnd - reservation.yStart;
-      cumulativeY += reservedHeight + stackPadding;
+      cumulativeY += reservedHeight + verticalSlotGap;
     }
 
-    const maxY = Math.max(edgePadding, effectiveHeight * 2);
-    return Math.max(minY, Math.min(cumulativeY, maxY));
+    return cumulativeY;
   }
 
-  let cumulativeY = effectiveHeight - edgePadding;
+  let cumulativeY = effectiveHeight;
   const reservations = this.getStaticReservations(position);
   const laneSortedReservations = reservations
     .filter((r) => r.lane < lane)
@@ -119,11 +109,11 @@ const resolveStaticCommentOffsetImpl = function (
 
   for (const reservation of laneSortedReservations) {
     const reservedHeight = reservation.yEnd - reservation.yStart;
-    cumulativeY -= reservedHeight + stackPadding;
+    cumulativeY -= reservedHeight + verticalSlotGap;
   }
 
   const adjustedY = cumulativeY - commentHeight;
-  return Math.max(edgePadding, adjustedY);
+  return Math.max(0, adjustedY);
 };
 
 const getStaticReservedLaneSetImpl = function (this: CommentRenderer): Set<number> {

@@ -1,6 +1,6 @@
 {
   "name": "comment-overlay",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Reusable comment overlay renderer engine.",
   "repository": {
     "url": "https://github.com/roflsunriz/comment-overlay"
@@ -49,6 +49,8 @@
     "nico:probe-overlay-capture": "node scripts/nico-probe-overlay-capture.mjs",
     "research:nico:capture": "node research/tools/capture-session.mjs",
     "research:nico:replay": "node research/tools/replay-session.mjs",
+    "research:nico:analyze": "node research/tools/analyze-canvas-trace.mjs",
+    "research:nico:lane-probe": "node research/tools/run-lane-pair-sweep.mjs",
     "research:nico:supplement": "node research/tools/supplement-static-resource.mjs",
     "research:test": "node --test research/tools/tests/*.test.mjs"
   },

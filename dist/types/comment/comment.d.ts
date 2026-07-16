@@ -48,6 +48,7 @@ export declare class Comment {
     letterSpacing: number;
     lineHeightMultiplier: number;
     lineHeightPx: number;
+    slotHeight: number;
     lines: string[];
     epochId: number;
     private directionSign;

@@ -1,6 +1,6 @@
 # ニコニココメントシステム互換性研究
 
-このディレクトリは、ニコニコ動画のコメント表示を一般規則として再現するための研究文書、研究用コード、ローカル実験結果の入口です。研究の原案は [strategy.md](./strategy.md)、現在の実装計画と判定基準は [studies/offline-replay-foundation.md](./studies/offline-replay-foundation.md)、最初の実測結果は [studies/2026-07-17-baseline-results.md](./studies/2026-07-17-baseline-results.md) を参照してください。
+このディレクトリは、ニコニコ動画のコメント表示を一般規則として再現するための研究文書、研究用コード、ローカル実験結果の入口です。研究の原案は [strategy.md](./strategy.md)、現在の実装計画と判定基準は [studies/offline-replay-foundation.md](./studies/offline-replay-foundation.md)、最初の実測結果は [studies/2026-07-17-baseline-results.md](./studies/2026-07-17-baseline-results.md)、合成コメントによるレーン観測は [studies/2026-07-17-synthetic-comment-lane-results.md](./studies/2026-07-17-synthetic-comment-lane-results.md)、複数行と可変高スロットの観測は [studies/2026-07-17-multiline-slot-results.md](./studies/2026-07-17-multiline-slot-results.md)、表示高を使い切った後のランダム配置は [studies/2026-07-17-overflow-results.md](./studies/2026-07-17-overflow-results.md) を参照してください。
 
 ## ディレクトリ構成
 
@@ -8,7 +8,9 @@
 - `studies/`: 仮説、実験計画、結果、未解決事項。Git管理対象。
 - `captures/`: 公式ページから取得したレスポンス本文とマニフェスト。Git管理外。
 - `runs/`: オフライン再生の監査結果とスクリーンショット。Git管理外。
-- `.tmp/`: 匿名Chromeプロファイルなどの一時ファイル。Git管理外。
+- `scenarios/`: 公式コメント応答へ注入する合成コメント入力。Git管理対象。
+
+匿名Chromeプロファイルは永続的な研究成果物ではないため、OSの一時ディレクトリ内 `comment-overlay-research/` に作成し、終了時に削除します。研究ツール、入力、監査結果、研究文書はすべて `research/` に置きます。
 
 公式配信物を含む `captures/` は、互換性研究のためにローカルだけで使用し、コミット、配布、npmパッケージへの同梱を行いません。キャプチャは必ずツールが生成する匿名の一時プロファイルで行い、普段使用しているブラウザプロファイルへ接続しません。
 
@@ -38,6 +40,8 @@ bun run research:nico:replay -- --archive research/captures/sm6240144-baseline/m
 
 再生時は全ページリクエストをCDPで捕捉し、記録にないリクエストを `BlockedByClient` で失敗させます。ただし、ブラウザーが自動生成するCORSプリフライトだけは、要求されたorigin・method・headerに対するローカル204応答を合成し、その事実を `synthesized` として監査します。さらにChromeプロセスへ到達不能なローカルプロキシ、DNS名前解決失敗、QUIC無効化、WebRTCの非プロキシUDP無効化を重ねます。`research/runs/` の `audit.json` には提供したレスポンス、合成したプリフライト、遮断したリクエスト、WebSocket試行、例外、コンソール出力を記録します。
 
+システム側のNicoCacheなどが視聴ページへ挿入した `https://www.nicovideo.jp/local/` 配下の資産は、公式プレイヤーの挙動を変えるため隔離再生時に無効化し、`disabledLocalInjections` として通常の未記録要求とは分けて監査します。新規キャプチャで検出した件数はmanifestの `localInjectionExchangeCount` に記録します。
+
 既定では未記録リクエストが1件でもあれば終了コード2です。探索中に監査結果だけ得る場合は `--allow-misses` を指定できますが、再現成功とは判定しません。
 
 ### 3. 研究基盤を検証する
@@ -45,6 +49,30 @@ bun run research:nico:replay -- --archive research/captures/sm6240144-baseline/m
 ```powershell
 bun run research:test
 ```
+
+### 4. 合成コメントを注入してCanvasを観測する
+
+```powershell
+bun run research:nico:replay -- --archive research/captures/sm6240144-baseline/manifest.json --scenario research/scenarios/same-vpos-four.json --seek-ms 10000 --out research/runs/same-vpos-four --allow-misses
+```
+
+`canvas-trace.jsonl` には、公式コードによるテキスト描画、source canvas、外側Canvasへの変換行列、観測時のvideo状態を記録します。文字幅はCanvasの論理 `measureText` 値と、source contextの変換行列を適用した実描画幅を分けて記録します。合成本文が描画へ到達した件数は `audit.json` の `scenario.textHits` で確認できます。
+
+表示寸法への比例性を検証するときだけ、`--window-width` と `--window-height` を同時に指定して再生ウィンドウを上書きできます。監査にはCanvasとvideoの内部寸法、client寸法、bounding rect、`devicePixelRatio` を記録します。
+
+記録したCanvas traceからレーン座標と処理順を集計できます。
+
+```powershell
+bun run research:nico:analyze -- --trace research/runs/same-vpos-four/canvas-trace.jsonl --scenario research/scenarios/same-vpos-four.json
+```
+
+同幅2コメントの指定時刻差を独立再生で測る場合は、1回のコマンドにつき1値を指定します。管理実行環境では同一プロセスからChromeを連続起動するとWindows Jobの制約を受けるため、値の反復はコマンド実行側で行います。
+
+```powershell
+bun run research:nico:lane-probe -- --archive research/captures/sm6240144-baseline/manifest.json --dt-ms 1288 --out research/runs/lane-probe-1288
+```
+
+`--first-body` / `--second-body` で幅、`--line-count` で自動生成本文の行数、`--body-prefix` で行の長さ、`--position` / `--size` / `--color` / `--source` / `--premium` でコマンドとメタデータを1軸ずつ変更できます。混在条件は `--first-size` / `--second-size` と `--first-line-count` / `--second-line-count` で2コメントを独立指定します。
 
 ## 安全性と再現性の境界
 
@@ -59,8 +87,8 @@ bun run research:test
 ## 次の実装段階
 
 1. ベースラインを匿名キャプチャし、オフライン再生の不足レスポンスを監査する。
-2. `nvComment` の記録済み応答を合成コメント応答へ置き換えるローカルコメントサーバー層を作る。
-3. Canvas API、DOM、動画時刻を計測する観測フックを再生開始前に注入する。
-4. 本文、コマンド、時刻差、処理順、幅、高さ、行数を直交表で生成し、同一アーカイブへ反復投入する。
+2. `nvComment` の記録済み応答を合成コメント応答へ置き換えるローカルコメントサーバー層を作る。（完了）
+3. Canvas API、DOM、動画時刻を計測する観測フックを再生開始前に注入する。（完了）
+4. 本文、コマンド、時刻差、処理順、幅、高さ、行数を直交表で生成し、同一アーカイブへ反復投入する。（着手済み）
 5. 観測結果から仮説を立て、未使用ケースをホールドアウトとして反証する。
 6. 成立した一般規則だけを `src/` に実装し、既存fixtureと横断プローブで退行を確認する。

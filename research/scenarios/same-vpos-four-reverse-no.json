@@ -1,0 +1,31 @@
+{
+  "formatVersion": 1,
+  "name": "same-vpos-four-reverse-no",
+  "targetFork": "main",
+  "comments": [
+    {
+      "no": 900004,
+      "vposMs": 20000,
+      "body": "CO_RN_A",
+      "commands": ["184", "naka", "white", "medium"]
+    },
+    {
+      "no": 900003,
+      "vposMs": 20000,
+      "body": "CO_RN_B",
+      "commands": ["184", "naka", "white", "medium"]
+    },
+    {
+      "no": 900002,
+      "vposMs": 20000,
+      "body": "CO_RN_C",
+      "commands": ["184", "naka", "white", "medium"]
+    },
+    {
+      "no": 900001,
+      "vposMs": 20000,
+      "body": "CO_RN_D",
+      "commands": ["184", "naka", "white", "medium"]
+    }
+  ]
+}

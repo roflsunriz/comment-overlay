@@ -14,7 +14,10 @@ const isWideStaticComment = (comment: Comment): boolean =>
   !comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35;
 
 const calculateStaticReservationHeight = (comment: Comment): number =>
-  Math.max(1, comment.fontSize * (isWideStaticComment(comment) ? 0.46 : 1));
+  Math.max(
+    1,
+    isWideStaticComment(comment) ? comment.fontSize * 0.46 : comment.slotHeight || comment.height,
+  );
 
 const shouldActivateCommentAtTimeImpl = function (
   this: CommentRenderer,
@@ -185,12 +188,11 @@ const activateCommentImpl = function (
           ? comment.virtualStartX - displacement
           : comment.virtualStartX + displacement;
     }
-    const laneIndex = this.findAvailableLane(comment);
-    comment.lane = laneIndex;
+    const slotTop = this.findAvailableLane(comment);
     const laneHeight = Math.max(1, this.laneHeight);
+    comment.lane = Math.max(0, Math.round(slotTop / laneHeight));
     const maxY = Math.max(0, displayHeight - comment.height);
-    const laneY = laneIndex * laneHeight;
-    comment.y = comment.isFull ? 0 : Math.max(0, Math.min(laneY, maxY));
+    comment.y = comment.isFull ? 0 : Math.max(0, Math.min(slotTop, maxY));
   } else {
     const staticPosition = comment.layout === "ue" ? "ue" : "shita";
     const laneIndex = this.assignStaticLane(staticPosition, comment, displayHeight, referenceTime);

@@ -12,7 +12,6 @@
 
 - [comment-overlay](https://www.npmjs.com/package/comment-overlay)
 
-
 ## 開発に必要な環境
 
 - Bun 1.3.8 以降
@@ -85,11 +84,7 @@ bun install
 ライブラリは `CommentRenderer` を中心に構成されています。以下は動画要素にコメントを重ねる最小限の例です。
 
 ```ts
-import {
-  CommentRenderer,
-  cloneDefaultSettings,
-  type RendererSettings,
-} from "comment-overlay";
+import { CommentRenderer, cloneDefaultSettings, type RendererSettings } from "comment-overlay";
 
 const video = document.querySelector("video");
 const container = document.querySelector(".overlay-container");
@@ -104,11 +99,12 @@ const renderer = new CommentRenderer(settings, {
 });
 
 renderer.initialize({ video, container });
-renderer.addComment(
-  "このコメントは明朝体で赤色で下部に大きく表示されます",
-  5000,
-  ["shita", "red", "big", "mincho"],
-);
+renderer.addComment("このコメントは明朝体で赤色で下部に大きく表示されます", 5000, [
+  "shita",
+  "red",
+  "big",
+  "mincho",
+]);
 
 // 動画のライフサイクルに合わせてリソースを解放します。
 video.addEventListener("ended", () => {
@@ -123,6 +119,7 @@ video.addEventListener("ended", () => {
 校正用途では `renderer.addComment(text, vposMs, commands, meta)` の第4引数に `no`、`fork`、`source`、`threadId`、`date`、`userIdHash` を渡せます。これらは描画挙動には影響せず、重複判定と校正 trace / frame snapshot のコメント同一性復元に使用されます。
 
 対応コメントコマンドは以下の通りです。
+
 - 位置指定: `shita`, `ue`, `naka`
 - サイズ指定: `small`, `medium`, `big`
 - フォント指定: `defont`(システムフォント), `gothic`(ゴシック体), `mincho`(明朝体)
@@ -134,7 +131,7 @@ video.addEventListener("ended", () => {
 - 行高指定: `lh:1.5` や `lineheight:150%` (倍率またはパーセント)
 - コメントコマンドが未指定のときは`naka` `medium` `defont` `white` 相当の表示になります。
 
-`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。v4.0.0 では通常 `naka` コメントのレーン投入を、同一 `vposMs` では `no` 昇順、上レーン優先、同一レーン再利用条件 `dt >= max(width / speed)` の公式観測式へ更新しました。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
+`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。v4.1.0 では公式の内部 `1366×768` Canvasを表示領域へ比例縮小する寸法則に合わせ、行数起因の自動縮小（`big=3`、`medium=5`、`small=7`、ただし`ender`を除く）と、各コメントの文字サイズ・行高から得た可変高区間を上から予約する配置へ更新しました。時間方向の同一区間再利用には `dt >= max(width / speed)` を使い、縦区間の下端が表示領域の下端以上になるoverflow時だけ公式同様にランダムYへフォールバックします。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ### RendererSettings のポイント
 
@@ -204,6 +201,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 ```
 
 **エポック変更のタイミング:**
+
 - `source-change`: 動画ソースが変更されたとき
 - `metadata-loaded`: 動画のメタデータがロードされたとき
 
@@ -216,7 +214,6 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 3. ブラウザーで表示される URL を開き、`overlay-tests` 内のテスト UI でコメント描画を確認できます。
 
 サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータと動画データは `overlay-tests/fixtures/` に配置してください。`overlay-tests/fixtures/sm6240144.mp4` と `overlay-tests/fixtures/sm6240144-comments.json` がローカルにある場合は、`http://127.0.0.1:4173/?preset=cat-mario` または UI の `sm6240144 猫マリオCA` preset で 01:40 付近のコメントアート確認を開始できます。これらの `sm6240144` 用アセットはgit管理対象外です。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
-
 
 ## コントリビューション
 

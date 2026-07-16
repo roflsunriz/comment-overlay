@@ -188,13 +188,13 @@ const getTexturePadding = (
   }
 
   if (comment.isScrolling && comment.lines.length > 1) {
-    const paddingX = comment.fontSize * (4 / 3);
-    const paddingY = comment.fontSize;
+    const paddingX = comment.fontSize * (5 / 9);
+    const paddingY = comment.fontSize * 0.5;
     return {
       paddingX,
       paddingY,
       textureWidth: Math.ceil(comment.width + paddingX * 2),
-      textureHeight: Math.ceil(comment.height + comment.fontSize * 6.1),
+      textureHeight: Math.ceil(comment.height + comment.fontSize * 1.25),
     };
   }
 
@@ -213,25 +213,23 @@ const getTexturePadding = (
   }
 
   const paddingX = comment.isScrolling
-    ? comment.fontSize * 1.15
+    ? comment.fontSize * (5 / 9)
     : Math.max(10, comment.fontSize * 0.5);
   const scrollTextureFontSize = comment.fontSize;
   const minimumTextureHeight = comment.isScrolling
-    ? Math.round(scrollTextureFontSize * (40 / 9))
+    ? Math.round(scrollTextureFontSize * (20 / 9))
     : comment.height + comment.fontSize / 3;
   const textureHeight = Math.ceil(
     Math.max(comment.height + Math.max(10, comment.fontSize), minimumTextureHeight),
   );
   const paddingY = comment.isScrolling
-    ? comment.fontSize
+    ? comment.fontSize * 0.5
     : Math.max(0, (textureHeight - comment.height) / 2);
 
   return {
     paddingX,
     paddingY,
-    textureWidth: Math.ceil(
-      comment.isScrolling ? comment.width * 2 + paddingX * 2 : comment.width + paddingX * 2,
-    ),
+    textureWidth: Math.ceil(comment.width + paddingX * 2),
     textureHeight,
   };
 };
@@ -730,7 +728,7 @@ export const drawComment = (
       const drawScale = getTextureDrawScale(comment);
       const placement = resolveTextureDrawPlacement(comment, texture, drawX, paddingX, drawScale);
       const targetX = placement.x;
-      const targetY = comment.isScrolling ? comment.y : comment.y - paddingY;
+      const targetY = comment.y - paddingY;
       if (placement.scaleX === 1 && placement.scaleY === 1) {
         ctx.drawImage(texture, targetX, targetY);
       } else {

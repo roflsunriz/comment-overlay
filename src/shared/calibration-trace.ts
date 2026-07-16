@@ -41,6 +41,8 @@ export interface CalibrationTraceRecord {
     readonly fontSize: number;
     readonly width: number;
     readonly height: number;
+    readonly lineHeightPx: number;
+    readonly slotHeight: number;
     readonly color: string;
     readonly opacity: number;
     readonly creationIndex: number;
@@ -116,6 +118,8 @@ const snapshotComment = (comment: Comment): CalibrationTraceRecord["comment"] =>
   fontSize: comment.fontSize,
   width: comment.width,
   height: comment.height,
+  lineHeightPx: comment.lineHeightPx,
+  slotHeight: comment.slotHeight,
   color: comment.color,
   opacity: comment.opacity,
   creationIndex: comment.creationIndex,

@@ -3,15 +3,14 @@ import type { Comment } from "@/comment/comment";
 import { STATIC_VISIBLE_DURATION_MS } from "@/shared/constants";
 import { commentLogger as logger } from "@/comment/logger";
 import { measureTextWidth } from "@/comment/text-measure";
+import { resolveNicoCommentLayoutMetrics } from "@/comment/nico-layout";
 
 export const getCommentCanvasFont = (
   comment: Pick<Comment, "fontSize" | "fontFamily" | "fontWeight">,
 ): string =>
   `${comment.fontWeight ? `${comment.fontWeight} ` : ""}${comment.fontSize}px ${comment.fontFamily}`;
 
-const NICO_BASE_FONT_SIZE_RATIO = 27 / 665;
 const NICO_REFERENCE_HEIGHT_PX = 665;
-const MIN_SCROLL_FONT_SIZE_PX = 12;
 
 const NICO_TAB_REPLACEMENT = "\u2003\u2003";
 const NICO_STATIC_WIDE_TEXTURE_WIDTH_RATIO = 1252 / 597.38330078125;
@@ -66,9 +65,6 @@ const ensureLines = (text: string): string[] => {
   }
   return [normalizedText];
 };
-
-const clampFontSize = (value: number, minSize = MIN_SCROLL_FONT_SIZE_PX): number =>
-  Math.max(minSize, value);
 
 const snapFullCommentWidth = (comment: Comment, canvasHeight: number): number => {
   if (comment.fontSize >= 35) {
@@ -158,7 +154,11 @@ const isNarrowMarkerMultilineLayer = (comment: Comment): boolean => {
 const isLargeComment = (comment: Comment): boolean =>
   comment.size === "big" || comment.fontSize >= 35;
 
-const updateTextMetrics = (comment: Comment, ctx: CanvasRenderingContext2D): void => {
+const updateTextMetrics = (
+  comment: Comment,
+  ctx: CanvasRenderingContext2D,
+  lineHeightPx = Math.max(1, comment.fontSize * comment.lineHeightMultiplier),
+): void => {
   let maxLineWidth = 0;
   const effectiveLetterSpacing = comment.letterSpacing;
   for (const line of comment.lines) {
@@ -170,13 +170,9 @@ const updateTextMetrics = (comment: Comment, ctx: CanvasRenderingContext2D): voi
     }
   }
   comment.width = maxLineWidth;
-  const computedLineHeightPx = Math.max(
-    1,
-    Math.floor(comment.fontSize * comment.lineHeightMultiplier),
-  );
-  comment.lineHeightPx = computedLineHeightPx;
+  comment.lineHeightPx = Math.max(1, lineHeightPx);
   const additionalHeight =
-    comment.lines.length > 1 ? (comment.lines.length - 1) * computedLineHeightPx : 0;
+    comment.lines.length > 1 ? (comment.lines.length - 1) * comment.lineHeightPx : 0;
   comment.height = comment.fontSize + additionalHeight;
 };
 
@@ -199,12 +195,18 @@ export const prepareComment = (
     }
 
     const safeVisibleWidth = Math.max(visibleWidth, 1);
-    const baseFontSize = clampFontSize(Math.floor(canvasHeight * NICO_BASE_FONT_SIZE_RATIO));
-    const scaledFontSize = clampFontSize(Math.floor(baseFontSize * comment.sizeScale));
-    comment.fontSize = scaledFontSize;
-    ctx.font = getCommentCanvasFont(comment);
     comment.lines = ensureLines(comment.text);
-    updateTextMetrics(comment, ctx);
+    const layoutMetrics = resolveNicoCommentLayoutMetrics({
+      canvasHeight,
+      size: comment.size,
+      lineCount: comment.lines.length,
+      isEnder: comment.isEnder,
+      lineHeightMultiplier: comment.lineHeightMultiplier,
+    });
+    comment.fontSize = layoutMetrics.fontSize;
+    comment.slotHeight = layoutMetrics.slotHeight;
+    ctx.font = getCommentCanvasFont(comment);
+    updateTextMetrics(comment, ctx, layoutMetrics.lineAdvance);
     if (comment.isScrolling && comment.isFull) {
       const isFullMinchoMultiline =
         comment.lines.length > 1 &&
@@ -276,10 +278,11 @@ export const prepareComment = (
         comment.width = snapFullCommentWidth(comment, canvasHeight);
         comment.height = Math.max(comment.height, Math.round(canvasHeight * fullHeightRatio));
       }
+      comment.slotHeight = Math.max(comment.slotHeight, comment.height);
     }
 
     if (!comment.isScrolling) {
-      const nicoStaticTextureWidth = safeVisibleWidth + baseFontSize * (8 / 3);
+      const nicoStaticTextureWidth = safeVisibleWidth + comment.fontSize * (8 / 3);
       if (comment.width >= nicoStaticTextureWidth * 0.95 && comment.fontSize >= 35) {
         comment.width = Math.round(canvasHeight * NICO_STATIC_WIDE_TEXTURE_WIDTH_RATIO);
       } else {

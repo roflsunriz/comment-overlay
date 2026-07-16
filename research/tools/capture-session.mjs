@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import CDP from "chrome-remote-interface";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
@@ -11,12 +10,14 @@ import {
 } from "./lib/archive.mjs";
 import {
   closeChrome,
+  createBrowserClient,
   createPageClient,
   launchChrome,
   makeTemporaryProfile,
   removeTemporaryProfile,
 } from "./lib/browser.mjs";
 import { booleanArg, numberArg, parseArgs, settleOrTimeout, sleep } from "./lib/cli.mjs";
+import { isLocalInjectionRequest } from "./lib/request-policy.mjs";
 
 const HELP = `
 ニコニコ動画の匿名ブラウザーセッションを研究用アーカイブへ記録します。
@@ -100,13 +101,31 @@ const main = async () => {
   const maxBodyBytes = numberArg(args, "max-body-bytes", 25 * 1024 * 1024, { minimum: 1 });
   await mkdir(resolve(outDirectory, "bodies"), { recursive: true });
   const profileDirectory = await makeTemporaryProfile("nico-capture");
-  const launched = await launchChrome({
-    chromePath: args.chrome,
-    profileDirectory,
-    extraArguments: ["--disable-extensions", "--disable-breakpad"],
-  });
-  const browserClient = await CDP({ host: "127.0.0.1", port: launched.port });
-  const pageClient = await createPageClient(launched.port);
+  let launched;
+  try {
+    launched = await launchChrome({
+      chromePath: args.chrome,
+      profileDirectory,
+      extraArguments: ["--disable-extensions", "--disable-breakpad"],
+    });
+  } catch (error) {
+    await removeTemporaryProfile(profileDirectory).catch((cleanupError) => {
+      console.warn(`Temporary profile cleanup failed: ${cleanupError.message}`);
+    });
+    throw error;
+  }
+  let browserClient = null;
+  let pageClient = null;
+  try {
+    browserClient = await createBrowserClient(launched.port, launched.child);
+    pageClient = await createPageClient(launched.port, launched.child);
+  } catch (error) {
+    await pageClient?.close().catch(() => {});
+    await closeChrome({ child: launched.child, browserClient });
+    await browserClient?.close().catch(() => {});
+    await removeTemporaryProfile(profileDirectory);
+    throw error;
+  }
   const { Network, Page, Runtime } = pageClient;
   const requests = new Map();
   const responses = new Map();
@@ -257,6 +276,9 @@ const main = async () => {
         ).size,
         omittedBodyCount: exchanges.filter((exchange) => exchange.omission).length,
         failureCount: failures.length,
+        localInjectionExchangeCount: exchanges.filter((exchange) =>
+          isLocalInjectionRequest(exchange.request.url),
+        ).length,
       },
       exchanges,
       failures,
@@ -264,10 +286,15 @@ const main = async () => {
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     console.log(`archive: ${relative(process.cwd(), manifestPath)}`);
     console.log(JSON.stringify(manifest.summary));
+    if (manifest.summary.localInjectionExchangeCount > 0) {
+      console.warn(
+        `Detected ${manifest.summary.localInjectionExchangeCount} non-official /local/ injections; offline replay will disable them.`,
+      );
+    }
   } finally {
-    await pageClient.close().catch(() => {});
+    await pageClient?.close().catch(() => {});
     await closeChrome({ child: launched.child, browserClient });
-    await browserClient.close().catch(() => {});
+    await browserClient?.close().catch(() => {});
     await removeTemporaryProfile(profileDirectory);
   }
 };

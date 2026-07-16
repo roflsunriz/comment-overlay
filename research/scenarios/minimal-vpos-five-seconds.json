@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "name": "minimal-vpos-five-seconds",
+  "targetFork": "main",
+  "comments": [
+    {
+      "no": 900001,
+      "vposMs": 5000,
+      "body": "CO_RESEARCH_MINIMAL_VPOS_5000",
+      "commands": ["184", "naka", "white", "medium"]
+    }
+  ]
+}

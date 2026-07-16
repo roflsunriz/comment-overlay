@@ -217,6 +217,8 @@ export interface LaneReservation {
   speed: number;
   buffer: number;
   directionSign: -1 | 1;
+  verticalStart: number;
+  verticalEnd: number;
 }
 
 export interface StaticLaneReservation {

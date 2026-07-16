@@ -16,6 +16,7 @@ import {
 } from "@/shared/constants";
 import { emitCalibrationTraceEvent } from "@/shared/calibration-trace";
 import { formatCommentPreview, debugLog, isDebugLoggingEnabled } from "@/shared/debug";
+import { resolveNicoVerticalSlotGap } from "@/comment/nico-layout";
 
 const updateCommentsImpl = function (this: CommentRenderer, frameTimeMs?: number): void {
   const video = this.videoElement;
@@ -224,52 +225,65 @@ const findAvailableLaneImpl = function (this: CommentRenderer, comment: Comment)
   const currentTime = this.currentTime;
   this.pruneLaneReservations(currentTime);
   this.pruneStaticLaneReservations(currentTime);
-  const laneCandidates = this.getLanePriorityOrder(currentTime);
   const newReservation = this.createLaneReservation(comment, currentTime);
-  const laneEvaluations = laneCandidates.map((lane) => {
-    const reservations = this.reservedLanes.get(lane) ?? [];
-    const blocker = reservations.find((reservation) =>
-      this.areReservationsConflicting(reservation, newReservation),
-    );
-    return {
-      lane,
-      available: blocker === undefined,
-      nextAvailableTime: this.getLaneNextAvailableTime(lane, currentTime),
-      blocker,
-    };
-  });
-  const selected = laneEvaluations.find((candidate) => candidate.available);
-  const fallbackLane = laneCandidates[laneCandidates.length - 1] ?? 0;
-  const selectedLane = selected?.lane ?? fallbackLane;
+  const timeConflictingReservations = [...this.reservedLanes.values()]
+    .flat()
+    .filter((reservation) => this.areReservationsConflicting(reservation, newReservation))
+    .sort((left, right) => left.verticalStart - right.verticalStart);
+  const slotHeight = Math.max(1, comment.slotHeight || comment.height);
+  const fullDisplayHeight = Math.max(1, this.displayHeight || this.canvas?.height || slotHeight);
+  const displayHeight = this._settings.useFixedLaneCount
+    ? Math.min(fullDisplayHeight, Math.max(slotHeight, this.laneCount * this.laneHeight))
+    : fullDisplayHeight;
+  const verticalSlotGap = resolveNicoVerticalSlotGap(fullDisplayHeight);
+  const evaluatedTops: number[] = [];
+  const blockers: string[] = [];
+  let selectedTop = 0;
+  let usedOverflowFallback = false;
 
-  this.storeLaneReservation(selectedLane, newReservation);
+  while (true) {
+    evaluatedTops.push(selectedTop);
+    const candidateBottom = selectedTop + slotHeight;
+    const blocker = timeConflictingReservations.find(
+      (reservation) =>
+        !(reservation.verticalEnd < selectedTop || candidateBottom < reservation.verticalStart),
+    );
+    if (!blocker) {
+      break;
+    }
+    blockers.push(
+      `${blocker.comment.creationIndex}@${blocker.comment.vposMs}:${blocker.verticalStart.toFixed(3)}-${blocker.verticalEnd.toFixed(3)}`,
+    );
+    selectedTop = blocker.verticalEnd + verticalSlotGap;
+    if (selectedTop + slotHeight >= displayHeight) {
+      usedOverflowFallback = true;
+      selectedTop = Math.random() * (displayHeight - slotHeight);
+      break;
+    }
+  }
+
+  newReservation.verticalStart = selectedTop;
+  newReservation.verticalEnd = selectedTop + slotHeight;
+  this.storeLaneReservation(selectedTop, newReservation);
   emitCalibrationTraceEvent("laneDecision", comment, {
     meta: {
       currentTimeMs: currentTime,
-      selectedLane,
-      usedFallback: selected === undefined,
-      candidateLanes: laneEvaluations.map((candidate) => candidate.lane).join(","),
-      availableLanes: laneEvaluations
-        .filter((candidate) => candidate.available)
-        .map((candidate) => candidate.lane)
-        .join(","),
-      nextAvailableTimes: laneEvaluations
-        .map((candidate) => Math.round(candidate.nextAvailableTime))
-        .join(","),
-      blockedBy: laneEvaluations
-        .map((candidate) =>
-          candidate.blocker
-            ? `${candidate.lane}:${candidate.blocker.comment.creationIndex}@${candidate.blocker.comment.vposMs}`
-            : `${candidate.lane}:-`,
-        )
-        .join(","),
+      selectedLane: selectedTop,
+      selectedTop,
+      selectedBottom: selectedTop + slotHeight,
+      slotHeight,
+      usedFallback: usedOverflowFallback,
+      candidateLanes: evaluatedTops.map((value) => value.toFixed(3)).join(","),
+      availableLanes: selectedTop.toFixed(3),
+      nextAvailableTimes: "",
+      blockedBy: blockers.join(","),
       reservationStartTimeMs: Math.round(newReservation.startTime),
       reservationEndTimeMs: Math.round(newReservation.endTime),
       reservationTotalEndTimeMs: Math.round(newReservation.totalEndTime),
       reservationWidth: Math.round(newReservation.width),
     },
   });
-  return selectedLane;
+  return selectedTop;
 };
 
 export const registerActivationMethods = (ctor: typeof CommentRenderer): void => {

@@ -38,6 +38,8 @@ export interface CalibrationTraceRecord {
         readonly fontSize: number;
         readonly width: number;
         readonly height: number;
+        readonly lineHeightPx: number;
+        readonly slotHeight: number;
         readonly color: string;
         readonly opacity: number;
         readonly creationIndex: number;

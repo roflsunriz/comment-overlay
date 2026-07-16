@@ -49,22 +49,22 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 
 `cloneDefaultSettings()` で得られる `RendererSettings` を編集して表示を制御します。
 
-| プロパティ | 型 | 説明 |
-| --- | --- | --- |
-| `commentColor` | `string` | デフォルトの文字色 (HEX 形式) |
-| `commentOpacity` | `number` | コメントの不透明度 (0-1) |
-| `isCommentVisible` | `boolean` | コメント描画全体の ON/OFF |
-| `useContainerResizeObserver` | `boolean` | コンテナサイズの自動追跡を行うかどうか |
-| `ngWords` | `string[]` | 部分一致 (大文字小文字を区別しない) で判定する NG ワード |
-| `ngRegexps` | `string[]` | 正規表現 NG パターン |
-| `scrollDirection` | `'rtl' \| 'ltr'` | 横流れコメントのスクロール方向 |
-| `renderStyle` | `'outline-only' \| 'classic'` | コメントの描画スタイル。`'classic'` は影付き |
-| `syncMode` | `'raf' \| 'video-frame'` | 描画の同期モード。`video-frame` は `requestVideoFrameCallback` を利用 |
-| `scrollVisibleDurationMs` | `number \| null` | スクロールコメントの表示時間 (ms)。`null` で自動調整 |
-| `useFixedLaneCount` | `boolean` | レーン数を固定するかどうか |
-| `fixedLaneCount` | `number` | 固定する場合のレーン数 |
-| `useDprScaling` | `boolean` | `devicePixelRatio` に応じた高解像度描画を行うか |
-| `shadowIntensity` | `'none' \| 'light' \| 'medium' \| 'strong'` | コメントの影の強さ |
+| プロパティ                   | 型                                          | 説明                                                                  |
+| ---------------------------- | ------------------------------------------- | --------------------------------------------------------------------- |
+| `commentColor`               | `string`                                    | デフォルトの文字色 (HEX 形式)                                         |
+| `commentOpacity`             | `number`                                    | コメントの不透明度 (0-1)                                              |
+| `isCommentVisible`           | `boolean`                                   | コメント描画全体の ON/OFF                                             |
+| `useContainerResizeObserver` | `boolean`                                   | コンテナサイズの自動追跡を行うかどうか                                |
+| `ngWords`                    | `string[]`                                  | 部分一致 (大文字小文字を区別しない) で判定する NG ワード              |
+| `ngRegexps`                  | `string[]`                                  | 正規表現 NG パターン                                                  |
+| `scrollDirection`            | `'rtl' \| 'ltr'`                            | 横流れコメントのスクロール方向                                        |
+| `renderStyle`                | `'outline-only' \| 'classic'`               | コメントの描画スタイル。`'classic'` は影付き                          |
+| `syncMode`                   | `'raf' \| 'video-frame'`                    | 描画の同期モード。`video-frame` は `requestVideoFrameCallback` を利用 |
+| `scrollVisibleDurationMs`    | `number \| null`                            | スクロールコメントの表示時間 (ms)。`null` で自動調整                  |
+| `useFixedLaneCount`          | `boolean`                                   | レーン数を固定するかどうか                                            |
+| `fixedLaneCount`             | `number`                                    | 固定する場合のレーン数                                                |
+| `useDprScaling`              | `boolean`                                   | `devicePixelRatio` に応じた高解像度描画を行うか                       |
+| `shadowIntensity`            | `'none' \| 'light' \| 'medium' \| 'strong'` | コメントの影の強さ                                                    |
 
 `ngWords` は入力をトリムしたうえで部分一致・大文字小文字を区別せずに評価されます。`scrollDirection` を `'ltr'` にするとコメントが左側から右方向へ流れ、デフォルトの `'rtl'` では従来通り右側から左方向へ流れます。
 
@@ -80,14 +80,14 @@ renderer.addComment("Hello Overlay!", 1500, ["naka", "yellow"]);
 
 `CommentRenderer` のコンストラクタの第2引数には `CommentRendererConfig` を渡せます。
 
-| プロパティ | 型 | 説明 |
-| --- | --- | --- |
-| `loggerNamespace` | `string` | ロガーの名前空間 |
-| `timeSource` | `TimeSource` | カスタム時間ソース（テスト用など） |
-| `animationFrameProvider` | `AnimationFrameProvider` | カスタムアニメーションフレームプロバイダー |
-| `createCanvasElement` | `() => HTMLCanvasElement` | カスタムキャンバス要素ファクトリー |
-| `debug` | `DebugLoggingOptions` | デバッグログの設定 |
-| `eventHooks` | `CommentRendererEventHooks` | イベントコールバック（後述） |
+| プロパティ               | 型                          | 説明                                       |
+| ------------------------ | --------------------------- | ------------------------------------------ |
+| `loggerNamespace`        | `string`                    | ロガーの名前空間                           |
+| `timeSource`             | `TimeSource`                | カスタム時間ソース（テスト用など）         |
+| `animationFrameProvider` | `AnimationFrameProvider`    | カスタムアニメーションフレームプロバイダー |
+| `createCanvasElement`    | `() => HTMLCanvasElement`   | カスタムキャンバス要素ファクトリー         |
+| `debug`                  | `DebugLoggingOptions`       | デバッグログの設定                         |
+| `eventHooks`             | `CommentRendererEventHooks` | イベントコールバック（後述）               |
 
 ## コメント表示/非表示の切り替え (v3.0.0+)
 
@@ -158,7 +158,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 - 字間: `ls:10` / `letterspacing:10` (px単位)
 - 行高: `lh:1.5` / `lineheight:150%` (倍率またはパーセント)
 
-`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。v4.0.0 では通常 `naka` コメントのレーン投入を、同一 `vposMs` では `no` 昇順、上レーン優先、同一レーン再利用条件 `dt >= max(width / speed)` の公式観測式へ更新しました。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
+`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行スクロールコメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。v4.1.0 では公式の内部 `1366×768` Canvasを表示領域へ比例縮小する寸法則に合わせ、行数起因の自動縮小（`big=3`、`medium=5`、`small=7`、ただし`ender`を除く）と、各コメントの文字サイズ・行高から得た可変高区間を上から予約する配置へ更新しました。時間方向の同一区間再利用には `dt >= max(width / speed)` を使い、縦区間の下端が表示領域の下端以上になるoverflow時だけ公式同様にランダムYへフォールバックします。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ## ライフサイクル
 
@@ -260,10 +260,10 @@ const renderer = new CommentRenderer(settings, {
     onStateSnapshot: (snapshot) => {
       // 状態の変化を記録
       console.table({
-        "現在時刻": `${snapshot.currentTime.toFixed(2)}ms`,
-        "総コメント数": snapshot.totalComments,
-        "アクティブコメント数": snapshot.activeComments,
-        "エポックID": snapshot.epochId,
+        現在時刻: `${snapshot.currentTime.toFixed(2)}ms`,
+        総コメント数: snapshot.totalComments,
+        アクティブコメント数: snapshot.activeComments,
+        エポックID: snapshot.epochId,
       });
     },
   },
@@ -272,7 +272,7 @@ const renderer = new CommentRenderer(settings, {
 
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v4.0.0`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v4.1.0`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";
@@ -285,10 +285,12 @@ console.log(`comment-overlay version: ${COMMENT_OVERLAY_VERSION}`);
 ### コメントテキストのトリミングについて（重要）
 
 **注意:**
+
 - コメントを追加する際に、テキストに対して `.trim()` を使用すると、行頭・行末の全角スペース（`\u3000`）や非破壊スペース（`\u00A0`）が削除されます
 - これにより、AAコメント（アスキーアート）のインデント構造が崩れる原因となります
 
 **推奨される実装:**
+
 ```ts
 // ❌ 悪い例: trim()を使用するとスペースが削除される
 const text = commentData.body.trim();

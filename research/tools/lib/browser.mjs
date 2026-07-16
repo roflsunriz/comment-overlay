@@ -2,6 +2,7 @@ import CDP from "chrome-remote-interface";
 import { spawn } from "node:child_process";
 import { access, mkdir, rm } from "node:fs/promises";
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 
 import { sleep } from "./cli.mjs";
@@ -65,22 +66,6 @@ export const findChromeExecutable = async (explicitPath) => {
   throw new Error("Chrome/Chromium was not found. Pass --chrome <path> or set CHROME_PATH.");
 };
 
-export const reservePort = async () =>
-  new Promise((resolvePort, reject) => {
-    const server = createServer();
-    server.unref();
-    server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : null;
-      server.close((error) => {
-        if (error) reject(error);
-        else if (port === null) reject(new Error("Could not reserve a CDP port."));
-        else resolvePort(port);
-      });
-    });
-  });
-
 const waitForCdp = async (port, child, timeoutMs = 20_000) => {
   const startedAt = Date.now();
   let latestError = null;
@@ -99,8 +84,56 @@ const waitForCdp = async (port, child, timeoutMs = 20_000) => {
   throw new Error(`Chrome CDP did not become ready: ${latestError?.message ?? "timeout"}`);
 };
 
+export const reservePort = async () =>
+  new Promise((resolvePort, rejectPort) => {
+    const server = createServer();
+    server.unref();
+    server.on("error", rejectPort);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : null;
+      server.close((error) => {
+        if (error) rejectPort(error);
+        else if (port === null) rejectPort(new Error("Could not reserve a CDP port."));
+        else resolvePort(port);
+      });
+    });
+  });
+
+const waitForChromeAssignedPort = (child, timeoutMs = 20_000) =>
+  new Promise((resolvePort, rejectPort) => {
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.stderr.off("data", onData);
+      child.off("exit", onExit);
+      callback(value);
+    };
+    const onData = (chunk) => {
+      const text = String(chunk);
+      const match = text.match(/DevTools listening on ws:\/\/.+:(\d+)\/devtools\//);
+      if (match) finish(resolvePort, Number(match[1]));
+    };
+    const onExit = (exitCode) =>
+      finish(
+        rejectPort,
+        new Error(`Chrome exited before reporting its CDP port (exit ${exitCode}).`),
+      );
+    const timer = setTimeout(
+      () => finish(rejectPort, new Error("Chrome did not report its CDP port before timeout.")),
+      timeoutMs,
+    );
+    child.stderr.on("data", onData);
+    child.on("exit", onExit);
+  });
+
+const temporaryProfileRoot = () =>
+  resolve(process.env.CO_RESEARCH_TEMP_ROOT ?? join(tmpdir(), "comment-overlay-research"));
+
 export const makeTemporaryProfile = async (purpose) => {
-  const root = resolve("research/.tmp");
+  const root = temporaryProfileRoot();
   await mkdir(root, { recursive: true });
   const directory = join(
     root,
@@ -111,7 +144,7 @@ export const makeTemporaryProfile = async (purpose) => {
 };
 
 export const removeTemporaryProfile = async (directory) => {
-  const allowedRoot = resolve("research/.tmp");
+  const allowedRoot = temporaryProfileRoot();
   const resolvedDirectory = resolve(directory);
   if (
     !resolvedDirectory.startsWith(`${allowedRoot}\\`) &&
@@ -126,12 +159,12 @@ export const launchChrome = async ({
   chromePath,
   profileDirectory,
   offline = false,
+  debuggingPort = null,
   extraArguments = [],
 }) => {
   const executable = await findChromeExecutable(chromePath);
-  const port = await reservePort();
   const argumentsForChrome = [
-    `--remote-debugging-port=${port}`,
+    `--remote-debugging-port=${debuggingPort ?? 0}`,
     `--user-data-dir=${profileDirectory}`,
     "--headless=new",
     "--no-first-run",
@@ -147,6 +180,7 @@ export const launchChrome = async ({
     "--window-size=1280,720",
     ...(offline
       ? [
+          "--disable-gpu-sandbox",
           "--proxy-server=http://127.0.0.1:9",
           "--proxy-bypass-list=<-loopback>",
           "--host-resolver-rules=MAP * ~NOTFOUND",
@@ -163,16 +197,31 @@ export const launchChrome = async ({
   const stderr = [];
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => {
-    if (stderr.length < 40) stderr.push(String(chunk).trim());
+    if (stderr.length < 80) stderr.push(String(chunk).trim());
   });
 
   try {
+    const port = debuggingPort ?? (await waitForChromeAssignedPort(child));
     await waitForCdp(port, child);
+    return { child, executable, port, stderr };
   } catch (error) {
     child.kill();
     throw new Error(`${error.message}\n${stderr.filter(Boolean).join("\n")}`);
   }
-  return { child, executable, port };
+};
+
+export const createBrowserClient = async (port, _child, timeoutMs = 5000) => {
+  const startedAt = Date.now();
+  let latestError = null;
+  while (Date.now() - startedAt <= timeoutMs) {
+    try {
+      return await CDP({ host: "127.0.0.1", port });
+    } catch (error) {
+      latestError = error;
+      await sleep(100);
+    }
+  }
+  throw new Error(`Could not connect to the Chrome browser target: ${latestError?.message}`);
 };
 
 export const closeChrome = async ({ child, browserClient }) => {
@@ -186,9 +235,19 @@ export const closeChrome = async ({ child, browserClient }) => {
   if (child.exitCode === null) child.kill();
 };
 
-export const createPageClient = async (port) => {
-  const targets = await CDP.List({ host: "127.0.0.1", port });
-  const page = targets.find((target) => target.type === "page");
-  if (!page) throw new Error("Chrome page target was not found.");
-  return CDP({ host: "127.0.0.1", port, target: page });
+export const createPageClient = async (port, _child, timeoutMs = 5000) => {
+  const startedAt = Date.now();
+  let latestError = null;
+  while (Date.now() - startedAt <= timeoutMs) {
+    try {
+      const targets = await CDP.List({ host: "127.0.0.1", port });
+      const page = targets.find((target) => target.type === "page");
+      if (page) return await CDP({ host: "127.0.0.1", port, target: page });
+      latestError = new Error("Chrome page target was not found.");
+    } catch (error) {
+      latestError = error;
+    }
+    await sleep(100);
+  }
+  throw new Error(`Could not connect to the Chrome page target: ${latestError?.message}`);
 };

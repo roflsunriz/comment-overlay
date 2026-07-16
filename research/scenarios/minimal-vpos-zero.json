@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "name": "minimal-vpos-zero",
+  "targetFork": "main",
+  "comments": [
+    {
+      "no": 900001,
+      "vposMs": 0,
+      "body": "CO_RESEARCH_MINIMAL_VPOS_ZERO",
+      "commands": ["184", "naka", "white", "medium"]
+    }
+  ]
+}

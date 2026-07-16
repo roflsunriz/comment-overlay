@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "name": "slot-gap-reject-big",
+  "targetFork": "main",
+  "comments": [
+    {
+      "no": 930001,
+      "vposMs": 28800,
+      "body": "CO_SLOT_A_SHORT",
+      "commands": ["184", "naka", "white", "small"]
+    },
+    {
+      "no": 930002,
+      "vposMs": 28800,
+      "body": "CO_SLOT_B_MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+      "commands": ["184", "naka", "white", "big"]
+    },
+    {
+      "no": 930003,
+      "vposMs": 30000,
+      "body": "CO_SLOT_C_BIG",
+      "commands": ["184", "naka", "white", "big"]
+    }
+  ]
+}
