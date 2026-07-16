@@ -215,6 +215,10 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 
 サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。コメントデータと動画データは `overlay-tests/fixtures/` に配置してください。`overlay-tests/fixtures/sm6240144.mp4` と `overlay-tests/fixtures/sm6240144-comments.json` がローカルにある場合は、`http://127.0.0.1:4173/?preset=cat-mario` または UI の `sm6240144 猫マリオCA` preset で 01:40 付近のコメントアート確認を開始できます。これらの `sm6240144` 用アセットはgit管理対象外です。UI からは NG ワード/NG 正規表現の有効化とスクロール方向の切り替えをリアルタイムで試せます。
 
+『ようこそ実力至上主義の教室へ』第5話のEDコメントアートは、`so31723295 ED（よう実1期・第5話）` presetで確認できます。第5話の1340〜1440秒にあるmainコメント137件（旧leaf 51件を含む）をクリップ先頭基準へ移して使用し、映像は同じシーズン1 EDを第1話の公式動画から切り出した素材です。
+
+動画選択プルダウンは、`overlay-tests/fixtures/` にある `<case-id>-comments.json` と `<case-id>.mp4` の組からビルド時に自動生成されます。表示名を変える場合はコメントJSONのトップレベルへ `"label"` を追加してください。`bun run serve` は自動生成とoverlay test用TypeScriptのビルドを行ってからサーバーを起動します。
+
 ## コントリビューション
 
 バグ報告や機能提案は GitHub Issue テンプレートを利用してください。Pull Request を送る際は、テンプレートのチェックリストに従ってローカルでの検証を済ませてから提出してください。

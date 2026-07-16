@@ -1,6 +1,7 @@
 node_modules/
 .playwright-mcp/
 overlay-tests/dist/
+overlay-tests/fixtures/*.mp4
 .DS_Store
 *.log
 *.tmp
