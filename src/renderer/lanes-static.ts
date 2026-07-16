@@ -82,6 +82,11 @@ const resolveStaticCommentOffsetImpl = function (
   displayHeight: number,
   comment: Comment,
 ): number {
+  const assignedOffset = this.pendingStaticPlacementOffsets.get(comment);
+  if (assignedOffset !== undefined) {
+    this.pendingStaticPlacementOffsets.delete(comment);
+    return assignedOffset;
+  }
   const effectiveHeight = Math.max(1, displayHeight);
   const commentHeight = Math.max(1, comment.slotHeight || comment.height);
   const verticalSlotGap = resolveNicoVerticalSlotGap(effectiveHeight);

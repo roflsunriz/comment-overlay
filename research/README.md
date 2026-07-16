@@ -1,6 +1,6 @@
 # ニコニココメントシステム互換性研究
 
-このディレクトリは、ニコニコ動画のコメント表示を一般規則として再現するための研究文書、研究用コード、ローカル実験結果の入口です。研究の原案は [strategy.md](./strategy.md)、現在の実装計画と判定基準は [studies/offline-replay-foundation.md](./studies/offline-replay-foundation.md)、最初の実測結果は [studies/2026-07-17-baseline-results.md](./studies/2026-07-17-baseline-results.md)、合成コメントによるレーン観測は [studies/2026-07-17-synthetic-comment-lane-results.md](./studies/2026-07-17-synthetic-comment-lane-results.md)、複数行と可変高スロットの観測は [studies/2026-07-17-multiline-slot-results.md](./studies/2026-07-17-multiline-slot-results.md)、表示高を使い切った後のランダム配置は [studies/2026-07-17-overflow-results.md](./studies/2026-07-17-overflow-results.md) を参照してください。
+このディレクトリは、ニコニコ動画のコメント表示を一般規則として再現するための研究文書、研究用コード、ローカル実験結果の入口です。研究の原案は [strategy.md](./strategy.md)、現在の実装計画と判定基準は [studies/offline-replay-foundation.md](./studies/offline-replay-foundation.md)、最初の実測結果は [studies/2026-07-17-baseline-results.md](./studies/2026-07-17-baseline-results.md)、合成コメントによるレーン観測は [studies/2026-07-17-synthetic-comment-lane-results.md](./studies/2026-07-17-synthetic-comment-lane-results.md)、複数行と可変高スロットの観測は [studies/2026-07-17-multiline-slot-results.md](./studies/2026-07-17-multiline-slot-results.md)、表示高を使い切った後のランダム配置は [studies/2026-07-17-overflow-results.md](./studies/2026-07-17-overflow-results.md)、固定コメントとコメントアートの境界調査は [studies/2026-07-17-fixed-comment-coverage-results.md](./studies/2026-07-17-fixed-comment-coverage-results.md) を参照してください。
 
 ## ディレクトリ構成
 
@@ -73,6 +73,12 @@ bun run research:nico:lane-probe -- --archive research/captures/sm6240144-baseli
 ```
 
 `--first-body` / `--second-body` で幅、`--line-count` で自動生成本文の行数、`--body-prefix` で行の長さ、`--position` / `--size` / `--color` / `--source` / `--premium` でコマンドとメタデータを1軸ずつ変更できます。混在条件は `--first-size` / `--second-size` と `--first-line-count` / `--second-line-count` で2コメントを独立指定します。
+
+固定コメントの時刻、寸法、コマンド、viewport、反復、横幅、処理順を直交表で測る場合は、`--profile` に `temporal`、`geometry`、`features`、`viewport`、`boundary`、`repeat`、`width`、`order` のいずれかを指定します。1ケースだけ再実行する場合は `--case` も指定できます。
+
+```powershell
+bun run research:nico:fixed-matrix -- --profile boundary --out research/runs/fixed-comment-matrix-boundary
+```
 
 ## 安全性と再現性の境界
 

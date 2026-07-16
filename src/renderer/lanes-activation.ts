@@ -9,6 +9,7 @@ import {
   STATIC_VISIBLE_DURATION_MS,
 } from "@/shared/constants";
 import { debugLog, formatCommentPreview, isDebugLoggingEnabled } from "@/shared/debug";
+import { resolveNicoVerticalSlotGap } from "@/comment/nico-layout";
 
 const isWideStaticComment = (comment: Comment): boolean =>
   !comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35;
@@ -18,6 +19,60 @@ const calculateStaticReservationHeight = (comment: Comment): number =>
     1,
     isWideStaticComment(comment) ? comment.fontSize * 0.46 : comment.slotHeight || comment.height,
   );
+
+type StaticPlacementReservation = Pick<
+  import("@/shared/types").StaticLaneReservation,
+  "releaseTime" | "yStart" | "yEnd"
+>;
+
+export const resolveStaticPlacement = ({
+  position,
+  reservationHeight,
+  displayHeight,
+  reservations,
+  currentTime,
+  random = Math.random,
+}: {
+  position: "ue" | "shita";
+  reservationHeight: number;
+  displayHeight: number;
+  reservations: StaticPlacementReservation[];
+  currentTime: number;
+  random?: () => number;
+}): { y: number; usedFallback: boolean } => {
+  const effectiveHeight = Math.max(1, displayHeight);
+  const slotHeight = Math.max(1, reservationHeight);
+  const gap = resolveNicoVerticalSlotGap(effectiveHeight);
+  const active = reservations.filter((reservation) => reservation.releaseTime > currentTime);
+  const candidates =
+    position === "ue"
+      ? [0, ...active.sort((left, right) => left.yEnd - right.yEnd).map((item) => item.yEnd + gap)]
+      : [
+          effectiveHeight - slotHeight,
+          ...active
+            .sort((left, right) => right.yStart - left.yStart)
+            .map((item) => item.yStart - gap - slotHeight),
+        ];
+
+  if (slotHeight < effectiveHeight) {
+    for (const y of candidates) {
+      if (y < 0 || y + slotHeight > effectiveHeight) continue;
+      const conflicts = active.some(
+        (reservation) => !(y + slotHeight <= reservation.yStart || y >= reservation.yEnd),
+      );
+      if (!conflicts) return { y, usedFallback: false };
+    }
+    return {
+      y: random() * (effectiveHeight - slotHeight),
+      usedFallback: true,
+    };
+  }
+
+  return {
+    y: position === "ue" ? 0 : effectiveHeight - slotHeight,
+    usedFallback: active.length > 0,
+  };
+};
 
 const shouldActivateCommentAtTimeImpl = function (
   this: CommentRenderer,
@@ -248,41 +303,19 @@ const assignStaticLaneImpl = function (
 ): number {
   const reservations = this.getStaticReservations(position);
   const reservationHeight = calculateStaticReservationHeight(comment);
-  const estimatedStep = Math.max(1, reservationHeight);
-  const laneCount = Math.max(
-    this.laneCount,
-    Math.ceil(Math.max(1, displayHeight) / estimatedStep) + reservations.length + 1,
-  );
-  const laneIndices = Array.from({ length: laneCount }, (_, index) => index);
+  const placement = resolveStaticPlacement({
+    position,
+    reservationHeight,
+    displayHeight,
+    reservations,
+    currentTime,
+  });
+  this.pendingStaticPlacementOffsets.set(comment, placement.y);
 
-  for (const lane of laneIndices) {
-    const yOffset = this.resolveStaticCommentOffset(position, lane, displayHeight, comment);
-    const yStart = yOffset;
-    const yEnd = yOffset + reservationHeight;
-
-    const hasConflict = reservations.some((reservation) => {
-      const timeOverlap = reservation.releaseTime > currentTime;
-      if (!timeOverlap) {
-        return false;
-      }
-      const yOverlap = !(yEnd <= reservation.yStart || yStart >= reservation.yEnd);
-      return yOverlap;
-    });
-
-    if (!hasConflict) {
-      return lane;
-    }
-  }
-
-  let fallbackLane = laneIndices[0] ?? 0;
-  let earliestRelease = Number.POSITIVE_INFINITY;
-  for (const reservation of reservations) {
-    if (reservation.releaseTime < earliestRelease) {
-      earliestRelease = reservation.releaseTime;
-      fallbackLane = reservation.lane;
-    }
-  }
-  return fallbackLane;
+  const reservedLanes = new Set(reservations.map((reservation) => reservation.lane));
+  let lane = 0;
+  while (reservedLanes.has(lane)) lane++;
+  return lane;
 };
 
 const reserveStaticLaneImpl = function (
@@ -314,7 +347,11 @@ const releaseStaticLaneImpl = function (
     return;
   }
   const reservations = this.getStaticReservations(position);
-  const index = reservations.findIndex((r) => r.lane === lane);
+  const index = reservations.findIndex((reservation) =>
+    position === "shita"
+      ? this.getGlobalLaneIndexForBottom(reservation.lane) === lane
+      : reservation.lane === lane,
+  );
   if (index >= 0) {
     reservations.splice(index, 1);
   }

@@ -195,3 +195,25 @@ test("drawImageの変換行列から実座標とレーン間隔を算出する",
     ["A", "B"],
   );
 });
+
+test("canvas trace analysis matches tabs normalized to em spaces", () => {
+  const scenario = normalizeCommentScenario({
+    formatVersion: 1,
+    comments: [{ no: 1, vposMs: 0, body: "\t\t幅", commands: ["ue", "big"] }],
+  });
+  const analysis = analyzeScenarioCanvasTrace(
+    [
+      {
+        operation: "drawImage",
+        sequence: 1,
+        args: [0, 0],
+        transform: [1, 0, 0, 1, 0, 0],
+        sourceCanvasText: { text: "\u2003\u2003\u2003\u2003幅" },
+      },
+    ],
+    scenario,
+  );
+
+  assert.equal(analysis.summary.matchedCommentCount, 1);
+  assert.equal(analysis.comments[0].drawCallCount, 1);
+});

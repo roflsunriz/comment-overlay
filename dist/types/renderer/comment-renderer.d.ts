@@ -11,6 +11,7 @@ export declare class CommentRenderer {
     readonly reservedLanes: Map<number, LaneReservation[]>;
     readonly topStaticLaneReservations: StaticLaneReservation[];
     readonly bottomStaticLaneReservations: StaticLaneReservation[];
+    readonly pendingStaticPlacementOffsets: WeakMap<Comment, number>;
     readonly log: Logger;
     readonly timeSource: TimeSource;
     readonly animationFrameProvider: AnimationFrameProvider;

@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "name": "fixed-full-mincho-layered-ca",
+  "targetFork": "main",
+  "comments": [
+    {
+      "no": 900101,
+      "vposMs": 10000,
+      "body": "　 \n\n\n　 \n\n\n　 \n\n\n　 \n\n\n　 \n\n＿▉￣▉＿▉￣\n　 ",
+      "commands": ["ue", "white", "big", "full", "mincho"]
+    },
+    {
+      "no": 900102,
+      "vposMs": 10000,
+      "body": "　 \n\n\n　 \n\n\n　 \n\n\n　 \n\n\n　 \n\n試￣続▁自￣の\n　 ",
+      "commands": ["ue", "white", "big", "full", "mincho"]
+    },
+    {
+      "no": 900103,
+      "vposMs": 10000,
+      "body": "　 \n\n\n　 \n\n\n　 \n\n\n　 \n\n\n　 \n\n￣し＿け￣由▁\n　 ",
+      "commands": ["ue", "black", "big", "full", "mincho"]
+    }
+  ]
+}

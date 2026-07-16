@@ -55,6 +55,7 @@ export class CommentRenderer {
   public readonly reservedLanes = new Map<number, LaneReservation[]>();
   public readonly topStaticLaneReservations: StaticLaneReservation[] = [];
   public readonly bottomStaticLaneReservations: StaticLaneReservation[] = [];
+  public readonly pendingStaticPlacementOffsets = new WeakMap<Comment, number>();
   public readonly log: Logger;
   public readonly timeSource: TimeSource;
   public readonly animationFrameProvider: AnimationFrameProvider;

@@ -51,17 +51,20 @@ const median = (values) => {
   return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
+const normalizeCommentText = (text) => text.replaceAll("\t", "\u2003\u2003");
+
 export const analyzeScenarioCanvasTrace = (records, scenario) => {
   const drawRecords = records.filter(
     (record) =>
       record.operation === "drawImage" && typeof record.sourceCanvasText?.text === "string",
   );
   const comments = scenario.comments.map((comment) => {
+    const normalizedBody = normalizeCommentText(comment.body);
     const matches = drawRecords
       .filter(
         (record) =>
-          record.sourceCanvasText.text === comment.body ||
-          record.sourceCanvasText.text.includes(comment.body),
+          record.sourceCanvasText.text === normalizedBody ||
+          record.sourceCanvasText.text.includes(normalizedBody),
       )
       .map((record) => ({
         sequence: record.sequence,
