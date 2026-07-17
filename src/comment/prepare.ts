@@ -4,6 +4,7 @@ import { STATIC_VISIBLE_DURATION_MS } from "@/shared/constants";
 import { commentLogger as logger } from "@/comment/logger";
 import { measureTextWidth } from "@/comment/text-measure";
 import { resolveNicoCommentLayoutMetrics } from "@/comment/nico-layout";
+import { resolveNicoStaticWidthFit } from "@/comment/static-width-fit";
 
 export const getCommentCanvasFont = (
   comment: Pick<Comment, "fontSize" | "fontFamily" | "fontWeight">,
@@ -13,7 +14,6 @@ export const getCommentCanvasFont = (
 const NICO_REFERENCE_HEIGHT_PX = 665;
 
 const NICO_TAB_REPLACEMENT = "\u2003\u2003";
-const NICO_STATIC_WIDE_TEXTURE_WIDTH_RATIO = 1252 / 597.38330078125;
 const NICO_FULL_SMALL_WIDTH_BUCKET_RATIOS = [
   366 / NICO_REFERENCE_HEIGHT_PX,
   510 / NICO_REFERENCE_HEIGHT_PX,
@@ -176,6 +176,21 @@ const updateTextMetrics = (
   comment.height = comment.fontSize + additionalHeight;
 };
 
+const measureMaxLineWidthAtFont = (
+  comment: Comment,
+  ctx: CanvasRenderingContext2D,
+  fontSize: number,
+): number => {
+  ctx.font = `${comment.fontWeight ? `${comment.fontWeight} ` : ""}${fontSize}px ${comment.fontFamily}`;
+  return Math.max(
+    0,
+    ...comment.lines.map((line) => {
+      const extraSpacing = line.length > 1 ? comment.letterSpacing * (line.length - 1) : 0;
+      return Math.max(0, measureTextWidth(ctx, line) + extraSpacing);
+    }),
+  );
+};
+
 export const prepareComment = (
   comment: Comment,
   ctx: CanvasRenderingContext2D,
@@ -205,8 +220,38 @@ export const prepareComment = (
     });
     comment.fontSize = layoutMetrics.fontSize;
     comment.slotHeight = layoutMetrics.slotHeight;
+    comment.staticWidthScale = 1;
     ctx.font = getCommentCanvasFont(comment);
     updateTextMetrics(comment, ctx, layoutMetrics.lineAdvance);
+    if (!comment.isScrolling) {
+      const verticalTextWidth = comment.width;
+      const originalMetrics = resolveNicoCommentLayoutMetrics({
+        canvasHeight,
+        size: comment.size,
+        lineCount: comment.lines.length,
+        isEnder: true,
+        lineHeightMultiplier: comment.lineHeightMultiplier,
+      });
+      const originalTextWidth = measureMaxLineWidthAtFont(comment, ctx, originalMetrics.fontSize);
+      const widthFit = resolveNicoStaticWidthFit({
+        visibleWidth: safeVisibleWidth,
+        canvasHeight,
+        isFull: comment.isFull,
+        isEnder: comment.isEnder,
+        lineCount: comment.lines.length,
+        verticalFontSize: layoutMetrics.fontSize,
+        verticalTextWidth,
+        originalFontSize: originalMetrics.fontSize,
+        originalTextWidth,
+      });
+      const baseMetrics = widthFit.useOriginalMetrics ? originalMetrics : layoutMetrics;
+      const fontRatio = widthFit.fontSize / Math.max(1, baseMetrics.fontSize);
+      comment.fontSize = widthFit.fontSize;
+      comment.staticWidthScale = widthFit.drawScale;
+      ctx.font = getCommentCanvasFont(comment);
+      updateTextMetrics(comment, ctx, baseMetrics.lineAdvance * fontRatio);
+      comment.slotHeight = Math.max(1, baseMetrics.slotHeight * fontRatio * widthFit.drawScale);
+    }
     if (comment.isScrolling && comment.isFull) {
       const isFullMinchoMultiline =
         comment.lines.length > 1 &&
@@ -282,12 +327,6 @@ export const prepareComment = (
     }
 
     if (!comment.isScrolling) {
-      const nicoStaticTextureWidth = safeVisibleWidth + comment.fontSize * (8 / 3);
-      if (comment.width >= nicoStaticTextureWidth * 0.95 && comment.fontSize >= 35) {
-        comment.width = Math.round(canvasHeight * NICO_STATIC_WIDE_TEXTURE_WIDTH_RATIO);
-      } else {
-        comment.width = Math.min(comment.width, nicoStaticTextureWidth);
-      }
       comment.bufferWidth = 0;
       const centeredX = (safeVisibleWidth - comment.width) / 2;
       comment.virtualStartX = centeredX;
@@ -298,7 +337,7 @@ export const prepareComment = (
       comment.visibleDurationMs = STATIC_VISIBLE_DURATION_MS;
       comment.preCollisionDurationMs = STATIC_VISIBLE_DURATION_MS;
       comment.totalDurationMs = STATIC_VISIBLE_DURATION_MS;
-      comment.reservationWidth = comment.width;
+      comment.reservationWidth = comment.width * comment.staticWidthScale;
       comment.staticExpiryTimeMs = comment.vposMs + STATIC_VISIBLE_DURATION_MS;
       comment.lastUpdateTime = comment.getTimeSource().now();
       comment.isPaused = false;

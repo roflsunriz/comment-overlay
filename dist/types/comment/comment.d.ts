@@ -49,6 +49,7 @@ export declare class Comment {
     lineHeightMultiplier: number;
     lineHeightPx: number;
     slotHeight: number;
+    staticWidthScale: number;
     lines: string[];
     epochId: number;
     private directionSign;

@@ -74,4 +74,36 @@ describe("resolveStaticPlacement", () => {
     expect(placement.y).toBe(0);
     expect(placement.usedFallback).toBe(false);
   });
+
+  test("treats a random fallback as a blocker and uses the gap after it", () => {
+    const placement = resolveStaticPlacement({
+      position: "ue",
+      reservationHeight: 46,
+      displayHeight: 768,
+      reservations: [
+        { releaseTime: 3000, yStart: 0, yEnd: 387 },
+        { releaseTime: 3000, yStart: 240, yEnd: 627 },
+      ],
+      currentTime: 0,
+    });
+
+    expect(placement.y).toBeCloseTo(627.1, 8);
+    expect(placement.usedFallback).toBe(false);
+  });
+
+  test("fills an expired edge gap without moving a surviving lower reservation", () => {
+    const placement = resolveStaticPlacement({
+      position: "ue",
+      reservationHeight: 46,
+      displayHeight: 768,
+      reservations: [
+        { releaseTime: 1000, yStart: 0, yEnd: 68 },
+        { releaseTime: 3000, yStart: 68.1, yEnd: 166.7 },
+      ],
+      currentTime: 1000,
+    });
+
+    expect(placement.y).toBe(0);
+    expect(placement.usedFallback).toBe(false);
+  });
 });

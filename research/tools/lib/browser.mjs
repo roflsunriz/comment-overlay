@@ -180,6 +180,7 @@ export const launchChrome = async ({
     "--window-size=1280,720",
     ...(offline
       ? [
+          "--disable-gpu",
           "--disable-gpu-sandbox",
           "--proxy-server=http://127.0.0.1:9",
           "--proxy-bypass-list=<-loopback>",
@@ -215,7 +216,11 @@ export const createBrowserClient = async (port, _child, timeoutMs = 5000) => {
   let latestError = null;
   while (Date.now() - startedAt <= timeoutMs) {
     try {
-      return await CDP({ host: "127.0.0.1", port });
+      const version = await CDP.Version({ host: "127.0.0.1", port });
+      if (!version.webSocketDebuggerUrl) {
+        throw new Error("Chrome browser websocket URL was not reported.");
+      }
+      return await CDP({ target: version.webSocketDebuggerUrl });
     } catch (error) {
       latestError = error;
       await sleep(100);

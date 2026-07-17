@@ -111,13 +111,7 @@ const NICO_FULL_MINCHO_SYNC_DRAW_OFFSET_REFERENCE_HEIGHT_PX = 810;
 const NICO_FULL_MINCHO_SYNC_BASE_TEXTURE_PADDING_Y_PX = 21.5;
 const NICO_FULL_MINCHO_SYNC_TALL_TEXTURE_HEIGHT_PX = 878;
 const NICO_FULL_MINCHO_SYNC_BIG_TEXTURE_HEIGHT_PX = 900;
-const NICO_STATIC_WIDE_FINAL_FONT_SIZE_PX = 10;
-const NICO_STATIC_WIDE_FINAL_PADDING_X_PX = 6.75;
-const NICO_STATIC_WIDE_FINAL_BASELINE_Y_PX = 16.75;
-const NICO_STATIC_WIDE_FINAL_LINE_HEIGHT_PX = 12.11423203055002;
 const NICO_STATIC_WIDE_SCALE_CENTERING_RATIO = 0.5;
-const NICO_STATIC_WIDE_MINCHO_SCALE_X = 1.42;
-const NICO_STATIC_WIDE_MINCHO_TARGET_X_RATIO = 0.12;
 
 const isNearBlackColor = (color: string): boolean => {
   const normalized = color.trim().toLowerCase();
@@ -234,27 +228,11 @@ const getTexturePadding = (
   };
 };
 
-const getTextureDrawScale = (comment: Comment): number => {
-  if (!comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35) {
-    return 0.8;
-  }
-  return 1;
-};
-
-const shouldUseStaticWideTexture = (comment: Comment): boolean =>
-  !comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35;
-
-const shouldUseStaticWideMinchoTextureLayout = (comment: Comment): boolean =>
-  shouldUseStaticWideTexture(comment) &&
-  (comment.fontFamily.includes("Yu Mincho") ||
-    comment.fontFamily.includes("YuMincho") ||
-    comment.fontFamily.includes("游明朝"));
+const getTextureDrawScale = (comment: Comment): number =>
+  comment.isScrolling ? 1 : comment.staticWidthScale;
 
 const getTextureDrawScaleX = (comment: Comment, drawScaleY: number): number =>
-  shouldUseStaticWideMinchoTextureLayout(comment) ? NICO_STATIC_WIDE_MINCHO_SCALE_X : drawScaleY;
-
-const getStaticWideVisibleWidth = (comment: Comment): number =>
-  Math.max(1, comment.width + comment.virtualStartX * 2);
+  comment.isScrolling ? 1 : drawScaleY;
 
 const getTextureDrawOffsetX = (comment: Comment): number =>
   comment.isScrolling && comment.isFull && comment.hasSameVposFullMinchoEnder
@@ -276,14 +254,6 @@ const resolveTextureDrawPlacement = (
   drawScaleY: number,
 ): TextureDrawPlacement => {
   const scaleX = getTextureDrawScaleX(comment, drawScaleY);
-  if (shouldUseStaticWideMinchoTextureLayout(comment)) {
-    return {
-      x: getStaticWideVisibleWidth(comment) * NICO_STATIC_WIDE_MINCHO_TARGET_X_RATIO,
-      scaleX,
-      scaleY: drawScaleY,
-    };
-  }
-
   const staticScaleOffsetX =
     !comment.isScrolling && scaleX !== 1
       ? texture.width * (1 - scaleX) * NICO_STATIC_WIDE_SCALE_CENTERING_RATIO
@@ -363,7 +333,7 @@ const createSegmentDrawer = (
 };
 
 const generateTextureCacheKey = (comment: Comment): string => {
-  return `v8::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.fontWeight}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lineHeightPx}::${comment.width}::${comment.height}::${comment.lines.length}`;
+  return `v9::${comment.text}::${comment.fontSize}::${comment.fontFamily}::${comment.fontWeight}::${comment.color}::${comment.opacity}::${comment.renderStyle}::${comment.letterSpacing}::${comment.lineHeightPx}::${comment.width}::${comment.height}::${comment.staticWidthScale}::${comment.lines.length}`;
 };
 
 type TexturePass = {
@@ -532,19 +502,6 @@ const resolveTextureProfile = (
     };
   }
 
-  if (shouldUseStaticWideTexture(comment)) {
-    return {
-      output: {
-        width: textureWidth,
-        height: textureHeight,
-        fontSize: NICO_STATIC_WIDE_FINAL_FONT_SIZE_PX,
-        paddingX: NICO_STATIC_WIDE_FINAL_PADDING_X_PX,
-        baselineY: NICO_STATIC_WIDE_FINAL_BASELINE_Y_PX,
-        lineHeight: NICO_STATIC_WIDE_FINAL_LINE_HEIGHT_PX,
-      },
-    };
-  }
-
   return null;
 };
 
@@ -647,11 +604,18 @@ const drawWithFallback = (
   ctx.save();
   ctx.font = getCommentCanvasFont(comment);
   const effectiveOpacity = clampOpacity(comment.opacity);
-  const drawX = interpolatedX ?? comment.x;
+  let drawX = interpolatedX ?? comment.x;
   const linesToRender = comment.lines.length > 0 ? comment.lines : [comment.text];
   const lineAdvance =
     comment.lines.length > 1 && comment.lineHeightPx > 0 ? comment.lineHeightPx : comment.fontSize;
-  const baselineStart = comment.y + comment.fontSize;
+  let baselineStart = comment.y + comment.fontSize;
+  if (!comment.isScrolling && comment.staticWidthScale !== 1) {
+    const centerX = drawX + comment.width / 2;
+    ctx.translate(centerX, comment.y);
+    ctx.scale(comment.staticWidthScale, comment.staticWidthScale);
+    drawX = -comment.width / 2;
+    baselineStart = comment.fontSize;
+  }
   const drawSegment = createSegmentDrawer(comment, ctx, ctx, "fallback", drawX);
 
   const resolvedFillStyle = resolveFillStyleWithOpacity(comment.color, effectiveOpacity);

@@ -1,6 +1,6 @@
 {
   "name": "comment-overlay",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "description": "Reusable comment overlay renderer engine.",
   "repository": {
     "url": "https://github.com/roflsunriz/comment-overlay"
@@ -31,7 +31,7 @@
     "build:overlay-tests": "bun run generate:overlay-tests && tsc --project tsconfig.overlay-tests.json",
     "generate:overlay-tests": "bun scripts/generate-overlay-test-cases.mjs",
     "serve": "bun run build:overlay-tests && bunx serve overlay-tests",
-    "test": "bun test src/renderer/lanes-activation.test.ts research/tools/tests/fixed-ca-holdout.test.ts && node --test research/tools/tests/*.test.mjs",
+    "test": "bun test src/comment/static-width-fit.test.ts src/renderer/lanes-activation.test.ts research/tools/tests/fixed-ca-holdout.test.ts && node --test research/tools/tests/*.test.mjs",
     "type-check": "tsc --project tsconfig.build.json --noEmit",
     "typegen": "tsc --project tsconfig.build.json",
     "lint": "eslint src --ext .ts",

@@ -11,14 +11,8 @@ import {
 import { debugLog, formatCommentPreview, isDebugLoggingEnabled } from "@/shared/debug";
 import { resolveNicoVerticalSlotGap } from "@/comment/nico-layout";
 
-const isWideStaticComment = (comment: Comment): boolean =>
-  !comment.isScrolling && comment.width >= 1_200 && comment.fontSize >= 35;
-
 const calculateStaticReservationHeight = (comment: Comment): number =>
-  Math.max(
-    1,
-    isWideStaticComment(comment) ? comment.fontSize * 0.46 : comment.slotHeight || comment.height,
-  );
+  Math.max(1, comment.slotHeight || comment.height);
 
 type StaticPlacementReservation = Pick<
   import("@/shared/types").StaticLaneReservation,

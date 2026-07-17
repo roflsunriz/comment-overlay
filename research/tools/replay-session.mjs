@@ -176,6 +176,15 @@ export const runReplay = async (args) => {
   const settleMs = numberArg(args, "settle-ms", 10_000, { minimum: 0 });
   const seekMs =
     args["seek-ms"] === undefined ? null : numberArg(args, "seek-ms", 0, { minimum: 0 });
+  const seekSequenceMs = args["seek-sequence-ms"]
+    ? String(args["seek-sequence-ms"])
+        .split(",")
+        .map((value) => Number(value.trim()))
+        .filter((value) => Number.isFinite(value) && value >= 0)
+    : seekMs === null
+      ? []
+      : [seekMs];
+  const seekStepSettleMs = numberArg(args, "seek-step-settle-ms", 250, { minimum: 0 });
   const seekWaitMs = numberArg(args, "seek-wait-ms", 10_000, { minimum: 0 });
   const handlerWaitMs = numberArg(args, "handler-wait-ms", 5000, { minimum: 0 });
   const debuggingPort =
@@ -193,7 +202,19 @@ export const runReplay = async (args) => {
   }
   await mkdir(outDirectory, { recursive: true });
 
+  const progress = [];
+  const markProgress = async (stage, details = {}) => {
+    progress.push({ stage, at: new Date().toISOString(), ...details });
+    await writeFile(
+      resolve(outDirectory, "progress.json"),
+      `${JSON.stringify({ formatVersion: 1, progress }, null, 2)}\n`,
+      "utf8",
+    );
+  };
+  await markProgress("output-ready");
+
   const profileDirectory = await makeTemporaryProfile("nico-replay");
+  await markProgress("profile-created");
   let launched;
   try {
     launched = await launchChrome({
@@ -207,6 +228,7 @@ export const runReplay = async (args) => {
         ...(windowWidth === null ? [] : [`--window-size=${windowWidth},${windowHeight}`]),
       ],
     });
+    await markProgress("chrome-launched", { port: launched.port });
   } catch (error) {
     await removeTemporaryProfile(profileDirectory).catch((cleanupError) => {
       console.warn(`Temporary profile cleanup failed: ${cleanupError.message}`);
@@ -218,6 +240,7 @@ export const runReplay = async (args) => {
   try {
     browserClient = await createBrowserClient(launched.port, launched.child);
     pageClient = await createPageClient(launched.port, launched.child);
+    await markProgress("cdp-connected");
   } catch (error) {
     await pageClient?.close().catch(() => {});
     await closeChrome({ child: launched.child, browserClient });
@@ -248,7 +271,13 @@ export const runReplay = async (args) => {
   };
 
   try {
-    await Promise.all([Network.enable(), Page.enable(), Runtime.enable()]);
+    await Network.enable();
+    await markProgress("network-enabled");
+    await Page.enable();
+    await markProgress("page-enabled");
+    await Runtime.enable();
+    await markProgress("runtime-enabled");
+    await markProgress("domains-enabled");
     await Network.setCacheDisabled({ cacheDisabled: true });
     await Network.setBypassServiceWorker({ bypass: true });
     if (!booleanArg(args, "no-canvas-observer")) {
@@ -279,6 +308,7 @@ export const runReplay = async (args) => {
     });
 
     await Fetch.enable({ patterns: [{ urlPattern: "*", requestStage: "Request" }] });
+    await markProgress("fetch-enabled");
     Fetch.requestPaused((event) => {
       const job = (async () => {
         const request = normalizeRequest(event.request);
@@ -393,22 +423,49 @@ export const runReplay = async (args) => {
     });
 
     const loadEvent = new Promise((resolveLoad) => Page.loadEventFired(resolveLoad));
+    await markProgress("navigate-start");
     const navigation = await Page.navigate({ url: manifest.entryUrl });
+    await markProgress("navigate-finished");
     if (navigation.errorText) throw new Error(`Replay navigation failed: ${navigation.errorText}`);
-    await settleOrTimeout(loadEvent, 45_000);
-    const videoWait = seekMs === null ? null : await waitForVideoElement(Runtime, seekWaitMs);
+    const loadResult = await settleOrTimeout(loadEvent, 45_000);
+    await markProgress("load-wait-finished", { timedOut: loadResult.timedOut });
+    const videoWait =
+      seekSequenceMs.length === 0 ? null : await waitForVideoElement(Runtime, seekWaitMs);
+    await markProgress("video-wait-finished", {
+      found: videoWait?.found ?? null,
+      waitedMs: videoWait?.waitedMs ?? null,
+    });
+    const seekActions = [];
+    for (const [index, requestedSeekMs] of seekSequenceMs.entries()) {
+      const result = videoWait.found
+        ? await seekVideo(Runtime, requestedSeekMs)
+        : { ok: false, reason: "video-not-found-after-wait" };
+      seekActions.push({ requestedSeekMs, result });
+      await markProgress("seek-step-finished", {
+        index,
+        requestedSeekMs,
+        ok: result.ok ?? null,
+      });
+      if (index < seekSequenceMs.length - 1) await sleep(seekStepSettleMs);
+    }
     const clockAction =
-      seekMs === null
+      seekActions.length === 0
         ? null
-        : {
-            requestedSeekMs: seekMs,
-            result: videoWait.found
-              ? await seekVideo(Runtime, seekMs)
-              : { ok: false, reason: "video-not-found-after-wait" },
-          };
+        : seekActions.length === 1
+          ? seekActions[0]
+          : { sequence: seekActions, stepSettleMs: seekStepSettleMs };
+    await markProgress("seek-finished", {
+      count: seekActions.length,
+      ok: seekActions.every((action) => action.result.ok),
+    });
     await sleep(settleMs);
+    await markProgress("settle-finished");
     const handlerDrain = await settleOrTimeout(Promise.allSettled([...handlerJobs]), handlerWaitMs);
     const pendingHandlerCount = handlerJobs.size;
+    await markProgress("handlers-finished", {
+      timedOut: handlerDrain.timedOut,
+      pendingHandlerCount,
+    });
 
     const pageState = await Runtime.evaluate({
       expression: `(() => ({
@@ -453,6 +510,7 @@ export const runReplay = async (args) => {
       }))()`,
       returnByValue: true,
     });
+    await markProgress("page-state-collected");
     const canvasObservation = await Runtime.evaluate({
       expression: `(() => ({
         status: globalThis.__CO_RESEARCH_CANVAS_STATUS__?.() ?? { installed: false },
@@ -460,6 +518,7 @@ export const runReplay = async (args) => {
       }))()`,
       returnByValue: true,
     });
+    await markProgress("canvas-snapshot-collected");
     const canvasResult = canvasObservation.result.value ?? {
       status: { installed: false },
       records: [],
@@ -488,6 +547,7 @@ export const runReplay = async (args) => {
       format: "png",
       captureBeyondViewport: false,
     });
+    await markProgress("screenshot-collected");
     await writeFile(resolve(outDirectory, "replay.png"), Buffer.from(screenshot.data, "base64"));
 
     const audit = {
@@ -546,6 +606,7 @@ export const runReplay = async (args) => {
     };
     const auditPath = resolve(outDirectory, "audit.json");
     await writeFile(auditPath, `${JSON.stringify(audit, null, 2)}\n`, "utf8");
+    await markProgress("audit-written");
     console.log(`audit: ${relative(process.cwd(), auditPath)}`);
     console.log(JSON.stringify(audit.summary));
     replayResult = {

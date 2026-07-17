@@ -318,6 +318,338 @@ const buildInteractionCases = () => {
   ];
 };
 
+const customFixedComment = ({
+  no,
+  marker,
+  position = "ue",
+  size = "medium",
+  lineCount = 1,
+  vposMs = BASE_VPOS_MS,
+  font = "mincho",
+  full = false,
+  ender = false,
+}) => ({
+  no,
+  vposMs,
+  body: markerBody(lineCount, marker),
+  commands: commandsFor({ position, size, full, font, ender, color: "white" }),
+});
+
+const customCase = (id, comments, { seekMs = BASE_VPOS_MS } = {}) => ({
+  id,
+  seekMs,
+  expectedMatchedCommentCount: comments.length,
+  window: null,
+  scenario: { formatVersion: 1, name: id, targetFork: "main", comments },
+});
+
+const buildSeekCases = () =>
+  ["ue", "shita"].map((position) => {
+    const testCase = customCase(
+      `seek-${position}-expiry-rebuild`,
+      [
+        customFixedComment({
+          no: 950001,
+          marker: "SEEK_EXPIRES",
+          position,
+          size: "medium",
+          vposMs: 7000,
+        }),
+        customFixedComment({
+          no: 950002,
+          marker: "SEEK_SURVIVES",
+          position,
+          size: "big",
+          vposMs: 8000,
+        }),
+        customFixedComment({
+          no: 950003,
+          marker: "SEEK_NEW",
+          position,
+          size: "small",
+          vposMs: 10000,
+        }),
+      ],
+      { seekMs: 10000 },
+    );
+    testCase.seekSequenceMs = [8000, 10000];
+    return testCase;
+  });
+
+const buildIdentityCases = () =>
+  [
+    ["normal", { size: "medium", lineCount: 1 }],
+    ["fallback", { size: "small", lineCount: 19 }],
+    ["oversized", { size: "big", lineCount: 16, full: true }],
+  ].flatMap(([label, options]) =>
+    ["same", "different"].flatMap((identity) =>
+      ["ue", "shita"].map((position) => {
+        const testCase = makePairCase({
+          id: `identity-${label}-${identity}-${position}`,
+          position,
+          font: "mincho",
+          ...options,
+        });
+        testCase.scenario.comments[0].userId = "identity-a";
+        testCase.scenario.comments[1].userId = identity === "same" ? "identity-a" : "identity-b";
+        return testCase;
+      }),
+    ),
+  );
+
+const buildForkCases = () =>
+  ["owner", "main", "easy"].flatMap((targetFork) =>
+    ["ue", "shita"].map((position) => {
+      const testCase = makePairCase({
+        id: `fork-${targetFork}-${position}`,
+        position,
+        size: "medium",
+        lineCount: 1,
+        full: false,
+        font: "defont",
+      });
+      testCase.scenario.targetFork = targetFork;
+      return testCase;
+    }),
+  );
+
+const buildGlyphWidthCases = () => {
+  const bodies = [
+    ["ascii-wide", "W".repeat(60), "M".repeat(60)],
+    ["ascii-narrow", "i".repeat(120), "l".repeat(120)],
+    ["emoji", "🙂".repeat(40), "😀".repeat(40)],
+    ["combining", "e\u0301".repeat(60), "a\u0308".repeat(60)],
+    ["mixed", "W幅🙂".repeat(30), "M狭😀".repeat(30)],
+    ["spaces", `${"\u3000".repeat(60)}幅`, `${"\u2003".repeat(60)}狭`],
+  ];
+  return bodies.map(([label, firstBody, secondBody]) => {
+    const testCase = makePairCase({
+      id: `glyph-width-${label}`,
+      position: "ue",
+      size: "big",
+      lineCount: 1,
+      full: false,
+      font: "mincho",
+    });
+    testCase.scenario.comments[0].body = firstBody;
+    testCase.scenario.comments[1].body = secondBody;
+    return testCase;
+  });
+};
+
+const buildDistributionCases = () =>
+  Array.from({ length: 20 }, (_, index) =>
+    makePairCase({
+      id: `distribution-ue-small-19lines-r${index + 1}`,
+      position: "ue",
+      size: "small",
+      lineCount: 19,
+      full: false,
+      font: "mincho",
+    }),
+  );
+
+const buildSearchCases = () => {
+  const variable = (position, reverse = false) => {
+    const specs = [
+      ["small", 1, "VAR_A"],
+      ["big", 1, "VAR_B"],
+      ["medium", 1, "VAR_C"],
+      ["small", 1, "VAR_D"],
+    ];
+    const comments = specs.map(([size, lineCount, marker], index) =>
+      customFixedComment({
+        no: 940001 + (reverse ? specs.length - 1 - index : index),
+        marker,
+        position,
+        size,
+        lineCount,
+      }),
+    );
+    return customCase(
+      `search-${position}-variable-${reverse ? "reverse-no" : "ascending"}`,
+      comments,
+    );
+  };
+  const overflow = (position, repeat) =>
+    customCase(`search-${position}-fallback-r${repeat}`, [
+      customFixedComment({
+        no: 941001,
+        marker: "FALLBACK_A",
+        position,
+        size: "small",
+        lineCount: 19,
+      }),
+      customFixedComment({
+        no: 941002,
+        marker: "FALLBACK_B",
+        position,
+        size: "small",
+        lineCount: 19,
+      }),
+      customFixedComment({
+        no: 941003,
+        marker: "FALLBACK_C",
+        position,
+        size: "small",
+        lineCount: 1,
+      }),
+      customFixedComment({
+        no: 941004,
+        marker: "FALLBACK_D",
+        position,
+        size: "small",
+        lineCount: 1,
+      }),
+    ]);
+  return [
+    variable("ue"),
+    variable("ue", true),
+    variable("shita"),
+    variable("shita", true),
+    ...[1, 2, 3, 4, 5].flatMap((repeat) => [overflow("ue", repeat), overflow("shita", repeat)]),
+  ];
+};
+
+const buildWidthMultilineCases = () => {
+  const lineCounts = { small: [7, 16], medium: [5, 16], big: [3, 16] };
+  return Object.entries(lineCounts).flatMap(([size, counts]) =>
+    counts.flatMap((lineCount) =>
+      [10, 30, 60].map((characterCount) => {
+        const testCase = makePairCase({
+          id: `width-multiline-${size}-${lineCount}lines-${characterCount}chars`,
+          position: "ue",
+          size,
+          lineCount,
+          full: false,
+          font: "mincho",
+        });
+        const body = (glyph) =>
+          [glyph.repeat(characterCount), ...Array.from({ length: lineCount - 1 }, () => "　")].join(
+            "\n",
+          );
+        testCase.scenario.comments[0].body = body("幅");
+        testCase.scenario.comments[1].body = body("狭");
+        return testCase;
+      }),
+    ),
+  );
+};
+
+const buildWidthMultilineBoundaryCases = () => {
+  const specs = {
+    small: { lineCount: 7, characterCounts: [40, 45, 50, 55] },
+    medium: { lineCount: 5, characterCounts: [35, 40, 45, 50] },
+    big: { lineCount: 3, characterCounts: [15, 20, 22, 24, 25, 26, 27] },
+  };
+  return Object.entries(specs).flatMap(([size, { lineCount, characterCounts }]) =>
+    characterCounts.map((characterCount) => {
+      const testCase = makePairCase({
+        id: `width-multiline-boundary-${size}-${lineCount}lines-${characterCount}chars`,
+        position: "ue",
+        size,
+        lineCount,
+        full: false,
+        font: "mincho",
+      });
+      const body = (glyph) =>
+        [glyph.repeat(characterCount), ...Array.from({ length: lineCount - 1 }, () => "　")].join(
+          "\n",
+        );
+      testCase.scenario.comments[0].body = body("幅");
+      testCase.scenario.comments[1].body = body("狭");
+      return testCase;
+    }),
+  );
+};
+
+const buildWidthFeatureCases = () =>
+  [
+    { lineCount: 1, characterCounts: [30], fonts: ["defont", "gothic", "mincho"] },
+    { lineCount: 16, characterCounts: [30, 60], fonts: ["mincho"] },
+  ].flatMap(({ lineCount, characterCounts, fonts }) =>
+    characterCounts.flatMap((characterCount) =>
+      fonts.flatMap((font) =>
+        [false, true].flatMap((full) =>
+          [false, true].map((ender) => {
+            const testCase = makePairCase({
+              id: `width-feature-${lineCount}lines-${characterCount}chars-${font}-${full ? "full" : "plain"}-${ender ? "ender" : "normal"}`,
+              position: "ue",
+              size: "big",
+              lineCount,
+              full,
+              font,
+              ender,
+            });
+            const body = (glyph) =>
+              [
+                glyph.repeat(characterCount),
+                ...Array.from({ length: lineCount - 1 }, () => "　"),
+              ].join("\n");
+            testCase.scenario.comments[0].body = body("幅");
+            testCase.scenario.comments[1].body = body("狭");
+            return testCase;
+          }),
+        ),
+      ),
+    ),
+  );
+
+const buildWidthExtremeFeatureCases = () => {
+  const singleLine = [60, 90, 120].map((characterCount) => {
+    const testCase = makePairCase({
+      id: `width-extreme-single-${characterCount}chars-full`,
+      position: "ue",
+      size: "big",
+      lineCount: 1,
+      full: true,
+      font: "mincho",
+    });
+    testCase.scenario.comments[0].body = "幅".repeat(characterCount);
+    testCase.scenario.comments[1].body = "狭".repeat(characterCount);
+    return testCase;
+  });
+  const multiline = [90, 120].flatMap((characterCount) =>
+    [false, true].flatMap((full) =>
+      [false, true].map((ender) => {
+        const testCase = makePairCase({
+          id: `width-extreme-16lines-${characterCount}chars-${full ? "full" : "plain"}-${ender ? "ender" : "normal"}`,
+          position: "ue",
+          size: "big",
+          lineCount: 16,
+          full,
+          font: "mincho",
+          ender,
+        });
+        const body = (glyph) =>
+          [glyph.repeat(characterCount), ...Array.from({ length: 15 }, () => "　")].join("\n");
+        testCase.scenario.comments[0].body = body("幅");
+        testCase.scenario.comments[1].body = body("狭");
+        return testCase;
+      }),
+    ),
+  );
+  return [...singleLine, ...multiline];
+};
+
+const buildDurationFeatureCases = () =>
+  [
+    ["plain-small", { size: "small", lineCount: 1, full: false, font: "defont" }],
+    ["full-big", { size: "big", lineCount: 16, full: true, font: "mincho" }],
+    ["ender-big", { size: "big", lineCount: 16, full: false, font: "gothic", ender: true }],
+  ].flatMap(([label, options]) =>
+    [2999, 3000].flatMap((deltaMs) =>
+      ["ue", "shita"].map((position) =>
+        makePairCase({
+          id: `duration-${label}-${position}-${deltaMs}ms`,
+          deltaMs,
+          position,
+          ...options,
+        }),
+      ),
+    ),
+  );
+
 export const buildCases = (profile) => {
   if (profile === "temporal") return buildTemporalCases();
   if (profile === "geometry") return buildGeometryCases();
@@ -329,6 +661,17 @@ export const buildCases = (profile) => {
   if (profile === "width-boundary") return buildWidthBoundaryCases();
   if (profile === "order") return buildOrderCases();
   if (profile === "interaction") return buildInteractionCases();
+  if (profile === "search") return buildSearchCases();
+  if (profile === "width-multiline") return buildWidthMultilineCases();
+  if (profile === "width-multiline-boundary") return buildWidthMultilineBoundaryCases();
+  if (profile === "width-features") return buildWidthFeatureCases();
+  if (profile === "width-extreme-features") return buildWidthExtremeFeatureCases();
+  if (profile === "duration-features") return buildDurationFeatureCases();
+  if (profile === "seek") return buildSeekCases();
+  if (profile === "identity") return buildIdentityCases();
+  if (profile === "fork") return buildForkCases();
+  if (profile === "glyph-width") return buildGlyphWidthCases();
+  if (profile === "distribution") return buildDistributionCases();
   if (profile === "all") {
     return [
       ...buildTemporalCases(),
@@ -341,6 +684,17 @@ export const buildCases = (profile) => {
       ...buildWidthBoundaryCases(),
       ...buildOrderCases(),
       ...buildInteractionCases(),
+      ...buildSearchCases(),
+      ...buildWidthMultilineCases(),
+      ...buildWidthMultilineBoundaryCases(),
+      ...buildWidthFeatureCases(),
+      ...buildWidthExtremeFeatureCases(),
+      ...buildDurationFeatureCases(),
+      ...buildSeekCases(),
+      ...buildIdentityCases(),
+      ...buildForkCases(),
+      ...buildGlyphWidthCases(),
+      ...buildDistributionCases(),
     ];
   }
   throw new Error(`Unknown profile: ${profile}`);
@@ -422,6 +776,9 @@ const main = async () => {
         scenario: scenarioPath,
         out: caseDirectory,
         "seek-ms": String(testCase.seekMs),
+        ...(testCase.seekSequenceMs
+          ? { "seek-sequence-ms": testCase.seekSequenceMs.join(",") }
+          : {}),
         "settle-ms": settleMs,
         "seek-wait-ms": args["seek-wait-ms"] ?? "5000",
         "handler-wait-ms": args["handler-wait-ms"] ?? "1000",

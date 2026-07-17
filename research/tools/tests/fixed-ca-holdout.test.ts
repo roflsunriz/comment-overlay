@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 import { resolveNicoCommentLayoutMetrics } from "../../../src/comment/nico-layout";
+import { Comment } from "../../../src/comment/comment";
+import { cloneDefaultSettings } from "../../../src/config/default-settings";
 import { resolveStaticPlacement } from "../../../src/renderer/lanes-activation";
 
 type FixtureComment = {
@@ -21,6 +23,29 @@ const artComments = fixture.comments.filter(
     ["ue", "big", "full", "mincho"].every((command) => comment.commands.includes(command)),
 );
 
+const context = {
+  font: "",
+  measureText(text: string) {
+    const fontSize = Number.parseFloat(/([0-9.]+)px/.exec(this.font)?.[1] ?? "0");
+    return { width: [...text].length * fontSize };
+  },
+} as unknown as CanvasRenderingContext2D;
+
+const prepareFixtureComment = (input: FixtureComment): Comment => {
+  const comment = new Comment(input.body, input.vposMs, input.commands, cloneDefaultSettings());
+  comment.prepare(context, 1364, 768, {
+    visibleWidth: 1364,
+    virtualExtension: 0,
+    maxVisibleDurationMs: 6700,
+    minVisibleDurationMs: 6700,
+    maxWidthRatio: 4,
+    bufferRatio: 0,
+    baseBufferPx: 0,
+    entryBufferPx: 0,
+  });
+  return comment;
+};
+
 describe("so31723295 episode 5 ED holdout", () => {
   test("all 48 art layers fall on the measured screen-height boundary", () => {
     const batches = new Set(artComments.map((comment) => comment.vposMs));
@@ -38,6 +63,7 @@ describe("so31723295 episode 5 ED holdout", () => {
       });
       expect(lineCount).toBe(16);
       expect(metrics.slotHeight).toBeGreaterThanOrEqual(768);
+      expect(prepareFixtureComment(comment).slotHeight).toBeGreaterThanOrEqual(768);
     }
   });
 
@@ -46,16 +72,10 @@ describe("so31723295 episode 5 ED holdout", () => {
       const batch = artComments.filter((comment) => comment.vposMs === vposMs);
       const reservations: Array<{ releaseTime: number; yStart: number; yEnd: number }> = [];
       for (const comment of batch) {
-        const metrics = resolveNicoCommentLayoutMetrics({
-          canvasHeight: 768,
-          size: "big",
-          lineCount: comment.body.split(/\r?\n/).length,
-          isEnder: false,
-          lineHeightMultiplier: 1,
-        });
+        const prepared = prepareFixtureComment(comment);
         const placement = resolveStaticPlacement({
           position: "ue",
-          reservationHeight: metrics.slotHeight,
+          reservationHeight: prepared.slotHeight,
           displayHeight: 768,
           reservations,
           currentTime: vposMs,
@@ -65,7 +85,7 @@ describe("so31723295 episode 5 ED holdout", () => {
         reservations.push({
           releaseTime: vposMs + 3000,
           yStart: placement.y,
-          yEnd: placement.y + metrics.slotHeight,
+          yEnd: placement.y + prepared.slotHeight,
         });
       }
     }

@@ -74,7 +74,14 @@ bun run research:nico:lane-probe -- --archive research/captures/sm6240144-baseli
 
 `--first-body` / `--second-body` で幅、`--line-count` で自動生成本文の行数、`--body-prefix` で行の長さ、`--position` / `--size` / `--color` / `--source` / `--premium` でコマンドとメタデータを1軸ずつ変更できます。混在条件は `--first-size` / `--second-size` と `--first-line-count` / `--second-line-count` で2コメントを独立指定します。
 
-固定コメントの時刻、寸法、コマンド、viewport、反復、横幅、処理順を直交表で測る場合は、`--profile` に `temporal`、`geometry`、`features`、`viewport`、`boundary`、`repeat`、`width`、`order` のいずれかを指定します。1ケースだけ再実行する場合は `--case` も指定できます。
+固定コメントの一般規則を直交表で測る場合は、`--profile` に次のいずれかを指定します。1ケースだけ再実行する場合は `--case` も指定できます。
+
+- 基本軸: `temporal`、`geometry`、`features`、`viewport`、`boundary`、`repeat`、`order`
+- 予約と状態遷移: `interaction`、`search`、`duration-features`、`seek`、`distribution`
+- 横幅: `width`、`width-boundary`、`width-multiline`、`width-multiline-boundary`、`width-features`、`width-extreme-features`、`glyph-width`
+- メタデータ非依存性: `identity`、`fork`
+
+`width-extreme-features` は、最小フォント到達後のscaleと `full` / `ender` の交差を追試するための入力です。全profileを連続実行する場合は `all` を指定できます。
 
 ```powershell
 bun run research:nico:fixed-matrix -- --profile boundary --out research/runs/fixed-comment-matrix-boundary
@@ -95,6 +102,6 @@ bun run research:nico:fixed-matrix -- --profile boundary --out research/runs/fix
 1. ベースラインを匿名キャプチャし、オフライン再生の不足レスポンスを監査する。
 2. `nvComment` の記録済み応答を合成コメント応答へ置き換えるローカルコメントサーバー層を作る。（完了）
 3. Canvas API、DOM、動画時刻を計測する観測フックを再生開始前に注入する。（完了）
-4. 本文、コマンド、時刻差、処理順、幅、高さ、行数を直交表で生成し、同一アーカイブへ反復投入する。（着手済み）
-5. 観測結果から仮説を立て、未使用ケースをホールドアウトとして反証する。
-6. 成立した一般規則だけを `src/` に実装し、既存fixtureと横断プローブで退行を確認する。
+4. 本文、コマンド、時刻差、処理順、幅、高さ、行数を直交表で生成し、同一アーカイブへ反復投入する。（完了）
+5. 観測結果から仮説を立て、未使用ケースをホールドアウトとして反証する。（完了）
+6. 成立した一般規則だけを `src/` に実装し、既存fixtureと横断プローブで退行を確認する。（完了）

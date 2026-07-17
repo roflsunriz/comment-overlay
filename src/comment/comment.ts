@@ -68,6 +68,7 @@ export class Comment {
   lineHeightMultiplier = 1;
   lineHeightPx = 0;
   slotHeight = 0;
+  staticWidthScale = 1;
   lines: string[] = [];
   epochId = 0;
   private directionSign: -1 | 1 = -1;
