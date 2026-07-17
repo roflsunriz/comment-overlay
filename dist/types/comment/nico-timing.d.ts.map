@@ -1,0 +1,1 @@
+{"version":3,"file":"nico-timing.d.ts","sourceRoot":"","sources":["../../../src/comment/nico-timing.ts"],"names":[],"mappings":"AAGA,MAAM,MAAM,iBAAiB,GAAG;IAC9B,aAAa,EAAE,MAAM,CAAC;IACtB,gBAAgB,EAAE,MAAM,CAAC;CAC1B,CAAC;AAEF,eAAO,MAAM,wBAAwB,GAAI,sCAItC;IACD,MAAM,EAAE,MAAM,CAAC;IACf,UAAU,EAAE,MAAM,CAAC;IACnB,WAAW,EAAE,OAAO,CAAC;CACtB,KAAG,iBAWH,CAAC"}

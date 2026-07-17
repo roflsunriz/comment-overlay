@@ -6,7 +6,6 @@ import {
   BASE_COLLISION_BUFFER_PX,
   COLLISION_BUFFER_RATIO,
   ENTRY_BUFFER_PX,
-  FINAL_PHASE_THRESHOLD_MS,
   MAX_COMMENT_WIDTH_RATIO,
   MAX_VISIBLE_DURATION_MS,
   MIN_VISIBLE_DURATION_MS,
@@ -41,33 +40,6 @@ const updateCommentsImpl = function (this: CommentRenderer, frameTimeMs?: number
   const effectiveHeight =
     this.displayHeight > 0 ? this.displayHeight : canvas.height / effectiveDpr;
   const prepareOptions = this.buildPrepareOptions(effectiveWidth);
-
-  const isNearEnd =
-    this.duration > 0 && this.duration - this.currentTime <= FINAL_PHASE_THRESHOLD_MS;
-
-  if (isNearEnd && !this.finalPhaseActive) {
-    this.finalPhaseActive = true;
-    this.finalPhaseStartTime = this.currentTime;
-    this.finalPhaseVposOverrides.clear();
-    this.finalPhaseScheduleDirty = true;
-    context.clearRect(0, 0, effectiveWidth, effectiveHeight);
-    this.comments.forEach((comment) => {
-      comment.isActive = false;
-      comment.clearActivation();
-    });
-    this.activeComments.clear();
-    this.reservedLanes.clear();
-    this.topStaticLaneReservations.length = 0;
-    this.bottomStaticLaneReservations.length = 0;
-  }
-
-  if (!isNearEnd && this.finalPhaseActive) {
-    this.resetFinalPhaseState();
-  }
-
-  if (this.finalPhaseActive && this.finalPhaseScheduleDirty) {
-    this.recomputeFinalPhaseTimeline();
-  }
 
   this.pruneStaticLaneReservations(this.currentTime);
 

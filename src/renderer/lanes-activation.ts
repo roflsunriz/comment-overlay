@@ -3,8 +3,6 @@ import type { CommentPrepareOptions } from "@/shared/types";
 import { Comment } from "@/comment/comment";
 import {
   ACTIVE_WINDOW_MS,
-  EDGE_EPSILON,
-  FINAL_PHASE_MIN_WINDOW_MS,
   SEEK_DIRECTION_EPSILON_MS,
   STATIC_VISIBLE_DURATION_MS,
 } from "@/shared/constants";
@@ -76,24 +74,6 @@ const shouldActivateCommentAtTimeImpl = function (
 ): boolean {
   const debugActive = preview.length > 0 && isDebugLoggingEnabled();
   const effectiveVpos = this.resolveFinalPhaseVpos(comment);
-
-  if (
-    this.finalPhaseActive &&
-    this.finalPhaseStartTime !== null &&
-    comment.vposMs < this.finalPhaseStartTime - EDGE_EPSILON
-  ) {
-    if (debugActive) {
-      debugLog("comment-eval-skip", {
-        preview,
-        vposMs: comment.vposMs,
-        effectiveVposMs: effectiveVpos,
-        reason: "final-phase-trimmed",
-        finalPhaseStartTime: this.finalPhaseStartTime,
-      });
-    }
-    this.finalPhaseVposOverrides.delete(comment);
-    return false;
-  }
 
   if (comment.isInvisible) {
     if (debugActive) {
@@ -206,37 +186,10 @@ const activateCommentImpl = function (
     const elapsedMs = Math.max(0, referenceTime - effectiveVpos);
     const displacement = comment.speedPixelsPerMs * elapsedMs;
 
-    if (this.finalPhaseActive && this.finalPhaseStartTime !== null) {
-      const videoDuration =
-        this.duration > 0 ? this.duration : this.finalPhaseStartTime + FINAL_PHASE_MIN_WINDOW_MS;
-      const finalPhaseWindowEnd = Math.max(
-        this.finalPhaseStartTime + FINAL_PHASE_MIN_WINDOW_MS,
-        videoDuration,
-      );
-      const totalTravelDistance = comment.width + displayWidth;
-      const projectedTravelMs =
-        totalTravelDistance > 0 ? totalTravelDistance / Math.max(comment.speedPixelsPerMs, 1) : 0;
-      const projectedEndTime = effectiveVpos + projectedTravelMs;
-      if (projectedEndTime > finalPhaseWindowEnd) {
-        const remainingTime = finalPhaseWindowEnd - referenceTime;
-        const allowedTravel = Math.max(0, remainingTime) * comment.speedPixelsPerMs;
-        const startX =
-          comment.scrollDirection === "rtl"
-            ? Math.max(comment.virtualStartX - displacement, displayWidth - allowedTravel)
-            : Math.min(comment.virtualStartX + displacement, allowedTravel - comment.width);
-        comment.x = startX;
-      } else {
-        comment.x =
-          comment.scrollDirection === "rtl"
-            ? comment.virtualStartX - displacement
-            : comment.virtualStartX + displacement;
-      }
-    } else {
-      comment.x =
-        comment.scrollDirection === "rtl"
-          ? comment.virtualStartX - displacement
-          : comment.virtualStartX + displacement;
-    }
+    comment.x =
+      comment.scrollDirection === "rtl"
+        ? comment.virtualStartX - displacement
+        : comment.virtualStartX + displacement;
     const slotTop = this.findAvailableLane(comment);
     const laneHeight = Math.max(1, this.laneHeight);
     comment.lane = Math.max(0, Math.round(slotTop / laneHeight));

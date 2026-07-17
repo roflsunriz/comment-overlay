@@ -61,11 +61,7 @@ export interface RendererSettings {
 
 export type ReadonlyRendererSettings = {
   readonly [K in keyof RendererSettings]: RendererSettings[K] extends
-    | string
-    | number
-    | boolean
-    | null
-    | undefined
+    string | number | boolean | null | undefined
     ? RendererSettings[K]
     : ReadonlyArray<string>;
 };
@@ -162,6 +158,7 @@ export interface RendererStateSnapshot {
   readonly totalComments: number;
   readonly activeComments: number;
   readonly reservedLanes: number;
+  /** @deprecated Official timing has no phase state; retained as false for compatibility. */
   readonly finalPhaseActive: boolean;
   readonly playbackHasBegun: boolean;
   readonly isStalled: boolean;

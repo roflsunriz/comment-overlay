@@ -1,16 +1,7 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
 import { Comment } from "@/comment/comment";
-import { NICO_SCROLL_ACTIVATION_LEAD_MS } from "@/comment/nico-scroll";
-import {
-  ACTIVE_WINDOW_MS,
-  EDGE_EPSILON,
-  FINAL_PHASE_MIN_GAP_MS,
-  FINAL_PHASE_MAX_GAP_MS,
-  FINAL_PHASE_ORDER_EPSILON_MS,
-  FINAL_PHASE_MIN_WINDOW_MS,
-  MAX_VISIBLE_DURATION_MS,
-  STATIC_VISIBLE_DURATION_MS,
-} from "@/shared/constants";
+import { resolveNicoCommentTiming } from "@/comment/nico-timing";
+import { MAX_VISIBLE_DURATION_MS, STATIC_VISIBLE_DURATION_MS } from "@/shared/constants";
 import { dumpRendererState, logEpochChange } from "@/shared/debug";
 import type { EpochChangeInfo, RendererStateSnapshot } from "@/shared/types";
 
@@ -82,21 +73,11 @@ const emitStateSnapshotImpl = function (this: CommentRenderer, label: string): v
 };
 
 const getEffectiveCommentVposImpl = function (this: CommentRenderer, comment: Comment): number {
-  if (this.finalPhaseActive && this.finalPhaseScheduleDirty) {
-    this.recomputeFinalPhaseTimeline();
-  }
-  const override = this.finalPhaseVposOverrides.get(comment);
-  if (override !== undefined) {
-    return override;
-  }
-  return getDefaultEffectiveVpos(comment);
-};
-
-const getDefaultEffectiveVpos = (comment: Comment): number => {
-  if (!comment.isScrolling) {
-    return comment.vposMs;
-  }
-  return Math.max(0, comment.vposMs - NICO_SCROLL_ACTIVATION_LEAD_MS);
+  return resolveNicoCommentTiming({
+    vposMs: comment.vposMs,
+    durationMs: this.duration,
+    isScrolling: comment.isScrolling,
+  }).activationVposMs;
 };
 
 const getFinalPhaseDisplayDurationImpl = function (
@@ -123,83 +104,13 @@ const getFinalPhaseDisplayDurationImpl = function (
 };
 
 const resolveFinalPhaseVposImpl = function (this: CommentRenderer, comment: Comment): number {
-  if (!this.finalPhaseActive || this.finalPhaseStartTime === null) {
-    this.finalPhaseVposOverrides.delete(comment);
-    return getDefaultEffectiveVpos(comment);
-  }
-  if (this.finalPhaseScheduleDirty) {
-    this.recomputeFinalPhaseTimeline();
-  }
-  const override = this.finalPhaseVposOverrides.get(comment);
-  if (override !== undefined) {
-    return override;
-  }
-  const fallback = Math.max(comment.vposMs, this.finalPhaseStartTime);
-  this.finalPhaseVposOverrides.set(comment, fallback);
-  return fallback;
+  return this.getEffectiveCommentVpos(comment);
 };
 
 const recomputeFinalPhaseTimelineImpl = function (this: CommentRenderer): void {
-  if (!this.finalPhaseActive || this.finalPhaseStartTime === null) {
-    this.finalPhaseVposOverrides.clear();
-    this.finalPhaseScheduleDirty = false;
-    return;
-  }
-
-  const windowStart = this.finalPhaseStartTime;
-  const durationMs = this.duration > 0 ? this.duration : windowStart + FINAL_PHASE_MIN_WINDOW_MS;
-  const windowEnd = Math.max(windowStart + FINAL_PHASE_MIN_WINDOW_MS, durationMs);
-
-  const candidates = this.comments
-    .filter((comment) => {
-      if (comment.hasShown) {
-        return false;
-      }
-      if (comment.isInvisible) {
-        return false;
-      }
-      if (this.isNGComment(comment.text)) {
-        return false;
-      }
-      return comment.vposMs >= windowStart - ACTIVE_WINDOW_MS;
-    })
-    .sort((a, b) => {
-      const diff = a.vposMs - b.vposMs;
-      if (Math.abs(diff) > EDGE_EPSILON) {
-        return diff;
-      }
-      return a.creationIndex - b.creationIndex;
-    });
-
+  // Kept as a no-op for API compatibility. Official timing uses the same
+  // duration-bound vpos rule for every comment and requires no phase schedule.
   this.finalPhaseVposOverrides.clear();
-
-  if (candidates.length === 0) {
-    this.finalPhaseScheduleDirty = false;
-    return;
-  }
-
-  const windowSpan = Math.max(windowEnd - windowStart, FINAL_PHASE_MIN_WINDOW_MS);
-  const baseGap = windowSpan / Math.max(candidates.length, 1);
-  const boundedGap = Number.isFinite(baseGap) ? baseGap : FINAL_PHASE_MIN_GAP_MS;
-  const gap = Math.max(FINAL_PHASE_MIN_GAP_MS, Math.min(boundedGap, FINAL_PHASE_MAX_GAP_MS));
-
-  let nextStart = windowStart;
-  candidates.forEach((comment, index) => {
-    const durationNeeded = Math.max(1, this.getFinalPhaseDisplayDuration(comment));
-    const availableLatestStart = windowEnd - durationNeeded;
-    let assigned = Math.max(windowStart, Math.min(nextStart, availableLatestStart));
-    if (!Number.isFinite(assigned)) {
-      assigned = windowStart;
-    }
-    const epsilon = FINAL_PHASE_ORDER_EPSILON_MS * index;
-    if (assigned + epsilon <= availableLatestStart) {
-      assigned += epsilon;
-    }
-    this.finalPhaseVposOverrides.set(comment, assigned);
-    const spacing = Math.max(FINAL_PHASE_MIN_GAP_MS, Math.min(durationNeeded / 2, gap));
-    nextStart = assigned + spacing;
-  });
-
   this.finalPhaseScheduleDirty = false;
 };
 

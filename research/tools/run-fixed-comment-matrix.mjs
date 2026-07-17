@@ -1087,6 +1087,88 @@ const buildScrollCleanupBoundaryCases = () => {
   );
 };
 
+const FINAL_PHASE_ARCHIVE_END_MS = 661_394;
+const FINAL_PHASE_CONTROL_END_MS = 100_000;
+const FINAL_PHASE_SEEK_OFFSETS_MS = [
+  -6001, -6000, -5999, -5500, -4500, -3500, -2500, -1500, -500, -1, 0, 100,
+];
+const FINAL_PHASE_COMMENT_OFFSETS_MS = [-5000, -4000, -3000, -2000, -1000, -100];
+const FINAL_PHASE_CONTROL_EXPECTED = {
+  scroll: [1, 2, 2, 2, 3, 4, 5, 6, 5, 5, 4, 4],
+  fixed: [0, 0, 0, 0, 1, 2, 3, 3, 3, 4, 3, 3],
+  mixed: [1, 1, 1, 1, 1, 2, 4, 4, 3, 4, 3, 3],
+};
+
+const buildFinalPhaseComments = (family, anchorMs) =>
+  FINAL_PHASE_COMMENT_OFFSETS_MS.map((offsetMs, index) => {
+    const shared = {
+      no: 970001 + index,
+      marker: `FINAL_${family.toUpperCase()}_${index + 1}`,
+      vposMs: anchorMs + offsetMs,
+    };
+    if (family === "scroll") {
+      const sizes = ["small", "medium", "big", "small", "medium", "big"];
+      const fonts = ["defont", "gothic", "mincho", "mincho", "defont", "gothic"];
+      const characterCounts = [1, 30, 120, 60, 10, 30];
+      const comment = customFixedComment({
+        ...shared,
+        position: "naka",
+        size: sizes[index],
+        font: fonts[index],
+        full: index === 3,
+        ender: index === 4,
+      });
+      comment.body = `${"幅".repeat(characterCounts[index])}終${index + 1}`;
+      return comment;
+    }
+    if (family === "fixed") {
+      return customFixedComment({
+        ...shared,
+        position: index % 2 === 0 ? "ue" : "shita",
+        size: ["small", "medium", "big"][index % 3],
+        lineCount: [1, 3, 16, 7, 5, 1][index],
+        font: ["defont", "gothic", "mincho"][index % 3],
+        full: index === 2 || index === 4,
+        ender: index === 5,
+      });
+    }
+    return customFixedComment({
+      ...shared,
+      position: ["naka", "ue", "shita"][index % 3],
+      size: ["big", "small", "medium"][index % 3],
+      lineCount: [1, 7, 5, 1, 16, 3][index],
+      font: ["mincho", "defont", "gothic"][index % 3],
+      full: index === 3,
+      ender: index === 5,
+    });
+  });
+
+const buildFinalPhaseEquivalenceCases = () =>
+  [
+    ["control", FINAL_PHASE_CONTROL_END_MS],
+    ["end", FINAL_PHASE_ARCHIVE_END_MS],
+  ].flatMap(([anchorLabel, anchorMs]) =>
+    ["scroll", "fixed", "mixed"].flatMap((family) =>
+      FINAL_PHASE_SEEK_OFFSETS_MS.map((seekOffsetMs, seekIndex) => {
+        const signedOffset = seekOffsetMs >= 0 ? `plus${seekOffsetMs}` : `minus${-seekOffsetMs}`;
+        const testCase = customCase(
+          `final-phase-${anchorLabel}-${family}-${signedOffset}ms`,
+          buildFinalPhaseComments(family, anchorMs),
+          { seekMs: anchorMs + seekOffsetMs },
+        );
+        testCase.expectedMatchedCommentCount =
+          anchorLabel === "end" && seekOffsetMs >= 0
+            ? family === "scroll"
+              ? 4
+              : family === "mixed"
+                ? 1
+                : 0
+            : FINAL_PHASE_CONTROL_EXPECTED[family][seekIndex];
+        return testCase;
+      }),
+    ),
+  );
+
 const buildDurationFeatureCases = () =>
   [
     ["plain-small", { size: "small", lineCount: 1, full: false, font: "defont" }],
@@ -1133,6 +1215,7 @@ export const buildCases = (profile) => {
   if (profile === "scroll-reuse-boundary") return buildScrollReuseBoundaryCases();
   if (profile === "scroll-glyph") return buildScrollGlyphCases();
   if (profile === "scroll-cleanup-boundary") return buildScrollCleanupBoundaryCases();
+  if (profile === "final-phase-equivalence") return buildFinalPhaseEquivalenceCases();
   if (profile === "duration-features") return buildDurationFeatureCases();
   if (profile === "seek") return buildSeekCases();
   if (profile === "identity") return buildIdentityCases();
@@ -1168,6 +1251,7 @@ export const buildCases = (profile) => {
       ...buildScrollReuseBoundaryCases(),
       ...buildScrollGlyphCases(),
       ...buildScrollCleanupBoundaryCases(),
+      ...buildFinalPhaseEquivalenceCases(),
       ...buildDurationFeatureCases(),
       ...buildSeekCases(),
       ...buildIdentityCases(),

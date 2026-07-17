@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { resolveStaticPlacement } from "@/renderer/lanes-activation";
+import { CommentRenderer } from "@/renderer/comment-renderer";
 
 describe("resolveStaticPlacement", () => {
   test("stacks fixed comments from their requested edge while space remains", () => {
@@ -105,5 +106,21 @@ describe("resolveStaticPlacement", () => {
 
     expect(placement.y).toBe(0);
     expect(placement.usedFallback).toBe(false);
+  });
+});
+
+describe("duration-bound comment window", () => {
+  test("includes comments timestamped beyond the media end after timing clamp", () => {
+    const renderer = new CommentRenderer();
+    renderer.duration = 100_000;
+    const fixed = renderer.addComment("fixed", 150_000, ["ue"]);
+    const scrolling = renderer.addComment("scroll", 150_000, ["naka"]);
+
+    const comments = renderer.getCommentsInTimeWindow(96_000, 1_000);
+
+    expect(fixed).not.toBeNull();
+    expect(scrolling).not.toBeNull();
+    expect(comments).toContain(fixed as NonNullable<typeof fixed>);
+    expect(comments).toContain(scrolling as NonNullable<typeof scrolling>);
   });
 });

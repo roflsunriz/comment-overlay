@@ -1,6 +1,6 @@
 # ニコニココメントシステム互換性研究
 
-このディレクトリは、ニコニコ動画のコメント表示を一般規則として再現するための研究文書、研究用コード、ローカル実験結果の入口です。研究の原案は [strategy.md](./strategy.md)、現在の実装計画と判定基準は [studies/offline-replay-foundation.md](./studies/offline-replay-foundation.md)、最初の実測結果は [studies/2026-07-17-baseline-results.md](./studies/2026-07-17-baseline-results.md)、合成コメントによるレーン観測は [studies/2026-07-17-synthetic-comment-lane-results.md](./studies/2026-07-17-synthetic-comment-lane-results.md)、複数行と可変高スロットの観測は [studies/2026-07-17-multiline-slot-results.md](./studies/2026-07-17-multiline-slot-results.md)、表示高を使い切った後のランダム配置は [studies/2026-07-17-overflow-results.md](./studies/2026-07-17-overflow-results.md)、固定コメントとコメントアートの境界調査は [studies/2026-07-17-fixed-comment-coverage-results.md](./studies/2026-07-17-fixed-comment-coverage-results.md)、スクロールコメントの速度・寿命・レーン境界を含む最終調査は [studies/2026-07-17-scrolling-comment-coverage-results.md](./studies/2026-07-17-scrolling-comment-coverage-results.md) を参照してください。
+このディレクトリは、ニコニコ動画のコメント表示を一般規則として再現するための研究文書、研究用コード、ローカル実験結果の入口です。研究の原案は [strategy.md](./strategy.md)、現在の実装計画と判定基準は [studies/offline-replay-foundation.md](./studies/offline-replay-foundation.md)、最初の実測結果は [studies/2026-07-17-baseline-results.md](./studies/2026-07-17-baseline-results.md)、合成コメントによるレーン観測は [studies/2026-07-17-synthetic-comment-lane-results.md](./studies/2026-07-17-synthetic-comment-lane-results.md)、複数行と可変高スロットの観測は [studies/2026-07-17-multiline-slot-results.md](./studies/2026-07-17-multiline-slot-results.md)、表示高を使い切った後のランダム配置は [studies/2026-07-17-overflow-results.md](./studies/2026-07-17-overflow-results.md)、固定コメントとコメントアートの境界調査は [studies/2026-07-17-fixed-comment-coverage-results.md](./studies/2026-07-17-fixed-comment-coverage-results.md)、スクロールコメントの速度・寿命・レーン境界は [studies/2026-07-17-scrolling-comment-coverage-results.md](./studies/2026-07-17-scrolling-comment-coverage-results.md)、動画終端の共通時刻規則は [studies/2026-07-17-final-phase-results.md](./studies/2026-07-17-final-phase-results.md) を参照してください。
 
 ## ディレクトリ構成
 
@@ -83,11 +83,19 @@ bun run research:nico:lane-probe -- --archive research/captures/sm6240144-baseli
 - スクロールの寸法と属性: `scroll-features`、`scroll-width`、`scroll-sync`、`scroll-metadata`、`scroll-viewport`、`scroll-glyph`
 - スクロールの状態遷移: `scroll-seek`、`scroll-lifecycle`、`scroll-lifecycle-boundary`、`scroll-lifecycle-edge`、`scroll-cleanup-boundary`
 - スクロールの予約境界: `scroll-reuse-boundary`
+- 動画終端: `final-phase-equivalence`（通常時刻と終了6秒前以降の平行移動対照）
 
 `width-extreme-features` は、最小フォント到達後のscaleと `full` / `ender` の交差を追試するための入力です。全profileを連続実行する場合は `all` を指定できます。
 
 ```powershell
 bun run research:nico:fixed-matrix -- --profile boundary --out research/runs/fixed-comment-matrix-boundary
+```
+
+動画終端profileを72ケースすべて独立実行し、通常時刻との対照差を抽出する場合は次のように実行します。差異そのものが終端規則の観測対象なので、解析は差異件数を記録して正常終了します。終端差がないことを検証したい別用途では `--require-equivalence` を追加できます。
+
+```powershell
+bun run research:nico:final-phase -- --out research/runs/comment-matrix-final-phase-equivalence
+bun run research:nico:final-phase-analyze -- --input research/runs/comment-matrix-final-phase-equivalence/matrix-results.json --out research/runs/comment-matrix-final-phase-equivalence/equivalence-analysis.json
 ```
 
 ## 安全性と再現性の境界
@@ -109,3 +117,4 @@ bun run research:nico:fixed-matrix -- --profile boundary --out research/runs/fix
 5. 観測結果から仮説を立て、未使用ケースをホールドアウトとして反証する。（完了）
 6. 成立した一般規則だけを `src/` に実装し、既存fixtureと横断プローブで退行を確認する。（完了）
 7. スクロールの属性、幅、文字種、開始・終了、レーン再利用、seekの同値類と境界を反証する。（完了）
+8. 動画終端の固定・スクロール・混在系列と時刻境界を反証し、共通の時刻丸め規則へ還元する。（完了）

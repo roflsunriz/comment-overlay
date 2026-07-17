@@ -1,6 +1,8 @@
 import type { CommentRenderer } from "@/renderer/comment-renderer";
 import type { Comment } from "@/comment/comment";
+import { NICO_SCROLL_ACTIVATION_LEAD_MS } from "@/comment/nico-scroll";
 import { resolveNicoVerticalSlotGap } from "@/comment/nico-layout";
+import { STATIC_VISIBLE_DURATION_MS } from "@/shared/constants";
 
 const findCommentIndexAtOrAfterImpl = function (
   this: CommentRenderer,
@@ -30,6 +32,11 @@ const getCommentsInTimeWindowImpl = function (
   }
   const startTime = centerTimeMs - windowMs;
   const endTime = centerTimeMs + windowMs;
+  const earliestDurationBoundActivation = Math.max(
+    0,
+    this.duration - STATIC_VISIBLE_DURATION_MS - NICO_SCROLL_ACTIVATION_LEAD_MS,
+  );
+  const includeDurationBoundTail = this.duration > 0 && endTime >= earliestDurationBoundActivation;
   const startIndex = this.findCommentIndexAtOrAfter(startTime);
   const result: Comment[] = [];
   for (let i = startIndex; i < this.comments.length; i++) {
@@ -37,10 +44,13 @@ const getCommentsInTimeWindowImpl = function (
     if (!comment) {
       continue;
     }
-    if (comment.vposMs > endTime) {
+    if (!includeDurationBoundTail && comment.vposMs > endTime) {
       break;
     }
-    result.push(comment);
+    const effectiveVpos = this.getEffectiveCommentVpos(comment);
+    if (effectiveVpos >= startTime && effectiveVpos <= endTime) {
+      result.push(comment);
+    }
   }
   return result;
 };

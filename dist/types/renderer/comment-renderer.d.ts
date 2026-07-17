@@ -36,12 +36,16 @@ export declare class CommentRenderer {
     isPlaying: boolean;
     isStalled: boolean;
     lastDrawTime: number;
+    /** @deprecated Retained for API compatibility; official timing has no phase state. */
     finalPhaseActive: boolean;
+    /** @deprecated Retained for API compatibility; always null. */
     finalPhaseStartTime: number | null;
+    /** @deprecated Retained for API compatibility; always false. */
     finalPhaseScheduleDirty: boolean;
     playbackHasBegun: boolean;
     skipDrawingForCurrentFrame: boolean;
     pendingInitialSync: boolean;
+    /** @deprecated Retained for API compatibility; official timing uses no override map. */
     readonly finalPhaseVposOverrides: Map<Comment, number>;
     frameId: AnimationFrameHandle | null;
     videoFrameHandle: number | null;
@@ -98,12 +102,16 @@ export declare class CommentRenderer {
     addComment: (text: string, vposMs: number, commands?: string[], meta?: CalibrationCommentMeta | null) => Comment | null;
     clearComments: () => void;
     resetState: () => void;
+    /** @deprecated Retained as a no-op-compatible state reset. */
     resetFinalPhaseState: () => void;
     incrementEpoch: (reason: "source-change" | "metadata-loaded") => void;
     emitStateSnapshot: (label: string) => void;
     getEffectiveCommentVpos: (comment: Comment) => number;
+    /** @deprecated Use getEffectiveCommentVpos. */
     getFinalPhaseDisplayDuration: (comment: Comment) => number;
+    /** @deprecated Use getEffectiveCommentVpos. */
     resolveFinalPhaseVpos: (comment: Comment) => number;
+    /** @deprecated Official timing requires no phase schedule. */
     recomputeFinalPhaseTimeline: () => void;
     shouldSuppressRendering: () => boolean;
     updatePlaybackProgressState: () => void;

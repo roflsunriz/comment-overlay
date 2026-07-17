@@ -270,18 +270,35 @@ export const runReplay = async (args) => {
     );
   };
 
+  const runCdpSetup = async (label, operation) => {
+    const result = await settleOrTimeout(operation, 10_000);
+    if (result.timedOut) {
+      throw new Error(`${label} timed out after 10000ms`);
+    }
+    return result.value;
+  };
+
   try {
-    await Network.enable();
+    await runCdpSetup("Network.enable", Network.enable());
     await markProgress("network-enabled");
-    await Page.enable();
+    await runCdpSetup("Page.enable", Page.enable());
     await markProgress("page-enabled");
-    await Runtime.enable();
+    await runCdpSetup("Runtime.enable", Runtime.enable());
     await markProgress("runtime-enabled");
     await markProgress("domains-enabled");
-    await Network.setCacheDisabled({ cacheDisabled: true });
-    await Network.setBypassServiceWorker({ bypass: true });
+    await runCdpSetup(
+      "Network.setCacheDisabled",
+      Network.setCacheDisabled({ cacheDisabled: true }),
+    );
+    await runCdpSetup(
+      "Network.setBypassServiceWorker",
+      Network.setBypassServiceWorker({ bypass: true }),
+    );
     if (!booleanArg(args, "no-canvas-observer")) {
-      await Page.addScriptToEvaluateOnNewDocument({ source: buildCanvasObserverScript() });
+      await runCdpSetup(
+        "Page.addScriptToEvaluateOnNewDocument",
+        Page.addScriptToEvaluateOnNewDocument({ source: buildCanvasObserverScript() }),
+      );
     }
 
     Runtime.consoleAPICalled((event) => {
@@ -307,7 +324,10 @@ export const runReplay = async (args) => {
       webSockets.push({ requestId: event.requestId, url: event.url });
     });
 
-    await Fetch.enable({ patterns: [{ urlPattern: "*", requestStage: "Request" }] });
+    await runCdpSetup(
+      "Fetch.enable",
+      Fetch.enable({ patterns: [{ urlPattern: "*", requestStage: "Request" }] }),
+    );
     await markProgress("fetch-enabled");
     Fetch.requestPaused((event) => {
       const job = (async () => {
@@ -424,7 +444,14 @@ export const runReplay = async (args) => {
 
     const loadEvent = new Promise((resolveLoad) => Page.loadEventFired(resolveLoad));
     await markProgress("navigate-start");
-    const navigation = await Page.navigate({ url: manifest.entryUrl });
+    const navigationResult = await settleOrTimeout(
+      Page.navigate({ url: manifest.entryUrl }),
+      15_000,
+    );
+    if (navigationResult.timedOut || !navigationResult.value) {
+      throw new Error("Replay navigation timed out after 15000ms");
+    }
+    const navigation = navigationResult.value;
     await markProgress("navigate-finished");
     if (navigation.errorText) throw new Error(`Replay navigation failed: ${navigation.errorText}`);
     const loadResult = await settleOrTimeout(loadEvent, 45_000);

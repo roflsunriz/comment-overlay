@@ -85,9 +85,6 @@ const addCommentsImpl = function (
   }
 
   this.comments.push(...addedComments);
-  if (this.finalPhaseActive) {
-    this.finalPhaseScheduleDirty = true;
-  }
   this.comments.sort((a, b) => {
     const vposMsDiff = a.vposMs - b.vposMs;
     if (Math.abs(vposMsDiff) > EDGE_EPSILON) {

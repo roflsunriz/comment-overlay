@@ -17,6 +17,7 @@ test("scrolling matrix covers every declared equivalence class", () => {
     "scroll-reuse-boundary": 50,
     "scroll-glyph": 6,
     "scroll-cleanup-boundary": 11,
+    "final-phase-equivalence": 72,
   };
 
   for (const [profile, expectedCount] of Object.entries(expectedCounts)) {
@@ -29,5 +30,5 @@ test("scrolling matrix covers every declared equivalence class", () => {
     );
   }
 
-  assert.equal(buildCases("all").length, 752);
+  assert.equal(buildCases("all").length, 824);
 });
