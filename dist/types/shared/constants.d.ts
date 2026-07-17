@@ -15,7 +15,6 @@ export declare const FINAL_PHASE_MIN_WINDOW_MS = 6000;
 export declare const STATIC_VISIBLE_DURATION_MS = 3000;
 export declare const ACTIVE_WINDOW_MS: number;
 export declare const VIRTUAL_CANVAS_EXTENSION_PX = 240;
-export declare const NICO_SCROLL_VPOS_LEAD_MS = 1800;
 export declare const MIN_LANE_COUNT = 1;
 export declare const DEFAULT_LANE_COUNT = 12;
 export declare const MIN_FONT_SIZE_PX = 24;
@@ -27,5 +26,4 @@ export declare const STATIC_COMMENT_EDGE_PADDING_PX = 5;
 export declare const STATIC_COMMENT_STACKING_PADDING_PX = 2;
 export declare const STATIC_COMMENT_SIDE_MARGIN_PX = 8;
 export declare const MIN_STATIC_FONT_SIZE_PX = 12;
-export declare const NICO_FULL_SCROLL_VPOS_LEAD_MS = 2300;
 //# sourceMappingURL=constants.d.ts.map

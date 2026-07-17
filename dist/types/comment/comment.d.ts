@@ -14,7 +14,6 @@ export declare class Comment {
     readonly isFull: boolean;
     readonly isEnder: boolean;
     readonly meta: CalibrationCommentMeta | null;
-    hasSameVposFullMinchoEnder: boolean;
     x: number;
     y: number;
     width: number;

@@ -32,8 +32,6 @@ export class Comment {
   readonly isFull: boolean;
   readonly isEnder: boolean;
   readonly meta: CalibrationCommentMeta | null;
-  hasSameVposFullMinchoEnder = false;
-
   x = 0;
   y = 0;
   width = 0;

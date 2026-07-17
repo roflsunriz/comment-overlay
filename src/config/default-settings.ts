@@ -1,7 +1,5 @@
 import type { RendererSettings, ReadonlyRendererSettings } from "@/shared/types";
 
-export const NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS = 6_700;
-
 const BASE_SETTINGS: RendererSettings = {
   commentColor: "#FFFFFF",
   commentOpacity: 1,
@@ -12,7 +10,7 @@ const BASE_SETTINGS: RendererSettings = {
   scrollDirection: "rtl",
   renderStyle: "outline-only",
   syncMode: "raf",
-  scrollVisibleDurationMs: NICO_COMPAT_SCROLL_VISIBLE_DURATION_MS,
+  scrollVisibleDurationMs: null,
   useFixedLaneCount: false,
   fixedLaneCount: 12,
   useDprScaling: true,

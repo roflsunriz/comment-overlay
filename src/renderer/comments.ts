@@ -4,25 +4,6 @@ import type { CalibrationCommentMeta } from "@/shared/types";
 import { formatCommentPreview, debugLog } from "@/shared/debug";
 import { EDGE_EPSILON, sanitizeVposMs } from "@/shared/constants";
 
-const isFullMinchoMultiline = (comment: Comment): boolean =>
-  comment.isScrolling &&
-  comment.isFull &&
-  comment.text.includes("\n") &&
-  comment.commands.some((command) => command.toLowerCase() === "mincho");
-
-const refreshSameVposFullMinchoEnderFlags = (comments: Comment[]): void => {
-  const vposesWithEnder = new Set<number>();
-  comments.forEach((comment) => {
-    if (comment.isEnder && isFullMinchoMultiline(comment)) {
-      vposesWithEnder.add(comment.vposMs);
-    }
-  });
-  comments.forEach((comment) => {
-    comment.hasSameVposFullMinchoEnder =
-      vposesWithEnder.has(comment.vposMs) && isFullMinchoMultiline(comment);
-  });
-};
-
 const getSortableCommentNo = (comment: Comment): number | null => {
   const no = comment.meta?.no;
   return typeof no === "number" && Number.isFinite(no) ? no : null;
@@ -104,7 +85,6 @@ const addCommentsImpl = function (
   }
 
   this.comments.push(...addedComments);
-  refreshSameVposFullMinchoEnderFlags(this.comments);
   if (this.finalPhaseActive) {
     this.finalPhaseScheduleDirty = true;
   }

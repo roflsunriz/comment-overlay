@@ -206,7 +206,7 @@ const buildPrepareOptionsImpl = function (
 
   if (overrideDuration !== null) {
     maxVisibleDurationMs = overrideDuration;
-    minVisibleDurationMs = Math.max(1, Math.min(overrideDuration, MIN_VISIBLE_DURATION_MS));
+    minVisibleDurationMs = overrideDuration;
   }
 
   return {

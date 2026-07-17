@@ -632,6 +632,461 @@ const buildWidthExtremeFeatureCases = () => {
   return [...singleLine, ...multiline];
 };
 
+const SCROLL_LINE_COUNTS = {
+  small: [1, 7, 16],
+  medium: [1, 5, 16],
+  big: [1, 3, 16],
+};
+
+const buildScrollFeatureCases = () =>
+  Object.entries(SCROLL_LINE_COUNTS).flatMap(([size, lineCounts]) =>
+    lineCounts.flatMap((lineCount) =>
+      ["defont", "gothic", "mincho"].flatMap((font) =>
+        [false, true].flatMap((full) =>
+          [false, true].map((ender) =>
+            makePairCase({
+              id: `scroll-feature-${size}-${lineCount}lines-${font}-${full ? "full" : "plain"}-${ender ? "ender" : "normal"}`,
+              deltaMs: 1000,
+              position: "naka",
+              size,
+              lineCount,
+              full,
+              font,
+              ender,
+            }),
+          ),
+        ),
+      ),
+    ),
+  );
+
+const buildScrollWidthCases = () => {
+  const characterCounts = [1, 30, 60, 120];
+  const build = ({ idPrefix, size, lineCount, font, full, ender, characterCount }) => {
+    const testCase = makePairCase({
+      id: `${idPrefix}-${characterCount}chars`,
+      deltaMs: 1000,
+      position: "naka",
+      size,
+      lineCount,
+      full,
+      font,
+      ender,
+    });
+    const body = (glyph) =>
+      [glyph.repeat(characterCount), ...Array.from({ length: lineCount - 1 }, () => "　")].join(
+        "\n",
+      );
+    testCase.scenario.comments[0].body = body("幅");
+    testCase.scenario.comments[1].body = body("狭");
+    return testCase;
+  };
+  const interaction = Object.entries(SCROLL_LINE_COUNTS).flatMap(([size, lineCounts]) =>
+    lineCounts.flatMap((lineCount) =>
+      [false, true].flatMap((full) =>
+        [false, true].flatMap((ender) =>
+          characterCounts.map((characterCount) =>
+            build({
+              idPrefix: `scroll-width-${size}-${lineCount}lines-mincho-${full ? "full" : "plain"}-${ender ? "ender" : "normal"}`,
+              size,
+              lineCount,
+              font: "mincho",
+              full,
+              ender,
+              characterCount,
+            }),
+          ),
+        ),
+      ),
+    ),
+  );
+  const fontControls = ["defont", "gothic"].flatMap((font) =>
+    characterCounts.map((characterCount) =>
+      build({
+        idPrefix: `scroll-width-big-1line-${font}-plain-normal`,
+        size: "big",
+        lineCount: 1,
+        font,
+        full: false,
+        ender: false,
+        characterCount,
+      }),
+    ),
+  );
+  return [...interaction, ...fontControls];
+};
+
+const buildScrollSyncCases = () =>
+  Object.entries(SCROLL_LINE_COUNTS).flatMap(([size, lineCounts]) =>
+    lineCounts
+      .filter((lineCount) => lineCount > 1)
+      .flatMap((lineCount) =>
+        ["defont", "gothic", "mincho"].flatMap((font) =>
+          ["normal-first", "ender-first"].map((order) => {
+            const normal = customFixedComment({
+              no: order === "normal-first" ? 960001 : 960002,
+              marker: "SYNC_NORMAL",
+              position: "naka",
+              size,
+              lineCount,
+              font,
+              full: true,
+              ender: false,
+            });
+            const ender = customFixedComment({
+              no: order === "normal-first" ? 960002 : 960001,
+              marker: "SYNC_ENDER",
+              position: "naka",
+              size,
+              lineCount,
+              font,
+              full: true,
+              ender: true,
+            });
+            return customCase(`scroll-sync-${size}-${lineCount}lines-${font}-${order}`, [
+              normal,
+              ender,
+            ]);
+          }),
+        ),
+      ),
+  );
+
+const buildScrollMetadataCases = () => {
+  const identity = ["same", "different"].map((mode) => {
+    const testCase = makePairCase({
+      id: `scroll-metadata-user-${mode}`,
+      deltaMs: 1000,
+      position: "naka",
+      size: "medium",
+      lineCount: 2,
+      full: false,
+      font: "defont",
+    });
+    testCase.scenario.comments[0].userId = "scroll-user-a";
+    testCase.scenario.comments[1].userId = mode === "same" ? "scroll-user-a" : "scroll-user-b";
+    return testCase;
+  });
+  const premium = [false, true].map((isPremium) => {
+    const testCase = makePairCase({
+      id: `scroll-metadata-${isPremium ? "premium" : "nonpremium"}`,
+      deltaMs: 1000,
+      position: "naka",
+      size: "big",
+      lineCount: 1,
+      full: false,
+      font: "defont",
+    });
+    testCase.scenario.comments.forEach((comment) => {
+      comment.isPremium = isPremium;
+    });
+    return testCase;
+  });
+  const sources = ["trunk", "leaf"].map((source) => {
+    const testCase = makePairCase({
+      id: `scroll-metadata-source-${source}`,
+      deltaMs: 1000,
+      position: "naka",
+      size: "big",
+      lineCount: 1,
+      full: false,
+      font: "mincho",
+    });
+    testCase.scenario.comments.forEach((comment) => {
+      comment.source = source;
+    });
+    return testCase;
+  });
+  const forks = ["owner", "main", "easy"].map((targetFork) => {
+    const testCase = makePairCase({
+      id: `scroll-metadata-fork-${targetFork}`,
+      deltaMs: 1000,
+      position: "naka",
+      size: "medium",
+      lineCount: 2,
+      full: true,
+      font: "gothic",
+    });
+    testCase.scenario.targetFork = targetFork;
+    return testCase;
+  });
+  const commandControls = ["184", "ca", "patissier", "_live"].map((command) => {
+    const testCase = makePairCase({
+      id: `scroll-command-${command.replace(/^_/, "")}`,
+      deltaMs: 1000,
+      position: "naka",
+      size: "medium",
+      lineCount: 2,
+      full: false,
+      font: "defont",
+    });
+    testCase.scenario.comments.forEach((comment) => comment.commands.push(command));
+    return testCase;
+  });
+  const invisible = customCase("scroll-command-invisible-reservation", [
+    customFixedComment({ no: 961001, marker: "VISIBLE_A", position: "naka" }),
+    {
+      ...customFixedComment({ no: 961002, marker: "INVISIBLE_B", position: "naka" }),
+      commands: ["naka", "white", "medium", "invisible"],
+    },
+    customFixedComment({ no: 961003, marker: "VISIBLE_C", position: "naka" }),
+  ]);
+  invisible.expectedMatchedCommentCount = 2;
+  return [...identity, ...premium, ...sources, ...forks, ...commandControls, invisible];
+};
+
+const buildScrollViewportCases = () =>
+  [
+    [1280, 720],
+    [1280, 360],
+    [1280, 240],
+    [720, 1280],
+    [360, 1280],
+    [240, 1280],
+  ].flatMap(([width, height]) =>
+    [1, 16].map((lineCount) =>
+      makePairCase({
+        id: `scroll-viewport-${width}x${height}-${lineCount}lines`,
+        deltaMs: 1000,
+        position: "naka",
+        size: "big",
+        lineCount,
+        full: false,
+        font: "mincho",
+        window: { width, height },
+      }),
+    ),
+  );
+
+const buildScrollSeekCases = () =>
+  [false, true].map((full) => {
+    const testCase = customCase(
+      `scroll-seek-${full ? "full" : "plain"}`,
+      [
+        customFixedComment({
+          no: 962001,
+          marker: "SCROLL_EXPIRES",
+          position: "naka",
+          size: "medium",
+          vposMs: 3000,
+          full,
+        }),
+        customFixedComment({
+          no: 962002,
+          marker: "SCROLL_SURVIVES",
+          position: "naka",
+          size: "big",
+          vposMs: 8000,
+          full,
+        }),
+        customFixedComment({
+          no: 962003,
+          marker: "SCROLL_NEW",
+          position: "naka",
+          size: "small",
+          vposMs: 10000,
+          full,
+        }),
+      ],
+      { seekMs: 10000 },
+    );
+    testCase.seekSequenceMs = [8000, 10000];
+    testCase.expectedMatchedCommentCount = 2;
+    return testCase;
+  });
+
+const buildScrollLifecycleCases = () =>
+  [1, 30, 120].flatMap((characterCount) =>
+    [1, 16].flatMap((lineCount) =>
+      [false, true].map((full) => {
+        const comment = customFixedComment({
+          no: 963001,
+          marker: "SCROLL_LIFECYCLE",
+          position: "naka",
+          size: "big",
+          lineCount,
+          vposMs: 10000,
+          font: "mincho",
+          full,
+        });
+        comment.body = [
+          "幅".repeat(characterCount),
+          ...Array.from({ length: lineCount - 1 }, () => "　"),
+        ].join("\n");
+        const testCase = customCase(
+          `scroll-lifecycle-${lineCount}lines-${characterCount}chars-${full ? "full" : "plain"}`,
+          [comment],
+          { seekMs: 18000 },
+        );
+        testCase.seekSequenceMs = [
+          7000, 7500, 8000, 8200, 8500, 9000, 10000, 12000, 14000, 16000, 18000,
+        ];
+        return testCase;
+      }),
+    ),
+  );
+
+const buildScrollLifecycleBoundaryCases = () =>
+  [1, 120].flatMap((characterCount) =>
+    [false, true].map((full) => {
+      const comment = customFixedComment({
+        no: 964001,
+        marker: "SCROLL_BOUNDARY",
+        position: "naka",
+        size: "big",
+        lineCount: 1,
+        vposMs: 10000,
+        font: "mincho",
+        full,
+      });
+      comment.body = "幅".repeat(characterCount);
+      const testCase = customCase(
+        `scroll-lifecycle-boundary-${characterCount}chars-${full ? "full" : "plain"}`,
+        [comment],
+        { seekMs: 13001 },
+      );
+      testCase.seekSequenceMs = [7999, 8000, 8001, 8999, 9000, 9001, 12999, 13000, 13001];
+      return testCase;
+    }),
+  );
+
+const buildScrollLifecycleEdgeCases = () =>
+  [1, 120].flatMap((characterCount) =>
+    [false, true].flatMap((full) =>
+      [7999, 8000, 8001, 12999, 13000, 13001].map((seekMs) => {
+        const comment = customFixedComment({
+          no: 965001,
+          marker: "SCROLL_EDGE",
+          position: "naka",
+          size: "big",
+          lineCount: 1,
+          vposMs: 10000,
+          font: "mincho",
+          full,
+        });
+        comment.body = "幅".repeat(characterCount);
+        const testCase = customCase(
+          `scroll-lifecycle-edge-${characterCount}chars-${full ? "full" : "plain"}-${seekMs}ms`,
+          [comment],
+          { seekMs },
+        );
+        testCase.expectedMatchedCommentCount = seekMs >= 8000 && seekMs < 13000 ? 1 : 0;
+        return testCase;
+      }),
+    ),
+  );
+
+const buildScrollReuseBoundaryCases = () => {
+  const specs = [
+    { label: "small-7-normal", size: "small", lineCount: 7, from: 1477, to: 1482 },
+    { label: "medium-5-normal", size: "medium", lineCount: 5, from: 1801, to: 1807 },
+    { label: "big-3-normal", size: "big", lineCount: 3, from: 2157, to: 2162 },
+    { label: "big-3-ender", size: "big", lineCount: 3, ender: true, from: 2781, to: 2786 },
+    { label: "big-1-mincho", size: "big", lineCount: 1, from: 2781, to: 2786 },
+    {
+      label: "big-1-mincho-full",
+      size: "big",
+      lineCount: 1,
+      full: true,
+      from: 2781,
+      to: 2786,
+    },
+    {
+      label: "big-1-defont",
+      size: "big",
+      lineCount: 1,
+      font: "defont",
+      from: 2797,
+      to: 2803,
+    },
+    { label: "big-1-short", size: "big", lineCount: 1, chars: 1, from: 282, to: 287 },
+  ];
+  return specs.flatMap(
+    ({
+      label,
+      size,
+      lineCount,
+      font = "mincho",
+      full = false,
+      ender = false,
+      chars = 30,
+      from,
+      to,
+    }) =>
+      Array.from({ length: to - from + 1 }, (_, offset) => {
+        const deltaMs = from + offset;
+        const testCase = makePairCase({
+          id: `scroll-reuse-${label}-${deltaMs}ms`,
+          deltaMs,
+          position: "naka",
+          size,
+          lineCount,
+          full,
+          font,
+          ender,
+        });
+        const body = (glyph) =>
+          [glyph.repeat(chars), ...Array.from({ length: lineCount - 1 }, () => "　")].join("\n");
+        testCase.scenario.comments[0].body = body("幅");
+        testCase.scenario.comments[1].body = body("狭");
+        return testCase;
+      }),
+  );
+};
+
+const buildScrollGlyphCases = () => {
+  const bodies = [
+    ["ascii-wide", "W".repeat(60), "M".repeat(60)],
+    ["ascii-narrow", "i".repeat(120), "l".repeat(120)],
+    ["emoji", "🙂".repeat(40), "😀".repeat(40)],
+    ["combining", "e\u0301".repeat(60), "a\u0308".repeat(60)],
+    ["mixed", "W幅🙂".repeat(30), "M狭😀".repeat(30)],
+    ["spaces", `${"\u3000".repeat(60)}幅`, `${"\u2003".repeat(60)}狭`],
+  ];
+  return bodies.map(([label, firstBody, secondBody]) => {
+    const testCase = makePairCase({
+      id: `scroll-glyph-${label}`,
+      deltaMs: 1000,
+      position: "naka",
+      size: "big",
+      lineCount: 1,
+      full: false,
+      font: "mincho",
+    });
+    testCase.scenario.comments[0].body = firstBody;
+    testCase.scenario.comments[1].body = secondBody;
+    return testCase;
+  });
+};
+
+const buildScrollCleanupBoundaryCases = () => {
+  const probes = [
+    { characterCount: 1, seekTimes: [13910, 13911, 13912] },
+    { characterCount: 30, seekTimes: [13297, 13298, 13299, 13300] },
+    { characterCount: 120, seekTimes: [13095, 13096, 13097, 13098] },
+  ];
+  return probes.flatMap(({ characterCount, seekTimes }) =>
+    seekTimes.map((seekMs) => {
+      const comment = customFixedComment({
+        no: 966001,
+        marker: "SCROLL_CLEANUP",
+        position: "naka",
+        size: "big",
+        lineCount: 1,
+        vposMs: 10000,
+        font: "mincho",
+        full: false,
+      });
+      comment.body = "幅".repeat(characterCount);
+      const testCase = customCase(`scroll-cleanup-${characterCount}chars-${seekMs}ms`, [comment], {
+        seekMs,
+      });
+      testCase.expectedMatchedCommentCount = 0;
+      return testCase;
+    }),
+  );
+};
+
 const buildDurationFeatureCases = () =>
   [
     ["plain-small", { size: "small", lineCount: 1, full: false, font: "defont" }],
@@ -666,6 +1121,18 @@ export const buildCases = (profile) => {
   if (profile === "width-multiline-boundary") return buildWidthMultilineBoundaryCases();
   if (profile === "width-features") return buildWidthFeatureCases();
   if (profile === "width-extreme-features") return buildWidthExtremeFeatureCases();
+  if (profile === "scroll-features") return buildScrollFeatureCases();
+  if (profile === "scroll-width") return buildScrollWidthCases();
+  if (profile === "scroll-sync") return buildScrollSyncCases();
+  if (profile === "scroll-metadata") return buildScrollMetadataCases();
+  if (profile === "scroll-viewport") return buildScrollViewportCases();
+  if (profile === "scroll-seek") return buildScrollSeekCases();
+  if (profile === "scroll-lifecycle") return buildScrollLifecycleCases();
+  if (profile === "scroll-lifecycle-boundary") return buildScrollLifecycleBoundaryCases();
+  if (profile === "scroll-lifecycle-edge") return buildScrollLifecycleEdgeCases();
+  if (profile === "scroll-reuse-boundary") return buildScrollReuseBoundaryCases();
+  if (profile === "scroll-glyph") return buildScrollGlyphCases();
+  if (profile === "scroll-cleanup-boundary") return buildScrollCleanupBoundaryCases();
   if (profile === "duration-features") return buildDurationFeatureCases();
   if (profile === "seek") return buildSeekCases();
   if (profile === "identity") return buildIdentityCases();
@@ -689,6 +1156,18 @@ export const buildCases = (profile) => {
       ...buildWidthMultilineBoundaryCases(),
       ...buildWidthFeatureCases(),
       ...buildWidthExtremeFeatureCases(),
+      ...buildScrollFeatureCases(),
+      ...buildScrollWidthCases(),
+      ...buildScrollSyncCases(),
+      ...buildScrollMetadataCases(),
+      ...buildScrollViewportCases(),
+      ...buildScrollSeekCases(),
+      ...buildScrollLifecycleCases(),
+      ...buildScrollLifecycleBoundaryCases(),
+      ...buildScrollLifecycleEdgeCases(),
+      ...buildScrollReuseBoundaryCases(),
+      ...buildScrollGlyphCases(),
+      ...buildScrollCleanupBoundaryCases(),
       ...buildDurationFeatureCases(),
       ...buildSeekCases(),
       ...buildIdentityCases(),
@@ -704,7 +1183,9 @@ const firstDraw = (comment) => comment?.drawCalls?.[0] ?? null;
 
 const summarizeAnalysis = (testCase, analysis) => {
   const draws = analysis.comments.map((comment) => {
-    const draw = firstDraw(comment);
+    const draw = testCase.seekSequenceMs
+      ? (comment?.drawCalls?.at(-1) ?? null)
+      : firstDraw(comment);
     return {
       no: comment.no,
       drawCallCount: comment.drawCallCount,
@@ -712,8 +1193,14 @@ const summarizeAnalysis = (testCase, analysis) => {
       videoCurrentTimeMs: draw?.videoCurrentTimeMs ?? null,
       sourceWidth: draw?.sourceWidth ?? null,
       sourceHeight: draw?.sourceHeight ?? null,
+      sourceFont: draw?.sourceFont ?? null,
+      measuredTextWidth: draw?.measuredTextWidth ?? null,
+      renderedTextWidth: draw?.renderedTextWidth ?? null,
+      textTransform: draw?.textTransform ?? null,
       translationX: draw?.geometry?.translationX ?? null,
       translationY: draw?.geometry?.translationY ?? null,
+      transformedWidth: draw?.geometry?.transformedWidth ?? null,
+      transformedHeight: draw?.geometry?.transformedHeight ?? null,
     };
   });
   const ys = draws.map((draw) => draw.translationY).filter(Number.isFinite);
