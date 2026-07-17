@@ -13,5 +13,6 @@
     "rootDir": "overlay-tests/src",
     "sourceMap": true
   },
-  "include": ["overlay-tests/src/**/*.ts"]
+  "include": ["overlay-tests/src/**/*.ts"],
+  "exclude": ["overlay-tests/src/**/*.test.ts"]
 }

@@ -1,6 +1,8 @@
-# comment-overlay 校正メモ
+# 旧キャリブレーション手順
 
-`comment-overlay` のニコニコ動画寄せを進めるための、実測・比較・再校正の手順をまとめたメモです。通常の利用方法は [README.md](./README.md) と [DOCUMENTATION.md](./DOCUMENTATION.md) を参照してください。
+> 過去の実測校正で使用した手順の記録です。現在の再現可能な研究手順と結果は [`research/`](../research/README.md) を参照してください。
+
+`comment-overlay` のニコニコ動画寄せを進めるために使用した、実測・比較・再校正の手順です。通常の利用方法は [README.md](../README.md) と [DOCUMENTATION.md](../DOCUMENTATION.md) を参照してください。
 
 ## 使うスクリプト
 
@@ -61,4 +63,3 @@ bun run nico:report -- --real .calibration/nico/VIDEO_ID/baseline/trace.jsonl --
 - `v3.1.21`: 空きレーンが無い場合の fallback を先頭 lane ではなく末尾 lane へ逃がすよう変更。
 - `v3.1.22`: 内部デバッグ snapshot に `preCollisionDurationMs` / `virtualStartX` / `exitThreshold` / `bufferWidth` / `reservationWidth` を追加。
 - `v3.1.23`: 通常スクロールコメントの `reservationWidth` を描画テクスチャ幅寄りへ補正。
-

@@ -1,5 +1,7 @@
 # ニコニコ横断プローブ計画
 
+> 旧評価基盤の計画と途中経過です。現在の合成実験基盤は [`research/`](../../research/README.md) に集約されています。
+
 目的:
 - 1動画1区間への過剰適合を避けるため、複数動画・複数コメントソース・複数区間の教師traceとCO traceを同じ評価器で横断採点する。
 - 個別CAの見た目に合わせた分岐ではなく、通常 `naka` / 固定 `ue` / `shita` / `full` / 多行コメントアートが同じ一般規則で改善しているかを見る。
@@ -37,7 +39,7 @@
 運用:
 - プローブ定義は `.calibration/nico/probes.json` に置く。
 - `scripts/nico-probe-score.mjs --config .calibration/nico/probes.json` で横断集計する。
-- trackedな雛形は `docs/nico-calibration-probes.example.json` に置く。
+- trackedな当時の雛形は [`cross-video-probes.example.json`](./cross-video-probes.example.json) に保存している。
 - 新しい校正変更を入れたら、個別スクリーンショットを見る前に横断スコアを確認する。
 - プローブの教師traceが無い場合は `missing` として報告し、勝手に0点にも成功扱いにも入れない。
 

@@ -272,7 +272,7 @@ const renderer = new CommentRenderer(settings, {
 
 ## バージョン
 
-パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v4.1.4`) を取得できます。
+パッケージには `COMMENT_OVERLAY_VERSION` 定数が含まれており、現在のライブラリバージョン (例: `v4.1.5`) を取得できます。
 
 ```ts
 import { COMMENT_OVERLAY_VERSION } from "comment-overlay";

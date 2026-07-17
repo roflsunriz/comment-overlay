@@ -1,633 +1,649 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Comment Overlay Manual Test</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-      font-family:
-        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
-      background: #080a0f;
-      color: #eef4ff;
-    }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comment Overlay Manual Test</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #080a0f;
+        color: #eef4ff;
+      }
 
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-    }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
 
-    body {
-      margin: 0;
-      padding: 22px;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 20% 0%, rgba(40, 93, 170, 0.22), transparent 30rem),
-        radial-gradient(circle at 90% 8%, rgba(20, 184, 166, 0.14), transparent 26rem),
-        linear-gradient(180deg, #0b0f17 0%, #080a0f 46%, #0a0c11 100%);
-    }
-
-    main {
-      margin: 0 auto;
-      width: min(1182px, 100%);
-    }
-
-    main[data-stage-size="wide"] {
-      width: min(1182px, 100%);
-    }
-
-    main[data-stage-size="theater"] {
-      width: min(960px, 100%);
-    }
-
-    main[data-stage-size="compact"] {
-      width: min(720px, 100%);
-    }
-
-    main[data-stage-size="mobile"] {
-      width: min(480px, 100%);
-    }
-
-    h1 {
-      font-size: clamp(1.08rem, 1.8vw, 1.42rem);
-      margin: 0;
-      text-align: left;
-      letter-spacing: 0;
-      font-weight: 720;
-      line-height: 1.15;
-    }
-
-    .player {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .app-header {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .app-kicker {
-      margin: 0 0 5px;
-      color: #7dd3fc;
-      font-size: 0.72rem;
-      font-weight: 760;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .header-meta {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    .meta-pill {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      padding: 0 10px;
-      border: 1px solid rgba(125, 211, 252, 0.22);
-      border-radius: 999px;
-      background: rgba(8, 14, 24, 0.66);
-      color: #b9c8da;
-      font-size: 0.78rem;
-      font-weight: 680;
-    }
-
-    .video-wrapper {
-      position: relative;
-      aspect-ratio: 1182 / 665;
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow:
-        0 22px 70px rgba(0, 0, 0, 0.46),
-        0 1px 0 rgba(255, 255, 255, 0.05) inset;
-      background: #000;
-    }
-
-    .video-wrapper:fullscreen {
-      width: 100vw;
-      height: 100vh;
-      border: 0;
-      border-radius: 0;
-      aspect-ratio: auto;
-      box-shadow: none;
-    }
-
-    .video-wrapper:fullscreen video {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-    }
-
-    .video-wrapper:fullscreen canvas {
-      position: absolute !important;
-      inset: 0 !important;
-      z-index: 2 !important;
-      display: block !important;
-      width: 100% !important;
-      height: 100% !important;
-      pointer-events: none !important;
-    }
-
-    video {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: fill;
-      background: #000;
-    }
-
-    .video-wrapper canvas {
-      z-index: 2 !important;
-    }
-
-    .video-wrapper.controls-hidden {
-      cursor: none;
-    }
-
-    .media-controls {
-      position: absolute;
-      right: 12px;
-      bottom: 12px;
-      left: 12px;
-      z-index: 3;
-      display: grid;
-      grid-template-columns: auto 1fr auto auto minmax(84px, 120px) auto;
-      gap: 10px;
-      align-items: center;
-      padding: 10px 12px;
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      border-radius: 999px;
-      background: rgba(3, 7, 18, 0.72);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
-      backdrop-filter: blur(14px);
-      opacity: 1;
-      transform: translateY(0);
-      transition:
-        opacity 0.18s ease,
-        transform 0.18s ease;
-    }
-
-    .video-wrapper.controls-hidden .media-controls {
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(8px);
-    }
-
-    .media-controls button {
-      min-width: 42px;
-      min-height: 32px;
-      padding: 7px 11px;
-    }
-
-    .media-controls input[type="range"] {
-      width: 100%;
-      accent-color: #38bdf8;
-    }
-
-    .media-time {
-      min-width: 92px;
-      color: #d7e3f2;
-      font-variant-numeric: tabular-nums;
-      font-size: 0.82rem;
-      font-weight: 720;
-      text-align: right;
-    }
-
-    .media-volume {
-      min-width: 84px;
-    }
-
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      justify-content: flex-start;
-    }
-
-    .toolbar {
-      display: grid;
-      grid-template-columns: 1.25fr 1fr 0.95fr;
-      gap: 12px;
-    }
-
-    .control-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      min-width: 0;
-      padding: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 10px;
-      background:
-        linear-gradient(180deg, rgba(20, 30, 45, 0.78), rgba(10, 15, 23, 0.82)),
-        rgba(15, 23, 42, 0.4);
-      box-shadow:
-        0 12px 34px rgba(0, 0, 0, 0.24),
-        0 1px 0 rgba(255, 255, 255, 0.04) inset;
-      backdrop-filter: blur(14px);
-    }
-
-    .control-group-title {
-      flex: 0 0 100%;
-      margin: 0 0 4px;
-      color: #8fb3d9;
-      font-size: 0.68rem;
-      font-weight: 780;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    .controls label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #d7e3f2;
-      font-size: 0.86rem;
-      font-weight: 650;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      background: rgba(8, 13, 21, 0.62);
-      padding: 16px;
-      border-radius: 10px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .field span {
-      font-weight: 600;
-    }
-
-    .field textarea {
-      resize: vertical;
-      min-height: 80px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.24);
-      background: rgba(2, 6, 14, 0.62);
-      color: inherit;
-      font-family: inherit;
-      font-size: 0.95rem;
-      line-height: 1.4;
-    }
-
-    .field textarea:focus {
-      outline: none;
-      border-color: #60a5fa;
-      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
-    }
-
-    .field textarea.invalid {
-      border-color: #f87171;
-      box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.25);
-    }
-
-    .input-hint {
-      margin: 0;
-      font-size: 0.85rem;
-      color: #cbd5f5;
-    }
-
-    select {
-      min-height: 34px;
-      border: 1px solid rgba(148, 163, 184, 0.26);
-      border-radius: 8px;
-      background: rgba(2, 6, 14, 0.68);
-      color: inherit;
-      padding: 6px 28px 6px 10px;
-      font: inherit;
-    }
-
-    button {
-      min-height: 34px;
-      background: linear-gradient(180deg, #2b7cff, #175bd7);
-      color: #fff;
-      border: 1px solid rgba(125, 211, 252, 0.2);
-      padding: 7px 13px;
-      border-radius: 999px;
-      cursor: pointer;
-      font-weight: 720;
-      line-height: 1;
-      box-shadow:
-        0 8px 22px rgba(31, 111, 235, 0.24),
-        0 1px 0 rgba(255, 255, 255, 0.18) inset;
-      transition:
-        background 0.15s ease,
-        border-color 0.15s ease,
-        box-shadow 0.15s ease,
-        transform 0.15s ease;
-    }
-
-    button:hover {
-      background: linear-gradient(180deg, #3b86ff, #1f6feb);
-      border-color: rgba(125, 211, 252, 0.44);
-      box-shadow:
-        0 10px 26px rgba(31, 111, 235, 0.32),
-        0 1px 0 rgba(255, 255, 255, 0.22) inset;
-    }
-
-    button:active {
-      transform: translateY(1px);
-    }
-
-    .button-secondary {
-      background: rgba(15, 23, 42, 0.86);
-      border-color: rgba(148, 163, 184, 0.22);
-      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
-    }
-
-    .button-secondary:hover {
-      background: rgba(34, 48, 70, 0.96);
-      border-color: rgba(148, 163, 184, 0.38);
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
-    }
-
-    .button-active {
-      background: linear-gradient(180deg, #16a394, #0f766e);
-      border-color: rgba(45, 212, 191, 0.56);
-      box-shadow:
-        0 9px 24px rgba(20, 184, 166, 0.22),
-        0 1px 0 rgba(255, 255, 255, 0.14) inset;
-    }
-
-    .segmented {
-      display: inline-flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      padding: 4px;
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 999px;
-      background: rgba(2, 6, 14, 0.46);
-    }
-
-    .segmented button {
-      min-height: 30px;
-      padding-inline: 10px;
-      box-shadow: none;
-    }
-
-    .profiler-controls {
-      border: 1px solid rgba(59, 130, 246, 0.18);
-      background: rgba(10, 21, 36, 0.58);
-    }
-
-    .profiler-btn {
-      background: linear-gradient(180deg, #0ea5e9, #0369a1);
-      font-size: 0.9rem;
-    }
-
-    .profiler-btn:hover {
-      background: #0284c7;
-    }
-
-    .clear-btn {
-      background: #dc2626;
-    }
-
-    .clear-btn:hover {
-      background: #b91c1c;
-    }
-
-    pre {
-      margin: 0;
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      background: rgba(3, 7, 18, 0.62);
-      border-radius: 10px;
-      padding: 12px 16px;
-      color: #cbd5e1;
-      font-size: 0.84rem;
-      white-space: pre-wrap;
-      word-break: break-word;
-      min-height: 2.6rem;
-    }
-
-    .status-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 10px;
-    }
-
-    @media (max-width: 640px) {
       body {
-        padding: 12px;
+        margin: 0;
+        padding: 22px;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 20% 0%, rgba(40, 93, 170, 0.22), transparent 30rem),
+          radial-gradient(circle at 90% 8%, rgba(20, 184, 166, 0.14), transparent 26rem),
+          linear-gradient(180deg, #0b0f17 0%, #080a0f 46%, #0a0c11 100%);
+      }
+
+      main {
+        margin: 0 auto;
+        width: min(1182px, 100%);
+      }
+
+      main[data-stage-size="wide"] {
+        width: min(1182px, 100%);
+      }
+
+      main[data-stage-size="theater"] {
+        width: min(960px, 100%);
+      }
+
+      main[data-stage-size="compact"] {
+        width: min(720px, 100%);
+      }
+
+      main[data-stage-size="mobile"] {
+        width: min(480px, 100%);
+      }
+
+      h1 {
+        font-size: clamp(1.08rem, 1.8vw, 1.42rem);
+        margin: 0;
+        text-align: left;
+        letter-spacing: 0;
+        font-weight: 720;
+        line-height: 1.15;
+      }
+
+      .player {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
       }
 
       .app-header {
-        align-items: flex-start;
-        flex-direction: column;
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .app-kicker {
+        margin: 0 0 5px;
+        color: #7dd3fc;
+        font-size: 0.72rem;
+        font-weight: 760;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
       }
 
       .header-meta {
-        justify-content: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border: 1px solid rgba(125, 211, 252, 0.22);
+        border-radius: 999px;
+        background: rgba(8, 14, 24, 0.66);
+        color: #b9c8da;
+        font-size: 0.78rem;
+        font-weight: 680;
+      }
+
+      .video-wrapper {
+        position: relative;
+        aspect-ratio: 1182 / 665;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow:
+          0 22px 70px rgba(0, 0, 0, 0.46),
+          0 1px 0 rgba(255, 255, 255, 0.05) inset;
+        background: #000;
+      }
+
+      .video-wrapper:fullscreen {
+        width: 100vw;
+        height: 100vh;
+        border: 0;
+        border-radius: 0;
+        aspect-ratio: auto;
+        box-shadow: none;
+      }
+
+      .video-wrapper:fullscreen video {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+      }
+
+      .video-wrapper:fullscreen canvas {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 2 !important;
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
+        pointer-events: none !important;
+      }
+
+      video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: fill;
+        background: #000;
+      }
+
+      .video-wrapper canvas {
+        z-index: 2 !important;
+      }
+
+      .video-wrapper.controls-hidden {
+        cursor: none;
+      }
+
+      .media-controls {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        z-index: 3;
+        display: grid;
+        grid-template-columns: auto 1fr auto auto minmax(84px, 120px) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 999px;
+        background: rgba(3, 7, 18, 0.72);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+        backdrop-filter: blur(14px);
+        opacity: 1;
+        transform: translateY(0);
+        transition:
+          opacity 0.18s ease,
+          transform 0.18s ease;
+      }
+
+      .video-wrapper.controls-hidden .media-controls {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(8px);
+      }
+
+      .media-controls button {
+        min-width: 42px;
+        min-height: 32px;
+        padding: 7px 11px;
+      }
+
+      .media-controls input[type="range"] {
+        width: 100%;
+        accent-color: #38bdf8;
+      }
+
+      .media-time {
+        min-width: 92px;
+        color: #d7e3f2;
+        font-variant-numeric: tabular-nums;
+        font-size: 0.82rem;
+        font-weight: 720;
+        text-align: right;
+      }
+
+      .media-volume {
+        min-width: 84px;
       }
 
       .controls {
-        padding: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: flex-start;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1.25fr 1fr 0.95fr;
+        gap: 12px;
       }
 
       .control-group {
-        flex-direction: column;
-        flex-wrap: nowrap;
-        align-items: stretch;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 10px;
+        background:
+          linear-gradient(180deg, rgba(20, 30, 45, 0.78), rgba(10, 15, 23, 0.82)),
+          rgba(15, 23, 42, 0.4);
+        box-shadow:
+          0 12px 34px rgba(0, 0, 0, 0.24),
+          0 1px 0 rgba(255, 255, 255, 0.04) inset;
+        backdrop-filter: blur(14px);
       }
 
-      .controls label,
-      .control-group > button,
-      .control-group > select {
-        width: auto;
-        max-width: 100%;
-        align-self: stretch;
+      .control-group-title {
+        flex: 0 0 100%;
+        margin: 0 0 4px;
+        color: #8fb3d9;
+        font-size: 0.68rem;
+        font-weight: 780;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
       }
 
       .controls label {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .controls label:has(input[type="checkbox"]) {
-        flex-direction: row;
+        display: flex;
         align-items: center;
+        gap: 8px;
+        color: #d7e3f2;
+        font-size: 0.86rem;
+        font-weight: 650;
       }
 
-      .controls label select {
-        width: 100%;
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(8, 13, 21, 0.62);
+        padding: 16px;
+        border-radius: 10px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .field span {
+        font-weight: 600;
+      }
+
+      .field textarea {
+        resize: vertical;
+        min-height: 80px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: rgba(2, 6, 14, 0.62);
+        color: inherit;
+        font-family: inherit;
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+
+      .field textarea:focus {
+        outline: none;
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+      }
+
+      .field textarea.invalid {
+        border-color: #f87171;
+        box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.25);
+      }
+
+      .input-hint {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #cbd5f5;
+      }
+
+      select {
+        min-height: 34px;
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        border-radius: 8px;
+        background: rgba(2, 6, 14, 0.68);
+        color: inherit;
+        padding: 6px 28px 6px 10px;
+        font: inherit;
+      }
+
+      button {
+        min-height: 34px;
+        background: linear-gradient(180deg, #2b7cff, #175bd7);
+        color: #fff;
+        border: 1px solid rgba(125, 211, 252, 0.2);
+        padding: 7px 13px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 720;
+        line-height: 1;
+        box-shadow:
+          0 8px 22px rgba(31, 111, 235, 0.24),
+          0 1px 0 rgba(255, 255, 255, 0.18) inset;
+        transition:
+          background 0.15s ease,
+          border-color 0.15s ease,
+          box-shadow 0.15s ease,
+          transform 0.15s ease;
+      }
+
+      button:hover {
+        background: linear-gradient(180deg, #3b86ff, #1f6feb);
+        border-color: rgba(125, 211, 252, 0.44);
+        box-shadow:
+          0 10px 26px rgba(31, 111, 235, 0.32),
+          0 1px 0 rgba(255, 255, 255, 0.22) inset;
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      .button-secondary {
+        background: rgba(15, 23, 42, 0.86);
+        border-color: rgba(148, 163, 184, 0.22);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+      }
+
+      .button-secondary:hover {
+        background: rgba(34, 48, 70, 0.96);
+        border-color: rgba(148, 163, 184, 0.38);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+      }
+
+      .button-active {
+        background: linear-gradient(180deg, #16a394, #0f766e);
+        border-color: rgba(45, 212, 191, 0.56);
+        box-shadow:
+          0 9px 24px rgba(20, 184, 166, 0.22),
+          0 1px 0 rgba(255, 255, 255, 0.14) inset;
       }
 
       .segmented {
-        width: 100%;
-        align-self: stretch;
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 999px;
+        background: rgba(2, 6, 14, 0.46);
       }
 
       .segmented button {
-        width: auto;
-        flex: 1 1 auto;
+        min-height: 30px;
+        padding-inline: 10px;
+        box-shadow: none;
       }
-    }
 
-    @media (max-width: 980px) {
-      .toolbar {
-        grid-template-columns: 1fr;
+      .profiler-controls {
+        border: 1px solid rgba(59, 130, 246, 0.18);
+        background: rgba(10, 21, 36, 0.58);
       }
-    }
-  </style>
-</head>
-<body>
-  <main id="test-stage" data-stage-size="wide">
-    <section class="player">
-      <header class="app-header">
-        <div>
-          <p class="app-kicker">Manual Calibration Console</p>
-          <h1>Comment Overlay Engine Demo</h1>
-        </div>
-        <div class="header-meta" aria-label="検証対象">
-          <span class="meta-pill">3 Sources</span>
-          <span class="meta-pill">Canvas Trace</span>
-          <span class="meta-pill">Viewport Probe</span>
-        </div>
-      </header>
 
-      <div class="video-wrapper overlay-container">
-        <video
-          id="test-video"
-          controlsList="nofullscreen nodownload noremoteplayback"
-          crossorigin="anonymous"
-          disablepictureinpicture
-          playsinline
-          preload="metadata"
-          autoplay
-          loop
-        >
-          <source
-            src="./fixtures/sm6240144.mp4"
-            type="video/mp4"
-          />
-          Your browser does not support the HTML5 video element.
-        </video>
-        <div class="media-controls" aria-label="動画操作">
-          <button type="button" id="media-play-toggle">停止</button>
-          <input id="media-seek" type="range" min="0" max="0" step="0.01" value="0" />
-          <span id="media-time" class="media-time">00:00 / 00:00</span>
-          <button type="button" id="media-mute-toggle">音量</button>
-          <input
-            id="media-volume"
-            class="media-volume"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value="0.01"
-            aria-label="音量"
-          />
-          <button type="button" id="media-fullscreen-toggle">全画面</button>
-        </div>
-      </div>
+      .profiler-btn {
+        background: linear-gradient(180deg, #0ea5e9, #0369a1);
+        font-size: 0.9rem;
+      }
 
-      <div class="toolbar">
-        <div class="controls control-group">
-          <p class="control-group-title">Case</p>
-          <label>
-            動画
-            <select id="video-case">
-              <option value="sm6240144" selected>sm6240144</option>
-              <option value="sm6945510">sm6945510</option>
-              <option value="sm38851567">sm38851567</option>
-            </select>
-          </label>
-          <button type="button" id="reload-comments">再読込</button>
-        </div>
+      .profiler-btn:hover {
+        background: #0284c7;
+      }
 
-        <div class="controls control-group">
-          <p class="control-group-title">Render</p>
-          <label>
-            <input type="checkbox" id="toggle-visibility" checked />
-            コメント表示
-          </label>
-          <label>
-            <input type="checkbox" id="toggle-repeat" checked />
-            リピート
-          </label>
-          <label>
-            方向
-            <select id="scroll-direction">
-              <option value="rtl">右→左</option>
-              <option value="ltr">左→右</option>
-            </select>
-          </label>
-          <label>
-            影
-            <select id="shadow-intensity">
-              <option value="none">なし</option>
-              <option value="light">弱</option>
-              <option value="medium" selected>中</option>
-              <option value="strong">強</option>
-            </select>
-          </label>
-          <button type="button" id="stall-emulator" class="button-secondary">ストール</button>
-        </div>
+      .clear-btn {
+        background: #dc2626;
+      }
 
-        <div class="controls control-group">
-          <p class="control-group-title">Viewport</p>
-          <div class="segmented" aria-label="表示領域">
-            <button type="button" class="stage-size-button button-active" data-stage-size="wide">100%</button>
-            <button type="button" class="stage-size-button button-secondary" data-stage-size="theater">960</button>
-            <button type="button" class="stage-size-button button-secondary" data-stage-size="compact">720</button>
-            <button type="button" class="stage-size-button button-secondary" data-stage-size="mobile">480</button>
+      .clear-btn:hover {
+        background: #b91c1c;
+      }
+
+      pre {
+        margin: 0;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(3, 7, 18, 0.62);
+        border-radius: 10px;
+        padding: 12px 16px;
+        color: #cbd5e1;
+        font-size: 0.84rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 2.6rem;
+      }
+
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 10px;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 12px;
+        }
+
+        .app-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .header-meta {
+          justify-content: flex-start;
+        }
+
+        .controls {
+          padding: 10px;
+        }
+
+        .control-group {
+          flex-direction: column;
+          flex-wrap: nowrap;
+          align-items: stretch;
+        }
+
+        .controls label,
+        .control-group > button,
+        .control-group > select {
+          width: auto;
+          max-width: 100%;
+          align-self: stretch;
+        }
+
+        .controls label {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .controls label:has(input[type="checkbox"]) {
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .controls label select {
+          width: 100%;
+        }
+
+        .segmented {
+          width: 100%;
+          align-self: stretch;
+        }
+
+        .segmented button {
+          width: auto;
+          flex: 1 1 auto;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .toolbar {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="test-stage" data-stage-size="wide">
+      <section class="player">
+        <header class="app-header">
+          <div>
+            <p class="app-kicker">Manual Calibration Console</p>
+            <h1>Comment Overlay Engine Demo</h1>
           </div>
-          <button type="button" id="fullscreen-button">全画面</button>
+          <div class="header-meta" aria-label="検証対象">
+            <span class="meta-pill">Generated Cases</span>
+            <span class="meta-pill">Canvas Trace</span>
+            <span class="meta-pill">Viewport Probe</span>
+          </div>
+        </header>
+
+        <div class="video-wrapper overlay-container">
+          <video
+            id="test-video"
+            controlsList="nofullscreen nodownload noremoteplayback"
+            crossorigin="anonymous"
+            disablepictureinpicture
+            playsinline
+            preload="metadata"
+            autoplay
+            loop
+          >
+            Your browser does not support the HTML5 video element.
+          </video>
+          <div class="media-controls" aria-label="動画操作">
+            <button type="button" id="media-play-toggle">停止</button>
+            <input id="media-seek" type="range" min="0" max="0" step="0.01" value="0" />
+            <span id="media-time" class="media-time">00:00 / 00:00</span>
+            <button type="button" id="media-mute-toggle">音量</button>
+            <input
+              id="media-volume"
+              class="media-volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.01"
+              aria-label="音量"
+            />
+            <button type="button" id="media-fullscreen-toggle">全画面</button>
+          </div>
         </div>
-      </div>
 
-      <div class="controls profiler-controls">
-        <strong>Debug Profiler</strong>
-        <button type="button" id="profiler-stats" class="profiler-btn">統計表示</button>
-        <button type="button" id="profiler-download-compact" class="profiler-btn">Compact JSON</button>
-        <button type="button" id="profiler-download-raw" class="profiler-btn">Raw JSON</button>
-        <button type="button" id="profiler-clear" class="profiler-btn clear-btn">クリア</button>
-      </div>
+        <div class="toolbar">
+          <div class="controls control-group">
+            <p class="control-group-title">Case</p>
+            <label>
+              コメントケース
+              <select id="video-case"></select>
+            </label>
+            <button type="button" id="reload-comments">再読込</button>
+          </div>
 
-      <div class="field-group">
-        <label class="field" for="ng-words-input">
-          <span>NGワード (改行区切り)</span>
-          <textarea id="ng-words-input" placeholder="例: 草&#10;神"></textarea>
-        </label>
-        <label class="field" for="ng-regex-input">
-          <span>NG正規表現 (改行区切り)</span>
-          <textarea
-            id="ng-regex-input"
-            placeholder="例: ^(?:8|８){4,}$&#10;[wｗ]{3,}"
-          ></textarea>
-        </label>
-        <p id="ng-regex-status" class="input-hint" aria-live="polite"></p>
-      </div>
+          <div class="controls control-group">
+            <p class="control-group-title">Render</p>
+            <label>
+              <input type="checkbox" id="toggle-visibility" checked />
+              コメント表示
+            </label>
+            <label>
+              <input type="checkbox" id="toggle-repeat" checked />
+              リピート
+            </label>
+            <label>
+              方向
+              <select id="scroll-direction">
+                <option value="rtl">右→左</option>
+                <option value="ltr">左→右</option>
+              </select>
+            </label>
+            <label>
+              影
+              <select id="shadow-intensity">
+                <option value="none">なし</option>
+                <option value="light">弱</option>
+                <option value="medium" selected>中</option>
+                <option value="strong">強</option>
+              </select>
+            </label>
+            <button type="button" id="stall-emulator" class="button-secondary">ストール</button>
+          </div>
 
-      <div class="status-grid">
-        <pre id="status" aria-live="polite"></pre>
-        <pre id="settings-status" aria-live="polite"></pre>
-        <pre id="viewport-status" aria-live="polite"></pre>
-      </div>
-    </section>
-  </main>
-  <script type="module" src="./build/main.js"></script>
-</body>
+          <div class="controls control-group">
+            <p class="control-group-title">Viewport</p>
+            <div class="segmented" aria-label="表示領域">
+              <button type="button" class="stage-size-button button-active" data-stage-size="wide">
+                100%
+              </button>
+              <button
+                type="button"
+                class="stage-size-button button-secondary"
+                data-stage-size="theater"
+              >
+                960
+              </button>
+              <button
+                type="button"
+                class="stage-size-button button-secondary"
+                data-stage-size="compact"
+              >
+                720
+              </button>
+              <button
+                type="button"
+                class="stage-size-button button-secondary"
+                data-stage-size="mobile"
+              >
+                480
+              </button>
+            </div>
+            <button type="button" id="fullscreen-button">全画面</button>
+          </div>
+        </div>
+
+        <div class="controls profiler-controls">
+          <strong>Debug Profiler</strong>
+          <button type="button" id="profiler-stats" class="profiler-btn">統計表示</button>
+          <button type="button" id="profiler-download-compact" class="profiler-btn">
+            Compact JSON
+          </button>
+          <button type="button" id="profiler-download-raw" class="profiler-btn">Raw JSON</button>
+          <button type="button" id="profiler-clear" class="profiler-btn clear-btn">クリア</button>
+        </div>
+
+        <div class="field-group">
+          <label class="field" for="ng-words-input">
+            <span>NGワード (改行区切り)</span>
+            <textarea id="ng-words-input" placeholder="例: 草&#10;神"></textarea>
+          </label>
+          <label class="field" for="ng-regex-input">
+            <span>NG正規表現 (改行区切り)</span>
+            <textarea id="ng-regex-input" placeholder="例: ^(?:8|８){4,}$&#10;[wｗ]{3,}"></textarea>
+          </label>
+          <p id="ng-regex-status" class="input-hint" aria-live="polite"></p>
+        </div>
+
+        <div class="status-grid">
+          <pre id="status" aria-live="polite"></pre>
+          <pre id="settings-status" aria-live="polite"></pre>
+          <pre id="viewport-status" aria-live="polite"></pre>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./build/main.js"></script>
+  </body>
 </html>

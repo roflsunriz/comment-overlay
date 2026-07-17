@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Copy to .calibration/nico/probes.json and edit paths for local teacher/candidate traces. The composite score is defined by these 9 lane probes.",
+  "description": "Historical example: copy to .calibration/nico/probes.json and edit paths for local teacher/candidate traces. The composite score is defined by these 9 lane probes.",
   "probes": [
     {
       "id": "sm6240144-lane-215s-ordinary",

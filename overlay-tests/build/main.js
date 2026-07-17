@@ -1,4 +1,5 @@
 import { DEFAULT_VIDEO_CASE_ID, DEFAULT_COMMENT_DATA_SOURCES, INITIAL_VIDEO_VOLUME, VIDEO_CASES, } from "./presets.js";
+import { createSilentTimeline, resolveCommentTimelineDuration } from "./comment-only-media.js";
 import { loadOverlayModule } from "./overlay-module.js";
 import { installOverlayProfiler, pushOverlaySample } from "./profiler.js";
 let debugLogFn = null;
@@ -174,8 +175,12 @@ const setup = async () => {
     const initialCaseId = caseParam && caseParam in VIDEO_CASES ? caseParam : DEFAULT_VIDEO_CASE_ID;
     let selectedVideoCaseId = initialCaseId;
     let selectedCommentSource = VIDEO_CASES[selectedVideoCaseId].comments;
-    videoEl.src = VIDEO_CASES[selectedVideoCaseId].video;
-    videoEl.load();
+    for (const [caseId, testCase] of Object.entries(VIDEO_CASES)) {
+        const option = document.createElement("option");
+        option.value = caseId;
+        option.textContent = testCase.label;
+        videoCaseSelect.append(option);
+    }
     const debugParam = query.get("overlayDebug");
     isDebugOverlayEnabled =
         debugParam === "1" || debugParam === "true" || debugParam === "yes" || debugParam === "on";
@@ -189,6 +194,9 @@ const setup = async () => {
     });
     renderer.initialize({ video: videoEl, container: containerEl });
     window.commentRenderer = renderer;
+    let loadedMediaCaseId = null;
+    let loadedMediaKind = null;
+    let commentOnlyObjectUrl = null;
     // ==== プロファイラーフック: renderer.draw をラップ ====
     const captureRendererState = (options = { includeCommentDetails: false }) => {
         try {
@@ -638,7 +646,9 @@ const setup = async () => {
             return;
         }
         pushSettings({ ...currentSettings, ngWords: words });
-        reportStatus(words.length > 0 ? `NGワードを${words.length}件設定しました。` : "NGワードを全て解除しました。");
+        reportStatus(words.length > 0
+            ? `NGワードを${words.length}件設定しました。`
+            : "NGワードを全て解除しました。");
     };
     const applyNgRegexps = (value) => {
         if (!(ngRegexInput instanceof HTMLTextAreaElement)) {
@@ -671,12 +681,12 @@ const setup = async () => {
     updateSettingsStatus();
     updateViewportStatus();
     videoCaseSelect.value = selectedVideoCaseId;
-    directionSelect.value = typeof currentSettings.scrollDirection === "string"
-        ? currentSettings.scrollDirection
-        : "rtl";
-    shadowIntensitySelect.value = typeof currentSettings.shadowIntensity === "string"
-        ? currentSettings.shadowIntensity
-        : "medium";
+    directionSelect.value =
+        typeof currentSettings.scrollDirection === "string" ? currentSettings.scrollDirection : "rtl";
+    shadowIntensitySelect.value =
+        typeof currentSettings.shadowIntensity === "string"
+            ? currentSettings.shadowIntensity
+            : "medium";
     ngWordsInput.value = currentSettings.ngWords.join("\n");
     ngRegexInput.value = currentSettings.ngRegexps.join("\n");
     updateRegexStatus(currentSettings.ngRegexps.length > 0
@@ -733,6 +743,50 @@ const setup = async () => {
     const resumeVideo = async () => {
         await videoEl.play().catch(() => undefined);
     };
+    const releaseCommentOnlyMedia = () => {
+        if (!commentOnlyObjectUrl) {
+            return;
+        }
+        URL.revokeObjectURL(commentOnlyObjectUrl);
+        commentOnlyObjectUrl = null;
+    };
+    const loadMediaSource = async (source) => new Promise((resolve) => {
+        const cleanup = () => {
+            videoEl.removeEventListener("loadedmetadata", handleLoadedMetadata);
+            videoEl.removeEventListener("error", handleError);
+        };
+        const handleLoadedMetadata = () => {
+            cleanup();
+            resolve(true);
+        };
+        const handleError = () => {
+            cleanup();
+            resolve(false);
+        };
+        videoEl.addEventListener("loadedmetadata", handleLoadedMetadata);
+        videoEl.addEventListener("error", handleError);
+        videoEl.src = source;
+        videoEl.load();
+    });
+    const loadCaseMedia = async (caseId, commentDurationSeconds) => {
+        const testCase = VIDEO_CASES[caseId];
+        releaseCommentOnlyMedia();
+        if (await loadMediaSource(testCase.video)) {
+            loadedMediaCaseId = caseId;
+            loadedMediaKind = "video";
+            return loadedMediaKind;
+        }
+        commentOnlyObjectUrl = URL.createObjectURL(createSilentTimeline(commentDurationSeconds));
+        if (!(await loadMediaSource(commentOnlyObjectUrl))) {
+            releaseCommentOnlyMedia();
+            loadedMediaCaseId = null;
+            loadedMediaKind = null;
+            throw new Error("コメント専用タイムラインを初期化できませんでした。");
+        }
+        loadedMediaCaseId = caseId;
+        loadedMediaKind = "comments-only";
+        return loadedMediaKind;
+    };
     const resolveCommentData = async () => {
         const sourceCandidates = typeof selectedCommentSource === "string" && selectedCommentSource.length > 0
             ? [selectedCommentSource]
@@ -761,7 +815,7 @@ const setup = async () => {
         aggregateError.details = failures;
         throw aggregateError;
     };
-    const loadComments = async () => {
+    const loadComments = async (options = {}) => {
         reportStatus("Loading comment data...");
         try {
             const { payload, source } = await resolveCommentData();
@@ -769,9 +823,15 @@ const setup = async () => {
             const cleaned = rawEntries
                 .map(sanitizeCommentEntry)
                 .filter((entry) => entry !== null);
+            const commentDurationSeconds = resolveCommentTimelineDuration(cleaned);
             safeDebugLog("overlay-load-comments", { total: cleaned.length, source });
             const wasPlaying = await pauseVideo();
             try {
+                if (options.reloadMedia ||
+                    loadedMediaCaseId !== selectedVideoCaseId ||
+                    videoEl.readyState < HTMLMediaElement.HAVE_METADATA) {
+                    await loadCaseMedia(selectedVideoCaseId, commentDurationSeconds);
+                }
                 await seekVideo(0);
                 renderer.resetState();
                 renderer.clearComments();
@@ -789,18 +849,21 @@ const setup = async () => {
                 });
             }
             finally {
-                if (wasPlaying) {
+                if (wasPlaying || options.autoplay) {
                     await resumeVideo();
                 }
             }
             const displaySource = source.startsWith("./") ? source.slice(2) : source;
-            reportStatus(`Loaded ${cleaned.length} comments from ${displaySource}.`);
+            const mediaStatus = loadedMediaKind === "comments-only"
+                ? " 動画fixtureがないためコメント専用タイムラインで再生します。"
+                : "";
+            reportStatus(`Loaded ${cleaned.length} comments from ${displaySource}.${mediaStatus}`);
             updateSettingsStatus();
             return cleaned.length;
         }
         catch (error) {
             const details = error && typeof error === "object" && Array.isArray(error.details)
-                ? error.details ?? []
+                ? (error.details ?? [])
                 : [];
             if (details.length > 0) {
                 details.forEach(({ source, error: itemError }) => {
@@ -825,9 +888,7 @@ const setup = async () => {
     directionSelect.addEventListener("change", () => {
         const direction = directionSelect.value === "ltr" ? "ltr" : "rtl";
         pushSettings({ ...currentSettings, scrollDirection: direction });
-        reportStatus(direction === "ltr"
-            ? "コメントを左から右へ流します。"
-            : "コメントを右から左へ流します。");
+        reportStatus(direction === "ltr" ? "コメントを左から右へ流します。" : "コメントを右から左へ流します。");
     });
     shadowIntensitySelect.addEventListener("change", () => {
         const intensity = shadowIntensitySelect.value;
@@ -863,17 +924,9 @@ const setup = async () => {
         selectedVideoCaseId = resolvedCaseId;
         selectedCommentSource = nextCase.comments;
         videoCaseSelect.value = selectedVideoCaseId;
-        if (videoEl.getAttribute("src") !== nextCase.video) {
-            await pauseVideo();
-            videoEl.src = nextCase.video;
-            videoEl.load();
-        }
         renderer.resetState();
-        await loadComments();
-        await seekVideo(0);
-        await resumeVideo();
+        await loadComments({ reloadMedia: true, autoplay: true });
         refreshViewportSoon();
-        reportStatus(`${nextCase.label} の動画とコメントを読み込みました。`);
     };
     videoCaseSelect.addEventListener("change", () => {
         void applyVideoCase(videoCaseSelect.value);
@@ -1000,10 +1053,10 @@ const setup = async () => {
     viewportObserver.observe(containerEl);
     window.addEventListener("beforeunload", () => {
         viewportObserver.disconnect();
+        releaseCommentOnlyMedia();
         renderer.destroy();
     });
-    await loadComments();
-    await resumeVideo();
+    await loadComments({ reloadMedia: true, autoplay: true });
     refreshViewportSoon();
 };
 void setup();

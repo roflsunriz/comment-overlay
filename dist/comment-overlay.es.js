@@ -862,7 +862,7 @@ const H = {
   ...H,
   ngWords: [...H.ngWords],
   ngRegexps: [...H.ngRegexps]
-}), zs = "v4.1.4", Vt = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, O = (e) => {
+}), zs = "v4.1.5", Vt = (e) => Number.isFinite(e) ? e <= 0 ? 0 : e >= 1 ? 1 : e : 1, O = (e) => {
   const t = e.scrollVisibleDurationMs, i = t == null ? null : Number.isFinite(t) ? Math.max(1, Math.floor(t)) : null;
   return {
     ...e,

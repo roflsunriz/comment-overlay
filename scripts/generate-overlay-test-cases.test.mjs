@@ -21,22 +21,21 @@ afterEach(async () => {
 });
 
 describe("generateOverlayTestCases", () => {
-  test("preserves the tracked case list when CI has comment JSON but no local videos", async () => {
+  test("generates a case from comment JSON when the corresponding video is absent", async () => {
     const root = await createTestRoot();
     const fixtures = path.join(root, "fixtures");
     const generatedFile = path.join(root, "video-cases.generated.ts");
     await mkdir(fixtures);
     await writeFile(path.join(fixtures, "sample-comments.json"), '{"label":"sample"}\n');
-    await writeFile(generatedFile, "// tracked output\n");
-
     const result = await generateOverlayTestCases({ inputDirectory: fixtures, generatedFile });
+    const generated = await readFile(generatedFile, "utf8");
 
-    expect(result.preserved).toBe(true);
-    expect(result.skipped).toHaveLength(1);
-    expect(await readFile(generatedFile, "utf8")).toBe("// tracked output\n");
+    expect(result.cases).toHaveLength(1);
+    expect(generated).toContain("sample: {");
+    expect(generated).toContain('video: "./fixtures/sample.mp4"');
   });
 
-  test("regenerates from every complete comment and video pair", async () => {
+  test("regenerates from every comment JSON regardless of optional video files", async () => {
     const root = await createTestRoot();
     const fixtures = path.join(root, "fixtures");
     const generatedFile = path.join(root, "video-cases.generated.ts");
@@ -47,7 +46,7 @@ describe("generateOverlayTestCases", () => {
     const result = await generateOverlayTestCases({ inputDirectory: fixtures, generatedFile });
     const generated = await readFile(generatedFile, "utf8");
 
-    expect(result.preserved).toBe(false);
+    expect(result.cases).toHaveLength(1);
     expect(generated).toContain("sample: {");
     expect(generated).toContain('label: "Sample Case"');
   });
