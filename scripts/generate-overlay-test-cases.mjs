@@ -28,38 +28,36 @@ const readLabel = async (commentFile, fallback) => {
     : fallback;
 };
 
-const discoverCases = async () => {
-  const entries = await readdir(fixtureDirectory, { withFileTypes: true });
+export const discoverCases = async (directory = fixtureDirectory) => {
+  const entries = await readdir(directory, { withFileTypes: true });
   const commentFiles = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(COMMENT_SUFFIX))
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right, "en"));
 
   const cases = [];
+  const skipped = [];
   for (const commentFileName of commentFiles) {
     const id = commentFileName.slice(0, -COMMENT_SUFFIX.length);
     const videoFileName = `${id}.mp4`;
-    const videoFile = path.join(fixtureDirectory, videoFileName);
+    const videoFile = path.join(directory, videoFileName);
     if (!(await isFile(videoFile))) {
-      throw new Error(`${commentFileName} に対応する ${videoFileName} がありません。`);
+      skipped.push({ commentFileName, videoFileName });
+      continue;
     }
 
     cases.push({
       id,
-      label: await readLabel(path.join(fixtureDirectory, commentFileName), id),
+      label: await readLabel(path.join(directory, commentFileName), id),
       comments: `./fixtures/${commentFileName}`,
       video: `./fixtures/${videoFileName}`,
     });
   }
 
-  if (cases.length === 0) {
-    throw new Error("overlay-tests/fixtures に *-comments.json がありません。");
-  }
-
-  return cases;
+  return { cases, skipped, commentFileCount: commentFiles.length };
 };
 
-const renderCases = (cases) => {
+export const renderCases = (cases) => {
   const defaultId = cases.some(({ id }) => id === PREFERRED_DEFAULT_ID)
     ? PREFERRED_DEFAULT_ID
     : cases[0].id;
@@ -90,11 +88,38 @@ const renderCases = (cases) => {
   return lines.join("\n");
 };
 
-const cases = await discoverCases();
-const prettierOptions = (await resolveConfig(outputFile)) ?? {};
-await writeFile(
-  outputFile,
-  await format(renderCases(cases), { ...prettierOptions, filepath: outputFile }),
-  "utf8",
-);
-console.log(`overlay test cases: ${cases.length} -> ${path.relative(projectRoot, outputFile)}`);
+export const generateOverlayTestCases = async ({
+  inputDirectory = fixtureDirectory,
+  generatedFile = outputFile,
+} = {}) => {
+  const { cases, skipped, commentFileCount } = await discoverCases(inputDirectory);
+  for (const { commentFileName, videoFileName } of skipped) {
+    console.warn(`${commentFileName} は対応する ${videoFileName} がないためスキップします。`);
+  }
+
+  if (cases.length === 0) {
+    if (commentFileCount > 0 && (await isFile(generatedFile))) {
+      console.warn("利用可能な動画fixtureがないため、既存の生成済みcase一覧を維持します。");
+      return { cases, skipped, preserved: true };
+    }
+    throw new Error("overlay-tests/fixtures に利用可能なコメントJSONと動画の組がありません。");
+  }
+
+  const prettierOptions = (await resolveConfig(generatedFile)) ?? {};
+  await writeFile(
+    generatedFile,
+    await format(renderCases(cases), { ...prettierOptions, filepath: generatedFile }),
+    "utf8",
+  );
+  console.log(
+    `overlay test cases: ${cases.length} -> ${path.relative(projectRoot, generatedFile)}`,
+  );
+  return { cases, skipped, preserved: false };
+};
+
+const isDirectInvocation =
+  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (isDirectInvocation) {
+  await generateOverlayTestCases();
+}
