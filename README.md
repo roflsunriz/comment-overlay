@@ -6,7 +6,7 @@
 
 再利用可能なコメントオーバーレイ描画エンジンです。ニコニコ動画のような横流れコメントを、HTML5 動画など任意の再生コンテンツ上に重ねて表示できます。npm レジストリで公開されており、`bun add comment-overlay` で導入できます。
 
-![cover](./images/cover.png)
+![comment-overlayで大画面コメントアートを描画したデモ](./images/cover.png)
 
 ## ニコニコ動画コメントシステムとの高い互換性
 

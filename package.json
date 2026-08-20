@@ -31,6 +31,7 @@
     "build:overlay-tests": "bun run generate:overlay-tests && tsc --project tsconfig.overlay-tests.json",
     "generate:overlay-tests": "bun scripts/generate-overlay-test-cases.mjs",
     "serve": "bun run build:overlay-tests && bunx serve overlay-tests",
+    "capture:cover": "bun run build && bun scripts/capture-cover.mjs",
     "test": "bun test src/comment/static-width-fit.test.ts src/comment/nico-scroll.test.ts src/comment/nico-timing.test.ts src/renderer/lanes-activation.test.ts overlay-tests/src/comment-data.test.ts overlay-tests/src/comment-only-media.test.ts scripts/generate-overlay-test-cases.test.mjs research/tools/tests/fixed-ca-holdout.test.ts && node --test research/tools/tests/*.test.mjs",
     "type-check": "tsc --project tsconfig.build.json --noEmit",
     "typegen": "tsc --project tsconfig.build.json",
