@@ -17,6 +17,11 @@ export const VIDEO_CASES = {
         comments: "./fixtures/so31603984-comments.json",
         video: "./fixtures/so31603984.mp4",
     },
+    so31723295: {
+        label: "so31723295",
+        comments: "./fixtures/so31723295-comments.json",
+        video: "./fixtures/so31723295.mp4",
+    },
 };
 export const DEFAULT_VIDEO_CASE_ID = "sm6240144";
 export const DEFAULT_COMMENT_DATA_SOURCES = [VIDEO_CASES[DEFAULT_VIDEO_CASE_ID].comments];
