@@ -2,25 +2,20 @@
 // Add a <case-id>-comments.json under overlay-tests/fixtures, then rebuild.
 // A same-name MP4 is optional; the UI supplies a silent timeline when it is absent.
 export const VIDEO_CASES = {
-    sm38851567: {
-        label: "sm38851567",
-        comments: "./fixtures/sm38851567-comments.json",
-        video: "./fixtures/sm38851567.mp4",
+    sm40437038: {
+        label: "sm40437038",
+        comments: "./fixtures/sm40437038-comments.json",
+        video: "./fixtures/sm40437038.mp4",
     },
     sm6240144: {
         label: "sm6240144",
         comments: "./fixtures/sm6240144-comments.json",
         video: "./fixtures/sm6240144.mp4",
     },
-    sm6945510: {
-        label: "sm6945510",
-        comments: "./fixtures/sm6945510-comments.json",
-        video: "./fixtures/sm6945510.mp4",
-    },
-    "so31723295-ed": {
-        label: "so31723295",
-        comments: "./fixtures/so31723295-ed-comments.json",
-        video: "./fixtures/so31723295-ed.mp4",
+    so31603984: {
+        label: "so31603984",
+        comments: "./fixtures/so31603984-comments.json",
+        video: "./fixtures/so31603984.mp4",
     },
 };
 export const DEFAULT_VIDEO_CASE_ID = "sm6240144";

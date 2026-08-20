@@ -20,7 +20,7 @@ bun run build
 
 `overlay-tests` は視覚確認を前提とするため、自動操作による合否判定は行わず、必要な場合に `bun run serve` で利用者が確認する。
 
-CASEプルダウンへfixtureを追加するときは、`overlay-tests/fixtures/` に `<case-id>-comments.json` を配置する。コメントJSONのトップレベル `label` は任意で、省略時はcase IDが表示名になる。同名の `<case-id>.mp4` は任意であり、存在しない場合はコメントJSONの最終時刻から生成した無音タイムラインで再生する。動画はgit管理対象外とし、コメントfixtureにもユーザーID、投稿日時、Cookie、認証情報、配信セッションURLを保存しない。`bun run build:overlay-tests` または `bun run serve` を実行すると、`overlay-tests/src/video-cases.generated.ts` が自動更新される。
+CASEプルダウンへfixtureを追加するときは、`overlay-tests/fixtures/` に `<case-id>-comments.json` を配置する。コメントJSONにはコメント配列、トップレベル `comments` 配列、またはニコニコの現行コメントAPI応答 `{ "meta": ..., "data": { "threads": ... } }` を使用できる。トップレベル `label` は任意で、省略時はcase IDが表示名になる。同名の `<case-id>.mp4` は任意であり、存在しない場合はコメントJSONの最終時刻から生成した無音タイムラインで再生する。動画はgit管理対象外とし、コメントfixtureにもユーザーID、投稿日時、Cookie、認証情報、配信セッションURLを保存しない。`bun run build:overlay-tests` または `bun run serve` を実行すると、`overlay-tests/src/video-cases.generated.ts` が自動更新される。
 
 研究用のオンラインキャプチャとオフライン再生は [research/README.md](./research/README.md) に従う。キャプチャ、監査結果、ブラウザー一時プロファイルをコミットしない。
 

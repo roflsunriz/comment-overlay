@@ -1,4 +1,5 @@
 import { DEFAULT_VIDEO_CASE_ID, DEFAULT_COMMENT_DATA_SOURCES, INITIAL_VIDEO_VOLUME, VIDEO_CASES, } from "./presets.js";
+import { extractCommentEntries, sanitizeCommentEntry, } from "./comment-data.js";
 import { createSilentTimeline, resolveCommentTimelineDuration } from "./comment-only-media.js";
 import { loadOverlayModule } from "./overlay-module.js";
 import { installOverlayProfiler, pushOverlaySample } from "./profiler.js";
@@ -23,19 +24,6 @@ const formatPreview = (text) => {
         return trimmed;
     }
     return `${trimmed.slice(0, 40)}…`;
-};
-const numberMeta = (value) => {
-    const candidate = Number(value);
-    return Number.isFinite(candidate) ? candidate : undefined;
-};
-const stringMeta = (value) => {
-    if (typeof value === "string" && value.length > 0) {
-        return value;
-    }
-    if (typeof value === "number" && Number.isFinite(value)) {
-        return String(value);
-    }
-    return undefined;
 };
 const statusEl = document.querySelector("#status");
 const stageEl = document.querySelector("#test-stage");
@@ -68,70 +56,6 @@ const reportStatus = (message) => {
     if (statusEl) {
         statusEl.textContent = message;
     }
-};
-const sanitizeCommentEntry = (entry) => {
-    if (!entry || typeof entry !== "object") {
-        safeDebugLog("overlay-sanitize-skip", { reason: "not-object" });
-        return null;
-    }
-    const candidate = entry;
-    const rawText = typeof candidate.text === "string"
-        ? candidate.text
-        : typeof candidate.body === "string"
-            ? candidate.body
-            : "";
-    // trim()を使わず、空文字列チェックのみ行う（全角スペースなどを保持するため）
-    const text = rawText;
-    const vposMs = Number(candidate.vposMs);
-    if (text.length === 0 || !Number.isFinite(vposMs) || vposMs < 0) {
-        safeDebugLog("overlay-sanitize-skip", {
-            reason: "invalid-values",
-            preview: formatPreview(text),
-            vposMs: Number.isFinite(vposMs) ? vposMs : String(candidate.vposMs),
-        });
-        return null;
-    }
-    const commands = Array.isArray(candidate.commands)
-        ? candidate.commands.filter((value) => typeof value === "string" && value.length > 0)
-        : [];
-    const meta = {
-        no: numberMeta(candidate.no),
-        fork: stringMeta(candidate.forkLabel) ?? stringMeta(candidate.fork),
-        source: stringMeta(candidate.source),
-        threadId: stringMeta(candidate.threadId) ?? stringMeta(candidate.thread),
-        date: numberMeta(candidate.date),
-        userIdHash: stringMeta(candidate.userIdHash) ?? stringMeta(candidate.userId),
-    };
-    const hasMeta = Object.values(meta).some((value) => value !== undefined);
-    return { text, vposMs, commands, meta: hasMeta ? meta : null };
-};
-const extractCommentEntries = (payload) => {
-    const preferDisplayThread = (entries) => {
-        const trunkEntries = entries.filter((entry) => entry.source === "trunk");
-        return trunkEntries.length > 0 ? trunkEntries : entries;
-    };
-    if (Array.isArray(payload)) {
-        return preferDisplayThread(payload.filter((entry) => Boolean(entry)));
-    }
-    if (payload && typeof payload === "object") {
-        const entries = Array.isArray(payload.comments)
-            ? payload.comments
-            : [];
-        return preferDisplayThread(entries.map((entry) => {
-            if (!entry || typeof entry !== "object") {
-                return {};
-            }
-            const candidate = entry;
-            if (typeof candidate.text === "string") {
-                return candidate;
-            }
-            return {
-                ...candidate,
-                text: typeof candidate.body === "string" ? candidate.body : "",
-            };
-        }));
-    }
-    return [];
 };
 const setup = async () => {
     if (!(videoEl instanceof HTMLVideoElement) ||
@@ -821,7 +745,7 @@ const setup = async () => {
             const { payload, source } = await resolveCommentData();
             const rawEntries = extractCommentEntries(payload);
             const cleaned = rawEntries
-                .map(sanitizeCommentEntry)
+                .map((entry) => sanitizeCommentEntry(entry, safeDebugLog))
                 .filter((entry) => entry !== null);
             const commentDurationSeconds = resolveCommentTimelineDuration(cleaned);
             safeDebugLog("overlay-load-comments", { total: cleaned.length, source });

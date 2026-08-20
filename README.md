@@ -228,7 +228,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 2. サンプルサーバーを起動します: `bun run serve`
 3. ブラウザーで表示される URL を開き、`overlay-tests` 内のテスト UI でコメント描画を確認できます。
 
-サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。`overlay-tests/fixtures/` へ `<case-id>-comments.json` を追加すると、CASEプルダウンへ自動的に追加されます。トップレベルの `"label"` は任意で、省略時はcase IDを表示します。同名の `<case-id>.mp4` があれば背景動画として使用し、動画がなければコメント末尾から再生時間を生成した無音タイムラインで、再生・停止・シークを含めてコメントだけを確認できます。動画fixtureはgit管理対象外です。
+サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。`overlay-tests/fixtures/` へ `<case-id>-comments.json` を追加すると、CASEプルダウンへ自動的に追加されます。コメントJSONはコメント配列、従来のトップレベル `comments` 配列、またはニコニコの現行コメントAPI応答 `{ "meta": ..., "data": { "threads": ... } }` を使用できます。現行API応答では全mainスレッドを読み込み、`source: "trunk"` のコメントがあれば従来どおりそれを表示対象にします。トップレベルの `"label"` は任意で、省略時はcase IDを表示します。同名の `<case-id>.mp4` があれば背景動画として使用し、動画がなければコメント末尾から再生時間を生成した無音タイムラインで、再生・停止・シークを含めてコメントだけを確認できます。動画fixtureはgit管理対象外です。
 
 `bun run serve` はcase一覧の生成とoverlay test用TypeScriptのビルドを行ってからサーバーを起動します。UI ではNGワード、NG正規表現、スクロール方向などをリアルタイムで変更できます。
 

@@ -10,18 +10,36 @@ type FixtureComment = {
   vposMs: number;
   body: string;
   commands: string[];
-  fork: string;
+  source: string;
 };
 
 const fixture = JSON.parse(
-  readFileSync("overlay-tests/fixtures/so31723295-ed-comments.json", "utf8"),
-) as { comments: FixtureComment[] };
+  readFileSync("overlay-tests/fixtures/sm40437038-comments.json", "utf8"),
+) as {
+  data: {
+    threads: Array<{ fork: string; comments: FixtureComment[] }>;
+  };
+};
 
-const artComments = fixture.comments.filter(
-  (comment) =>
-    comment.fork === "leaf" &&
-    ["ue", "big", "full", "mincho"].every((command) => comment.commands.includes(command)),
+const candidateComments = fixture.data.threads
+  .filter((thread) => thread.fork === "main")
+  .flatMap((thread) => thread.comments)
+  .filter(
+    (comment) =>
+      comment.source === "trunk" &&
+      ["ue", "big", "full", "mincho", "ender"].every((command) =>
+        comment.commands.includes(command),
+      ),
+  );
+const layeredVpos = new Set(
+  candidateComments
+    .filter(
+      (comment, _index, comments) =>
+        comments.filter((candidate) => candidate.vposMs === comment.vposMs).length > 1,
+    )
+    .map((comment) => comment.vposMs),
 );
+const artComments = candidateComments.filter((comment) => layeredVpos.has(comment.vposMs));
 
 const context = {
   font: "",
@@ -46,11 +64,11 @@ const prepareFixtureComment = (input: FixtureComment): Comment => {
   return comment;
 };
 
-describe("so31723295 episode 5 ED holdout", () => {
-  test("all 48 art layers fall on the measured screen-height boundary", () => {
+describe("sm40437038 layered fixed-comment holdout", () => {
+  test("all 20 art layers fall on the measured screen-height boundary", () => {
     const batches = new Set(artComments.map((comment) => comment.vposMs));
-    expect(artComments).toHaveLength(48);
-    expect(batches.size).toBe(11);
+    expect(artComments).toHaveLength(20);
+    expect(batches.size).toBe(10);
 
     for (const comment of artComments) {
       const lineCount = comment.body.split(/\r?\n/).length;
@@ -58,10 +76,10 @@ describe("so31723295 episode 5 ED holdout", () => {
         canvasHeight: 768,
         size: "big",
         lineCount,
-        isEnder: false,
+        isEnder: true,
         lineHeightMultiplier: 1,
       });
-      expect(lineCount).toBe(16);
+      expect(lineCount).toBe(9);
       expect(metrics.slotHeight).toBeGreaterThanOrEqual(768);
       expect(prepareFixtureComment(comment).slotHeight).toBeGreaterThanOrEqual(768);
     }
