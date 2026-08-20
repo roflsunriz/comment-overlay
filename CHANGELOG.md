@@ -17,6 +17,7 @@
 ### Changed
 
 - 作業開始時の共通指針見落としを防ぐため、調査やコマンド実行より前に `COMMON-AGENTS.md` を先頭から末尾まで読み、EOFを確認する必須ゲートを追加した。
+- GitHub ActionsのNode.js 20廃止警告を解消するため、checkoutとNode.jsセットアップactionをNode.js 24対応の現行メジャーへ更新した。
 
 - コメントJSONを追加するだけで全caseがCASEプルダウンへ現れるように、case生成を動画ファイルの有無から独立させ、HTMLの固定選択肢を生成データからの動的構築へ置き換えた。
 - 現行研究と途中経過を混同しないように、旧 `docs/` とルートの `CALIBRATION.md` を `history/` の会話ログ、旧手順、個別調査へ再編した。

@@ -6,7 +6,7 @@ on:
   # v*形式のタグがプッシュされた時に自動実行
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   publish:
@@ -14,17 +14,17 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write  # OIDC(OpenID Connect)に必要
+      id-token: write # OIDC(OpenID Connect)に必要
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
