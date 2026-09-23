@@ -33,3 +33,8 @@ Get-Content -Raw -LiteralPath .\COMMON-AGENTS.md
 ## Dependabot の限定修復（2026-09-23）
 
 - CI 再失敗後の自動修復は `bun.lock` だけをパッチとして適用する。修復後は `workflow_dispatch` で `.github/workflows/ci.yml` を再実行するため、この CI の `contents: read` と checkout の `persist-credentials: false` を維持し、PR コードを実行するジョブへ書き込み権限や秘密情報を渡さない。根拠は `.github/workflows/dependabot-automation.yml` と共通ワークフローの権限分離。
+
+## TypeScript メジャー更新の上限（2026-09-23）
+
+- `@typescript-eslint/eslint-plugin` の peer は `typescript >=4.8.4 <6.1.0` のため、TypeScript 7 系では `bun run lint` が「does not support TS 7.0」で失敗する。TS 7 対応は上流の typescript-eslint#10940 待ちとし、更新は 6.0 系の最大版に留める。
+- TypeScript 6 では `tsconfig.build.json` の `rootDir` 明示が必須（未設定は TS5011）なので、`"rootDir": "src"` を維持する。根拠は `tsconfig.build.json` と `bun run build` の検証結果。

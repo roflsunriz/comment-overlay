@@ -15,6 +15,7 @@
 ### Changed
 
 - 依存更新を安全に省力化するため、Dependabot の patch／minor PR を既存 CI の全チェック成功後に自動取り込みし、失敗ジョブを一度再実行し、必要なら `bun.lock` を限定して再生成する設定を追加した。
+- TypeScript 7 が typescript-eslint の対応範囲外（peer は `<6.1.0`）で CI の Lint が失敗するため、壊れない範囲の最大版である 6.0.3 へ更新し、TS6 で必須になった `rootDir` を `tsconfig.build.json` へ明示してビルドを修復した。
 
 ## [4.1.6] - 2026-08-20
 
