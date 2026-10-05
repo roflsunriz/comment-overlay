@@ -26,72 +26,9 @@
 
 - [comment-overlay](https://www.npmjs.com/package/comment-overlay)
 
-## 開発に必要な環境
-
-- Bun 1.3.8 以降
-
-## 開発環境のセットアップ
-
-```bash
-bun install
-```
-
-## スクリプト
-
-- `bun run dev`: Vite 開発サーバーを起動します。
-- `bun run build`: 出力をクリーンアップして型定義を生成した後、ライブラリをビルドします。
-- `bun run lint`: `src` ディレクトリの TypeScript ファイルを ESLint で検査します。
-- `bun run type-check`: `tsconfig.build.json` を用いた型チェックを実行します。
-- `bun run serve`: `overlay-tests` ディレクトリを静的サーバーで起動し、ビルド成果物を使って動作確認できます。
-- `bun run nico:trace -- ...`: CDP 接続した Chrome 上のニコニコ動画プレイヤーから Canvas 描画ログとスクリーンショットを採取します。
-- `bun run nico:overlay-trace -- ...`: 生コメントJSONを `comment-overlay` で描画し、校正トレースを採取します。
-- `bun run nico:report -- ...`: 実プレイヤー採取ログと `comment-overlay` 側ログの差分レポートを生成します。
-- `bun run nico:strict-score -- ...`: 実プレイヤーと `comment-overlay` の `drawImage` 外側レイヤー位置を数値比較します。
-- `bun run nico:internal-score -- ...`: 実プレイヤーと `comment-overlay` のソースキャンバス内部 `fillText` 配置を数値比較します。
-- `bun run research:nico:capture -- ...`: 匿名のニコニコ動画セッションを、Git管理外の研究用アーカイブへ記録します。
-- `bun run research:nico:replay -- ...`: 記録済みセッションを、外部通信を遮断したChromeで再生して通信監査結果を生成します。
-- `bun run research:nico:supplement -- ...`: 監査で不足が判明した公式静的資産1件を、ホストと拡張子を制限して追補します。
-- `bun run research:test`: `research/tools` 配下の研究基盤をテストします。
-
-ニコニコ互換性研究の方針、隔離要件、具体的な使用手順は [`research/README.md`](./research/README.md) に集約しています。
-
-開発にあたり、変更後は `bun run lint`、`bun run type-check`、`bun run build` を順番に実行して品質を確認してください。
-
-## パブリッシュ手順（メンテナー向け）
-
-このプロジェクトはGitHub Actionsを使用してnpmに自動パブリッシュします。npmは2025年12月9日にクラシックトークンを無効化したため、新しいグラニュラートークンを使用します。
-
-### 初回セットアップ
-
-1. npmで新しいグラニュラートークンを作成
-   - https://www.npmjs.com/settings/[your-username]/tokens にアクセス
-   - "Generate New Token" → "Granular Access Token"を選択
-   - Permissions: "Read and write"を付与
-   - Packages: "All packages"または`comment-overlay`を選択
-   - "Automation"オプションを有効化（2FAバイパス用）
-
-2. GitHubリポジトリのSecretsに追加
-   - Settings → Secrets and variables → Actions → New repository secret
-   - Name: `NPM_TOKEN`
-   - Value: 作成したnpmトークンを貼り付け
-
-### パッケージのパブリッシュ
-
-1. `package.json`のバージョンを更新（例: 2.9.0 → 2.10.0）
-2. `src/config/default-settings.ts`のバージョンも更新
-3. 変更をコミット＆プッシュ
-4. タグを作成してプッシュ:
-   ```bash
-   git tag v2.10.0
-   git push origin v2.10.0
-   ```
-5. GitHub Actionsが自動的に実行され、npmにパブリッシュされます
-
-または、GitHubの"Actions"タブから"Publish to npm"ワークフローを手動実行することもできます。
-
 ## 非推奨バージョン
 
-次のバージョンはバグを含むため非推奨となっています:v1.2.0, v1.2.1, v1.2.2, v2.5.0
+次のバージョンはバグを含むため非推奨です: v1.2.0, v1.2.1, v1.2.2, v2.5.0
 
 ## 使い方
 
@@ -145,7 +82,15 @@ video.addEventListener("ended", () => {
 - 行高指定: `lh:1.5` や `lineheight:150%` (倍率またはパーセント)
 - コメントコマンドが未指定のときは`naka` `medium` `defont` `white` 相当の表示になります。
 
-`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行コメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。公式の内部 `1364×768` Canvasを表示領域へ比例縮小する寸法則に合わせ、行数起因の自動縮小（`big=3`、`medium=5`、`small=7`、ただし`ender`を除く）を適用します。横流れコメントは最大行の実測文字幅を縮小せず、内部1024幅相当の描画領域を文字全体が4秒で横切る速度で移動し、同一レーンは`文字幅÷速度`後に再利用します。通常固定コメントは実測文字幅を表示幅の75%、`full`は表示幅までへフィットし、その結果の文字サイズ・行高から可変高区間を予約します。固定コメントは3秒間、上固定なら上から、下固定なら下から空き区間へ整列します。単体が表示高未満で空きだけが不足する場合はランダムYへ退避し、単体が表示高以上の場合は同じ端へ重ねます。この境界により、複数レイヤーで構成された矩形・白抜き・歌詞を同じ座標に保ちます。動画終端3000ms以内のコメントは、固定・横流れとも表示基準時刻を終端3000ms前へ丸め、その後は通常と同じ保持・移動規則を使います。`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
+`small` / `medium` / `big` のフォント比率、`gothic` のフォント候補、多行コメントの内部テクスチャ寸法は、ニコニコ動画実プレイヤーの Canvas 描画ログに基づいて調整しています。公式の内部 `1364×768` Canvasを表示領域へ比例縮小する寸法則に合わせ、行数起因の自動縮小（`big=3`、`medium=5`、`small=7`、ただし`ender`を除く）を適用します。
+
+横流れコメントは最大行の実測文字幅を縮小せず、内部1024幅相当の描画領域を文字全体が4秒で横切る速度で移動し、同一レーンは`文字幅÷速度`後に再利用します。
+
+通常固定コメントは実測文字幅を表示幅の75%、`full`は表示幅までへフィットし、その結果の文字サイズ・行高から可変高区間を予約します。固定コメントは3秒間、上固定なら上から、下固定なら下から空き区間へ整列します。単体が表示高未満で空きだけが不足する場合はランダムYへ退避し、単体が表示高以上の場合は同じ端へ重ねます。この境界により、複数レイヤーで構成された矩形・白抜き・歌詞を同じ座標に保ちます。
+
+動画終端3000ms以内のコメントは、固定・横流れとも表示基準時刻を終端3000ms前へ丸め、その後は通常と同じ保持・移動規則を使います。
+
+`ca` コマンドは専用描画経路を持たず、通常コメントと同じレンダリングパイプラインで処理されます。
 
 ### RendererSettings のポイント
 
@@ -215,7 +160,7 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 });
 ```
 
-**エポック変更のタイミング:**
+エポック変更は次のタイミングで通知されます。
 
 - `source-change`: 動画ソースが変更されたとき
 - `metadata-loaded`: 動画のメタデータがロードされたとき
@@ -231,6 +176,69 @@ const renderer = new CommentRenderer(cloneDefaultSettings(), {
 サンプル UI は `overlay-tests` ディレクトリにあり、`scripts/sync-overlay-tests.mjs` によってビルド成果物と同期されます。`overlay-tests/fixtures/` へ `<case-id>-comments.json` を追加すると、CASEプルダウンへ自動的に追加されます。コメントJSONはコメント配列、従来のトップレベル `comments` 配列、またはニコニコの現行コメントAPI応答 `{ "meta": ..., "data": { "threads": ... } }` を使用できます。現行API応答では全mainスレッドを読み込み、`source: "trunk"` のコメントがあれば従来どおりそれを表示対象にします。トップレベルの `"label"` は任意で、省略時はcase IDを表示します。同名の `<case-id>.mp4` があれば背景動画として使用し、動画がなければコメント末尾から再生時間を生成した無音タイムラインで、再生・停止・シークを含めてコメントだけを確認できます。動画fixtureはgit管理対象外です。
 
 `bun run serve` はcase一覧の生成とoverlay test用TypeScriptのビルドを行ってからサーバーを起動します。UI ではNGワード、NG正規表現、スクロール方向などをリアルタイムで変更できます。
+
+## 開発に必要な環境
+
+- Bun 1.3.8 以降
+
+## 開発環境のセットアップ
+
+```bash
+bun install
+```
+
+## スクリプト
+
+- `bun run dev`: Vite 開発サーバーを起動します。
+- `bun run build`: 出力をクリーンアップして型定義を生成した後、ライブラリをビルドします。
+- `bun run lint`: `src` ディレクトリの TypeScript ファイルを ESLint で検査します。
+- `bun run type-check`: `tsconfig.build.json` を用いた型チェックを実行します。
+- `bun run serve`: `overlay-tests` ディレクトリを静的サーバーで起動し、ビルド成果物を使って動作確認できます。
+- `bun run nico:trace -- ...`: CDP 接続した Chrome 上のニコニコ動画プレイヤーから Canvas 描画ログとスクリーンショットを採取します。
+- `bun run nico:overlay-trace -- ...`: 生コメントJSONを `comment-overlay` で描画し、校正トレースを採取します。
+- `bun run nico:report -- ...`: 実プレイヤー採取ログと `comment-overlay` 側ログの差分レポートを生成します。
+- `bun run nico:strict-score -- ...`: 実プレイヤーと `comment-overlay` の `drawImage` 外側レイヤー位置を数値比較します。
+- `bun run nico:internal-score -- ...`: 実プレイヤーと `comment-overlay` のソースキャンバス内部 `fillText` 配置を数値比較します。
+- `bun run research:nico:capture -- ...`: 匿名のニコニコ動画セッションを、Git管理外の研究用アーカイブへ記録します。
+- `bun run research:nico:replay -- ...`: 記録済みセッションを、外部通信を遮断したChromeで再生して通信監査結果を生成します。
+- `bun run research:nico:supplement -- ...`: 監査で不足が判明した公式静的資産1件を、ホストと拡張子を制限して追補します。
+- `bun run research:test`: `research/tools` 配下の研究基盤をテストします。
+
+ニコニコ互換性研究の方針、隔離要件、具体的な使用手順は [`research/README.md`](./research/README.md) に集約しています。
+
+開発にあたり、変更後は `bun run lint`、`bun run type-check`、`bun run build` を順番に実行して品質を確認してください。
+
+## パブリッシュ手順（メンテナー向け）
+
+このプロジェクトはGitHub Actionsを使用してnpmに自動パブリッシュします。npmは2025年12月9日にクラシックトークンを無効化したため、新しいグラニュラートークンを使用します。
+
+### 初回セットアップ
+
+1. npmで新しいグラニュラートークンを作成
+   - https://www.npmjs.com/settings/[your-username]/tokens にアクセス
+   - "Generate New Token" → "Granular Access Token"を選択
+   - Permissions: "Read and write"を付与
+   - Packages: "All packages"または`comment-overlay`を選択
+   - "Automation"オプションを有効化（2FAバイパス用）
+
+2. GitHubリポジトリのSecretsに追加
+   - Settings → Secrets and variables → Actions → New repository secret
+   - Name: `NPM_TOKEN`
+   - Value: 作成したnpmトークンを貼り付け
+
+### パッケージのパブリッシュ
+
+1. `package.json`のバージョンを更新（例: 2.9.0 → 2.10.0）
+2. `src/config/default-settings.ts`のバージョンも更新
+3. 変更をコミット＆プッシュ
+4. タグを作成してプッシュ:
+   ```bash
+   git tag v2.10.0
+   git push origin v2.10.0
+   ```
+5. GitHub Actionsが自動的に実行され、npmにパブリッシュされます
+
+または、GitHubの"Actions"タブから"Publish to npm"ワークフローを手動実行することもできます。
 
 ## コントリビューション
 

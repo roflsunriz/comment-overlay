@@ -1,0 +1,55 @@
+name: 機能提案
+description: 新しい機能や改善案を提案してください
+title: '[Feature] '
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |-
+        comment-overlayに関する内容を、目的と確認できた事実に分けて記載してください。
+        Cookie、認証トークン、パスワード、個人情報を本文や添付に含めないでください。
+        投稿前に[README](https://github.com/roflsunriz/comment-overlay/blob/master/README.md)と[既存Issue](https://github.com/roflsunriz/comment-overlay/issues)を確認してください。
+        脆弱性の報告は[SECURITY.md](https://github.com/roflsunriz/comment-overlay/blob/master/SECURITY.md)の案内に従ってください。
+  - type: textarea
+    id: legacy-1
+    attributes:
+      label: 提案の概要
+      description: どのような機能を求めているか、簡潔に記述してください
+    validations:
+      required: false
+  - type: textarea
+    id: legacy-2
+    attributes:
+      label: 解決したい問題
+      description: なぜその機能が必要か、背景や課題を説明してください
+    validations:
+      required: false
+  - type: textarea
+    id: legacy-3
+    attributes:
+      label: 提案する変更
+      description: 実装イメージやアイデアがあれば記述してください
+    validations:
+      required: false
+  - type: textarea
+    id: legacy-4
+    attributes:
+      label: 代替案と互換性
+      description: 他に検討した案や、暫定的に取れる対応があれば記述してください
+    validations:
+      required: false
+  - type: textarea
+    id: additional-common
+    attributes:
+      label: 補足
+      description: 参考資料、画面案、受け入れ条件などを記載してください。
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 公開情報の確認
+      options:
+        - label: 本文と添付に秘密情報や個人情報が含まれていないことを確認しました。
+          required: true
