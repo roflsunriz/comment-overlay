@@ -61,53 +61,26 @@ var e = {
 			}
 		}
 		let n = t.toLowerCase();
-		if (p(n)) {
-			_ = n;
-			continue;
-		}
-		if (m(n)) {
-			v = n;
-			continue;
-		}
-		if (h(n)) {
-			y = n;
-			continue;
-		}
-		if (g(n)) {
-			b = r[n].toUpperCase();
-			continue;
-		}
-		if (n === "_live") {
-			S = .5;
-			continue;
-		}
-		if (n === "invisible") {
-			x = 0, C = !0;
-			continue;
-		}
-		if (n === "full") {
-			w = !0;
-			continue;
-		}
-		if (n === "ender") {
-			T = !0;
-			continue;
-		}
-		if (n.startsWith("ls:") || n.startsWith("letterspacing:")) {
+		if (p(n)) _ = n;
+		else if (m(n)) v = n;
+		else if (h(n)) y = n;
+		else if (g(n)) b = r[n].toUpperCase();
+		else if (n === "_live") S = .5;
+		else if (n === "invisible") x = 0, C = !0;
+		else if (n === "full") w = !0;
+		else if (n === "ender") T = !0;
+		else if (n.startsWith("ls:") || n.startsWith("letterspacing:")) {
 			let e = t.indexOf(":");
 			if (e >= 0) {
 				let n = l(t.slice(e + 1));
 				n !== null && (E = d(n));
 			}
-			continue;
-		}
-		if (n.startsWith("lh:") || n.startsWith("lineheight:")) {
+		} else if (n.startsWith("lh:") || n.startsWith("lineheight:")) {
 			let e = t.indexOf(":");
 			if (e >= 0) {
 				let n = u(t.slice(e + 1));
 				n !== null && (D = f(n));
 			}
-			continue;
 		}
 	}
 	let O = Math.max(0, Math.min(1, x)), ee = (b ?? o.defaultColor).toUpperCase(), k = typeof S == "number" ? Math.max(0, Math.min(1, S)) : null;
@@ -507,20 +480,7 @@ var e = {
 	let l = i + c, u = () => {
 		r === "cache" ? s === "outline" ? Y.outlineCallsInCache++ : Y.fillCallsInCache++ : s === "outline" ? Y.outlineCallsInFallback++ : Y.fillCallsInFallback++;
 	}, d = (n, i, a) => {
-		if (u(), s === "outline") {
-			t.strokeText(n, i, o), J("strokeText", t, e, {
-				text: n,
-				x: i,
-				y: o,
-				meta: {
-					statsTarget: r,
-					mode: s,
-					...a
-				}
-			});
-			return;
-		}
-		t.fillText(n, i, o), J("fillText", t, e, {
+		u(), s === "outline" ? (t.strokeText(n, i, o), J("strokeText", t, e, {
 			text: n,
 			x: i,
 			y: o,
@@ -529,7 +489,16 @@ var e = {
 				mode: s,
 				...a
 			}
-		});
+		})) : (t.fillText(n, i, o), J("fillText", t, e, {
+			text: n,
+			x: i,
+			y: o,
+			meta: {
+				statsTarget: r,
+				mode: s,
+				...a
+			}
+		}));
 	};
 	if (Math.abs(e.letterSpacing) < 2 ** -52) {
 		d(a, l);
@@ -965,11 +934,7 @@ var e = {
 	this.pruneStaticLaneReservations(this.currentTime);
 	for (let e of Array.from(this.activeComments)) {
 		let t = this.getEffectiveCommentVpos(e), n = t < this.currentTime - A, r = t > this.currentTime + A;
-		if (n || r) {
-			e.isActive = !1, this.activeComments.delete(e), e.clearActivation(), e.lane >= 0 && (e.layout === "ue" ? this.releaseStaticLane("ue", e.lane) : e.layout === "shita" && this.releaseStaticLane("shita", e.lane));
-			continue;
-		}
-		e.isScrolling && e.hasShown && (e.scrollDirection === "rtl" && e.x <= e.exitThreshold || e.scrollDirection === "ltr" && e.x >= e.exitThreshold) && (e.isActive = !1, this.activeComments.delete(e), e.clearActivation());
+		n || r ? (e.isActive = !1, this.activeComments.delete(e), e.clearActivation(), e.lane >= 0 && (e.layout === "ue" ? this.releaseStaticLane("ue", e.lane) : e.layout === "shita" && this.releaseStaticLane("shita", e.lane))) : e.isScrolling && e.hasShown && (e.scrollDirection === "rtl" && e.x <= e.exitThreshold || e.scrollDirection === "ltr" && e.x >= e.exitThreshold) && (e.isActive = !1, this.activeComments.delete(e), e.clearActivation());
 	}
 	let l = this.getCommentsInTimeWindow(this.currentTime, A);
 	for (let e of l) {
@@ -982,25 +947,19 @@ var e = {
 			currentTime: this.currentTime,
 			isActive: e.isActive,
 			hasShown: e.hasShown
-		}), this.isNGComment(e.text)) {
-			t && U("comment-eval-skip", {
-				preview: n,
-				vposMs: e.vposMs,
-				effectiveVposMs: this.getEffectiveCommentVpos(e),
-				reason: "ng-runtime"
-			});
-			continue;
-		}
-		if (e.isInvisible) {
-			t && U("comment-eval-skip", {
-				preview: n,
-				vposMs: e.vposMs,
-				effectiveVposMs: this.getEffectiveCommentVpos(e),
-				reason: "invisible"
-			}), e.isActive = !1, this.activeComments.delete(e), e.hasShown = !0, e.clearActivation();
-			continue;
-		}
-		if (e.syncWithSettings(this._settings, this.settingsVersion), this.shouldActivateCommentAtTime(e, this.currentTime, n) && this.activateComment(e, r, o, s, c, this.currentTime), e.isActive) {
+		}), this.isNGComment(e.text)) t && U("comment-eval-skip", {
+			preview: n,
+			vposMs: e.vposMs,
+			effectiveVposMs: this.getEffectiveCommentVpos(e),
+			reason: "ng-runtime"
+		});
+		else if (e.isInvisible) t && U("comment-eval-skip", {
+			preview: n,
+			vposMs: e.vposMs,
+			effectiveVposMs: this.getEffectiveCommentVpos(e),
+			reason: "invisible"
+		}), e.isActive = !1, this.activeComments.delete(e), e.hasShown = !0, e.clearActivation();
+		else if (e.syncWithSettings(this._settings, this.settingsVersion), this.shouldActivateCommentAtTime(e, this.currentTime, n) && this.activateComment(e, r, o, s, c, this.currentTime), e.isActive) {
 			if (e.layout !== "naka" && e.hasStaticExpired(this.currentTime)) {
 				let t = e.layout === "ue" ? "ue" : "shita";
 				this.releaseStaticLane(t, e.lane), e.isActive = !1, this.activeComments.delete(e), e.clearActivation();
@@ -1342,15 +1301,7 @@ var e = {
 	this.activeComments.forEach((e) => {
 		e.isActive = !1, e.clearActivation();
 	}), this.activeComments.clear(), this.reservedLanes.clear(), this.topStaticLaneReservations.length = 0, this.bottomStaticLaneReservations.length = 0, this.getCommentsInTimeWindow(this.currentTime, A).forEach((e) => {
-		if (this.isNGComment(e.text) || e.isInvisible) {
-			e.isActive = !1, this.activeComments.delete(e), e.clearActivation();
-			return;
-		}
-		if (e.syncWithSettings(this._settings, this.settingsVersion), e.isActive = !1, this.activeComments.delete(e), e.lane = -1, e.hasShown = !1, e.clearActivation(), this.shouldActivateCommentAtTime(e, this.currentTime)) {
-			this.activateComment(e, r, o, s, c, this.currentTime);
-			return;
-		}
-		e.hasShown = this.getEffectiveCommentVpos(e) < this.currentTime - 9e3;
+		this.isNGComment(e.text) || e.isInvisible ? (e.isActive = !1, this.activeComments.delete(e), e.clearActivation()) : (e.syncWithSettings(this._settings, this.settingsVersion), e.isActive = !1, this.activeComments.delete(e), e.lane = -1, e.hasShown = !1, e.clearActivation(), this.shouldActivateCommentAtTime(e, this.currentTime) ? this.activateComment(e, r, o, s, c, this.currentTime) : e.hasShown = this.getEffectiveCommentVpos(e) < this.currentTime - 9e3);
 	});
 }, fn = (e) => {
 	e.prototype.draw = un, e.prototype.performInitialSync = dn;
@@ -1374,9 +1325,7 @@ var e = {
 			this.cancelAnimationFrameRequest(), this.cancelVideoFrameCallback();
 			let t = e.requestVideoFrameCallback;
 			typeof t == "function" && (this.videoFrameHandle = t.call(e, this.handleVideoFrame));
-			return;
-		}
-		this.cancelVideoFrameCallback(), this.frameId = this.animationFrameProvider.request(this.handleAnimationFrame);
+		} else this.cancelVideoFrameCallback(), this.frameId = this.animationFrameProvider.request(this.handleAnimationFrame);
 	}
 }, vn = function() {
 	this.frameId !== null && (this.animationFrameProvider.cancel(this.frameId), this.frameId = null);
@@ -1405,7 +1354,7 @@ var e = {
 	let s = this.canvasDpr > 0 ? this.canvasDpr : 1, c = this.displayWidth > 0 ? this.displayWidth : e.width / s, l = this.displayHeight > 0 ? this.displayHeight : e.height / s, u = this.buildPrepareOptions(c);
 	this.getCommentsInTimeWindow(this.currentTime, A).forEach((e) => {
 		let n = H(), r = n ? W(e.text) : "";
-		if (n && U("comment-evaluate", {
+		n && U("comment-evaluate", {
 			stage: "seek",
 			preview: r,
 			vposMs: e.vposMs,
@@ -1413,29 +1362,17 @@ var e = {
 			currentTime: this.currentTime,
 			isActive: e.isActive,
 			hasShown: e.hasShown
-		}), this.isNGComment(e.text)) {
-			n && U("comment-eval-skip", {
-				preview: r,
-				vposMs: e.vposMs,
-				effectiveVposMs: this.getEffectiveCommentVpos(e),
-				reason: "ng-runtime"
-			}), e.isActive = !1, this.activeComments.delete(e), e.clearActivation();
-			return;
-		}
-		if (e.isInvisible) {
-			n && U("comment-eval-skip", {
-				preview: r,
-				vposMs: e.vposMs,
-				effectiveVposMs: this.getEffectiveCommentVpos(e),
-				reason: "invisible"
-			}), e.isActive = !1, this.activeComments.delete(e), e.hasShown = !0, e.clearActivation();
-			return;
-		}
-		if (e.syncWithSettings(this._settings, this.settingsVersion), e.isActive = !1, this.activeComments.delete(e), e.lane = -1, e.hasShown = !1, e.clearActivation(), this.shouldActivateCommentAtTime(e, this.currentTime, r)) {
-			this.activateComment(e, t, c, l, u, this.currentTime);
-			return;
-		}
-		e.hasShown = this.getEffectiveCommentVpos(e) < this.currentTime - 9e3;
+		}), this.isNGComment(e.text) ? (n && U("comment-eval-skip", {
+			preview: r,
+			vposMs: e.vposMs,
+			effectiveVposMs: this.getEffectiveCommentVpos(e),
+			reason: "ng-runtime"
+		}), e.isActive = !1, this.activeComments.delete(e), e.clearActivation()) : e.isInvisible ? (n && U("comment-eval-skip", {
+			preview: r,
+			vposMs: e.vposMs,
+			effectiveVposMs: this.getEffectiveCommentVpos(e),
+			reason: "invisible"
+		}), e.isActive = !1, this.activeComments.delete(e), e.hasShown = !0, e.clearActivation()) : (e.syncWithSettings(this._settings, this.settingsVersion), e.isActive = !1, this.activeComments.delete(e), e.lane = -1, e.hasShown = !1, e.clearActivation(), this.shouldActivateCommentAtTime(e, this.currentTime, r) ? this.activateComment(e, t, c, l, u, this.currentTime) : e.hasShown = this.getEffectiveCommentVpos(e) < this.currentTime - 9e3);
 	}), this._settings.isCommentVisible && (this.lastDrawTime = this.timeSource.now(), this.draw());
 }, Cn = (e) => {
 	e.prototype.processFrame = pn, e.prototype.handleAnimationFrame = mn, e.prototype.handleVideoFrame = hn, e.prototype.shouldUseVideoFrameCallback = gn, e.prototype.scheduleNextFrame = _n, e.prototype.cancelAnimationFrameRequest = vn, e.prototype.cancelVideoFrameCallback = yn, e.prototype.startAnimation = bn, e.prototype.stopAnimation = xn, e.prototype.onSeek = Sn;
@@ -1445,11 +1382,7 @@ var e = {
 	if (typeof document < "u" && document.body) return document.body;
 	throw Error("Cannot resolve container element. Provide container explicitly when DOM is unavailable.");
 }, Tn = function(e) {
-	if (typeof getComputedStyle == "function") {
-		getComputedStyle(e).position === "static" && (e.style.position = "relative");
-		return;
-	}
-	e.style.position || (e.style.position = "relative");
+	typeof getComputedStyle == "function" ? getComputedStyle(e).position === "static" && (e.style.position = "relative") : e.style.position || (e.style.position = "relative");
 }, En = function(e) {
 	try {
 		this.destroyCanvasOnly();
@@ -1613,11 +1546,7 @@ var e = {
 }, Bn = function() {
 	if (typeof document > "u" || typeof document.addEventListener != "function" || typeof document.removeEventListener != "function") return;
 	let e = () => {
-		if (document.visibilityState !== "visible") {
-			this.stopAnimation();
-			return;
-		}
-		this._settings.isCommentVisible && (this.handleVisibilityRestore(), this.startAnimation());
+		document.visibilityState === "visible" ? this._settings.isCommentVisible && (this.handleVisibilityRestore(), this.startAnimation()) : this.stopAnimation();
 	};
 	document.addEventListener("visibilitychange", e), this.addCleanup(() => document.removeEventListener("visibilitychange", e)), document.visibilityState !== "visible" && this.stopAnimation();
 }, Vn = function() {
@@ -1667,11 +1596,7 @@ var e = {
 		let e = () => {
 			t = !1, this.resize();
 		};
-		if (typeof requestAnimationFrame == "function") {
-			requestAnimationFrame(e);
-			return;
-		}
-		e();
+		typeof requestAnimationFrame == "function" ? requestAnimationFrame(e) : e();
 	};
 	if (this._settings.useContainerResizeObserver && this.isResizeObserverAvailable) {
 		let t = this.resolveResizeObserverTarget(e), n = new ResizeObserver((e) => {
@@ -1710,9 +1635,7 @@ var e = {
 		if (t instanceof HTMLElement) {
 			let n = t.getBoundingClientRect();
 			e.resize(n.width, n.height);
-			return;
-		}
-		e.resize();
+		} else e.resize();
 	};
 	typeof requestAnimationFrame == "function" && requestAnimationFrame(t), typeof setTimeout == "function" && setTimeout(t, 80);
 }, er = function(e) {
@@ -1727,9 +1650,7 @@ var e = {
 	if (this.fullscreenActive !== o && (this.fullscreenActive = o, this.setupResizeHandling(t)), e.style.position = "absolute", e.style.top = "0", e.style.left = "0", e.style.right = "0", e.style.bottom = "0", e.style.display = "block", e.style.pointerEvents = "none", e.style.zIndex = "2147483647", a) {
 		let e = a.getBoundingClientRect();
 		this.resize(e.width, e.height), $n(this);
-		return;
-	}
-	this.resize(), $n(this);
+	} else this.resize(), $n(this);
 }, nr = function(e) {
 	let t = this.getFullscreenElement();
 	return t instanceof HTMLElement && (t === e || t.contains(e)) ? t : null;
