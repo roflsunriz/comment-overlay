@@ -170,3 +170,7 @@ Dependabot は対象の依存関係を毎週確認します。patch／minor 更�
 - [README.md](README.md): 利用者向けの導入と操作。
 - [verification.md](verification.md): 検証手順、実測結果、未確認事項。
 - [how-to-update.md](how-to-update.md): 更新・復旧の実手順。
+
+## npmパッケージの文書同梱
+
+`package.json` の `files` は同梱ファイルの明示リストであり、READMEから分離した `findings.md` を含める。文書だけの同梱変更では製品バンドルを編集せず、`npm pack --dry-run --ignore-scripts --offline --json` のエントリ一覧でREADMEとfindingsの両方を確認する。

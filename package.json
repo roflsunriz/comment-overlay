@@ -22,7 +22,8 @@
   "files": [
     "src",
     "dist",
-    "DOCUMENTATION.md"
+    "DOCUMENTATION.md",
+    "findings.md"
   ],
   "scripts": {
     "clean": "rimraf dist",
