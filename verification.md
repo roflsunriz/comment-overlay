@@ -35,3 +35,8 @@
 
 - npmのfilesへfindings.mdを追加し、オフラインのnpm pack dry-runでREADME.mdとfindings.mdの同梱を確認した。製品API・バンドル・版番号は未変更の未リリース文書更新。
 - 追加差分も本文・参照・`git diff --check` を確認し、依存定義の変更や新たな外部監査送信は行っていない。
+
+## 2026-10-20: Dependabot 月末一括処理
+
+- `.github/dependabot.yml` は毎月28日00:00、`.github/workflows/dependabot-automation.yml` は同日18:00（いずれも `Asia/Tokyo`）に設定した。呼び出し先は検証済み共通 workflow の固定 SHA とし、現在の head SHA、Dependabot の資格状態、全 PR チェック成功を merge 前に再確認する。
+- YAML 構文、変更差分、空白エラーをローカルで検査した。実際の月末 schedule と Dependabot PR の merge 経路は、次回の毎月28日実行で確認する。
