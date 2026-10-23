@@ -6,3 +6,4 @@
 - npm公開時は `package.json` と `src/config/default-settings.ts` のversion、README/DOCUMENTATIONを同時更新する。`files` は明示listなので `npm pack --dry-run` で必要文書と成果物を確認する。
 - Dependabotのbase更新で自動mergeが失敗した場合はcallback log、現在head SHA、全check、mergeableを再確認する。自動修復jobは読取り権限でlockfileだけを扱う。
 - `bun audit fix` だけで残る厳密な間接依存はoverrideとlockfileを同時更新し、上流解消後にoverrideを外す。
+- 既定ブランチは `main`。GitHub Ruleset `main protection(delete/force)` は `~DEFAULT_BRANCH` を対象に削除とnon-fast-forwardを禁止するため、既定ブランチの改名後も `main` へ適用される。ブランチ名を変える場合は `.github/workflows/ci.yml`、Issueフォーム内の文書リンク、`how-to-update.md` を同時更新する。
