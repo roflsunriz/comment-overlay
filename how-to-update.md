@@ -32,12 +32,12 @@ CASEプルダウンへfixtureを追加するときは、`overlay-tests/fixtures/
 2. `CHANGELOG.md` の `[Unreleased]` 以下を `## [x.y.z] - YYYY-MM-DD` へ移し、上に空の `[Unreleased]` を残す。
 3. 上記の更新・検証をすべて実行し、`bun audit` で依存関係の脆弱性が0件であることを確認する。
 4. 生成された `dist/` と `overlay-tests/dist/` を含む意図した差分だけを、日本語Conventional Commits形式でコミットする。
-5. `master` を `origin` へpushし、同じコミットへ注釈付きタグ `vX.Y.Z` を作成してpushする。
+5. `main` を `origin` へpushし、同じコミットへ注釈付きタグ `vX.Y.Z` を作成してpushする。
 6. GitHub Actionsの `Publish to npm` が成功するまで確認し、npmの公開バージョンがタグと一致することを確認する。
 
 ```powershell
 bun audit
-git push origin master
+git push origin main
 git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 gh run list --workflow publish.yml --limit 5
@@ -51,8 +51,6 @@ gh run watch <run-id> --exit-status
 タグpush前に問題が判明した場合は修正コミット後にタグを作る。タグpush後に公開が失敗した場合はタグを付け替えず、Actionsログから原因を修正して同じworkflowを再実行する。誤ったパッケージが公開済みの場合はnpmの既存版を上書きせず、新しいpatch版で修正する。
 
 ## Dependabot PR の更新
-
-
 
 Dependabot version update は毎月28日00:00、検証済み PR の自動マージは同日18:00（いずれも `Asia/Tokyo`）にまとめます。28日より前に自動マージせず、現在の head SHA と全 PR チェックを月末処理で再確認します。
 前提は `.github/dependabot.yml` と PR 用 CI（CI）です。更新 PR の head SHA と `gh pr checks <PR番号>` の結果を確認してください。patch／minor は全チェック成功後に自動取り込みされます。初回 CI 失敗は failed jobs のみを 1 回再実行し、再失敗時は `bun.lock` の再生成を試み、修復後の CI を再実行します。自動処理が失敗した場合は Actions ログを確認します。基準ブランチの同時更新でマージが失敗したときは、現在の head SHA、全チェック、競合の有無を再確認して統合します。依存関係を解決できない PR は放置せず、適切な Dependabot ignore 指示で閉じます。

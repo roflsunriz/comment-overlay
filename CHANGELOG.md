@@ -6,6 +6,7 @@
 
 ### Changed
 
+- リポジトリの既定ブランチ名を `master` から `main` へ変更し、CI、Issueフォーム内の文書リンク、リリース手順を新しい名前へ統一した。
 - push前の更新確認で見つかった開発用ツールの互換範囲内の修正版を取り込んだ。
 
 - GitHub Actions の月間利用時間を抑えるため、Dependabot version update と自動マージを毎週・即時処理から毎月28日（Asia/Tokyo）の月末一括処理へ変更した。

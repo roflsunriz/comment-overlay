@@ -1,6 +1,6 @@
 name: 機能提案
 description: 新しい機能や改善案を提案してください
-title: '[Feature] '
+title: "[Feature] "
 labels:
   - enhancement
 body:
@@ -9,8 +9,8 @@ body:
       value: |-
         comment-overlayに関する内容を、目的と確認できた事実に分けて記載してください。
         Cookie、認証トークン、パスワード、個人情報を本文や添付に含めないでください。
-        投稿前に[README](https://github.com/roflsunriz/comment-overlay/blob/master/README.md)と[既存Issue](https://github.com/roflsunriz/comment-overlay/issues)を確認してください。
-        脆弱性の報告は[SECURITY.md](https://github.com/roflsunriz/comment-overlay/blob/master/SECURITY.md)の案内に従ってください。
+        投稿前に[README](https://github.com/roflsunriz/comment-overlay/blob/main/README.md)と[既存Issue](https://github.com/roflsunriz/comment-overlay/issues)を確認してください。
+        脆弱性の報告は[SECURITY.md](https://github.com/roflsunriz/comment-overlay/blob/main/SECURITY.md)の案内に従ってください。
   - type: textarea
     id: legacy-1
     attributes:
