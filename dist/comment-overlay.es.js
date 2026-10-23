@@ -1,4 +1,4 @@
-//#region src/comment/comment-commands.ts
+// src/comment/comment-commands.ts
 var e = {
 	small: 2 / 3,
 	medium: 1,
@@ -1766,8 +1766,7 @@ var e = {
 	}
 };
 mt($), Ct($), Et($), At($), Pt($), Ut($), Zt($), ln($), fn($), Cn($), kn($), zn($), Un($), Zn($), ar($), cr($);
-//#endregion
-//#region src/shared/calibration-debug.ts
+// src/shared/calibration-debug.ts
 var lr = (e) => ({
 	text: e.text,
 	vposMs: e.vposMs,
@@ -1830,7 +1829,6 @@ var lr = (e) => ({
 		records: r
 	};
 };
-//#endregion
 export { rt as COMMENT_OVERLAY_VERSION, et as Comment, $ as CommentRenderer, tt as DEFAULT_RENDERER_SETTINGS, dr as captureRendererCalibrationFrame, nt as cloneDefaultSettings, V as configureDebugLogging, at as createDefaultAnimationFrameProvider, w as createDefaultTimeSource, j as createLogger, U as debugLog, G as dumpRendererState, H as isDebugLoggingEnabled, K as logEpochChange, De as resetDebugCounters };
 
 //# sourceMappingURL=comment-overlay.es.js.map

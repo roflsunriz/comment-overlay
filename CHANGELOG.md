@@ -6,6 +6,8 @@
 
 ### Changed
 
+- push前の更新確認で見つかった開発用ツールの互換範囲内の修正版を取り込んだ。
+
 - GitHub Actions の月間利用時間を抑えるため、Dependabot version update と自動マージを毎週・即時処理から毎月28日（Asia/Tokyo）の月末一括処理へ変更した。
 
 - READMEから分離した知見を配布先でも参照できるよう、ソースアーカイブ／パッケージへ `findings.md` を同梱する対象を更新した。
